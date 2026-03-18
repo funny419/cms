@@ -15,6 +15,7 @@ jobs:
 
       - name: Create .env file from Secrets
         # 배포 시점에 Secrets를 조합하여 .env 파일을 동적으로 생성합니다.
+        # 각 서비스에 맞는 별도의 Secret을 사용하는 것이 보안상 안전합니다.
         run: |
           echo "CMS_MARIADB_PASSWORD=${{ secrets.CMS_MARIADB_PASSWORD }}" > .env
           echo "CMS_DB_APP_PASSWORD=${{ secrets.CMS_MARIADB_PASSWORD }}" >> .env
@@ -22,7 +23,7 @@ jobs:
           echo "CMS_DB_NAME=cmsdb" >> .env
           echo "FLASK_APP=app.py" >> .env
           echo "FLASK_DEBUG=0" >> .env
-          echo "SECRET_KEY=${{ secrets.CMS_MARIADB_PASSWORD }}" >> .env
+          echo "SECRET_KEY=${{ secrets.FLASK_SECRET_KEY }}" >> .env
           echo "VITE_API_BASE_URL=http://localhost:5000" >> .env
         shell: bash
 
