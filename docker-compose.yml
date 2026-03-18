@@ -1,0 +1,58 @@
+services:
+  # Database Service (MariaDB)
+  db:
+    image: mariadb:10.11
+    container_name: cms_db
+    restart: always
+    ports:
+      # .gemini.md Rule 3: Host 4807, Internal 3306
+      - "4807:3306"
+    environment:
+      # These variables should be set in a .env file for local development
+      # and injected as secrets in the CI/CD pipeline.
+      MYSQL_ROOT_PASSWORD: ${CMS_MARIADB_PASSWORD}
+      MYSQL_DATABASE: ${CMS_DB_NAME:-cmsdb}
+      MYSQL_USER: ${CMS_DB_USER:-funnycms}
+      MYSQL_PASSWORD: ${CMS_DB_APP_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Backend Service (Flask)
+  backend:
+    build: ./backend
+    container_name: cms_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_APP: app.py
+      FLASK_DEBUG: 1
+      # .gemini.md Tech Stack: SQLAlchemy connection string format
+      DATABASE_URL: mysql+pymysql://${CMS_DB_USER:-funnycms}:${CMS_DB_APP_PASSWORD}@db:3306/${CMS_DB_NAME:-cmsdb}
+    volumes:
+      - ./backend:/app
+
+  # Frontend Service (React + Vite)
+  frontend:
+    build: ./frontend
+    container_name: cms_frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      # Windows 파일 시스템에서의 Hot Reload 이슈 방지 (Polling 모드)
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  db_data:

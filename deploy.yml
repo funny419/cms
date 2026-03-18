@@ -1,0 +1,38 @@
+name: Deploy CMS to Windows
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    # 윈도우 머신에 설치된 Self-Hosted Runner를 사용한다고 가정
+    runs-on: [self-hosted, windows, x64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file from Secrets
+        # 배포 시점에 Secrets를 조합하여 .env 파일을 동적으로 생성합니다.
+        run: |
+          echo "CMS_MARIADB_PASSWORD=${{ secrets.CMS_MARIADB_PASSWORD }}" > .env
+          echo "CMS_DB_APP_PASSWORD=${{ secrets.CMS_MARIADB_PASSWORD }}" >> .env
+          echo "CMS_DB_USER=funnycms" >> .env
+          echo "CMS_DB_NAME=cmsdb" >> .env
+          echo "FLASK_APP=app.py" >> .env
+          echo "FLASK_DEBUG=0" >> .env
+          echo "SECRET_KEY=${{ secrets.CMS_MARIADB_PASSWORD }}" >> .env
+          echo "VITE_API_BASE_URL=http://localhost:5000" >> .env
+        shell: bash
+
+      - name: Build and Run with Docker Compose
+        # 기존 컨테이너를 내리고, 이미지를 새로 빌드하여 실행합니다.
+        run: |
+          docker-compose down
+          docker-compose up -d --build
+
+      - name: Clean up
+        # 보안을 위해 생성된 .env 파일 삭제
+        run: rm .env
+        if: always()
