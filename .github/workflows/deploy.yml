@@ -35,5 +35,6 @@ jobs:
 
       - name: Clean up
         # 보안을 위해 생성된 .env 파일 삭제
-        run: rm .env
+        run: rm -f .env
         if: always()
+        shell: bash
