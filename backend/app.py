@@ -3,14 +3,13 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from database import db
 from models import User, Post, Settings
+from config import Config
 
 def create_app():
     app = Flask(__name__)
 
-    # 환경 변수 로드
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_key')
+    # 설정 로드 (.gemini.md Rules applied via config.py)
+    app.config.from_object(Config())
 
     # CORS 설정 (프론트엔드 포트 허용)
     CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}})

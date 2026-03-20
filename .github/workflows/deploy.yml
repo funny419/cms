@@ -31,9 +31,10 @@ jobs:
 
       - name: Build and Run with Docker Compose
         # 기존 컨테이너를 내리고, 이미지를 새로 빌드하여 실행합니다.
+        # 프로덕션용 compose 파일을 명시적으로 사용합니다.
         run: |
-          docker-compose down
-          docker-compose up -d --build
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d --build
         shell: powershell
 
       - name: Clean up

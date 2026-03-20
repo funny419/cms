@@ -1,0 +1,50 @@
+# Production Environment Docker Compose
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: cms_db_prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${CMS_MARIADB_PASSWORD}
+      MYSQL_DATABASE: ${CMS_DB_NAME:-cmsdb}
+      MYSQL_USER: ${CMS_DB_USER:-funnycms}
+      MYSQL_PASSWORD: ${CMS_DB_APP_PASSWORD}
+    volumes:
+      - db_data_prod:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile # Production-ready Dockerfile
+    container_name: cms_backend_prod
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLASK_APP: app.py
+      FLASK_DEBUG: 0 # Production Mode
+      DATABASE_URL: mysql+pymysql://${CMS_DB_USER:-funnycms}:${CMS_DB_APP_PASSWORD}@db:3306/${CMS_DB_NAME:-cmsdb}
+      SECRET_KEY: ${SECRET_KEY}
+    command: ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+
+  # Nginx reverse proxy and frontend server
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: cms_nginx_prod
+    restart: always
+    ports:
+      - "80:80" # Expose web server on port 80
+    depends_on:
+      - backend
+
+volumes:
+  db_data_prod:
