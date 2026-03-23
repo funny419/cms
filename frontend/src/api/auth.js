@@ -1,94 +1,73 @@
-// Vite의 프록시 설정이 되어있다고 가정하고 상대 경로 사용
-// 설정이 없다면 'http://localhost:5000/api/auth' 로 변경 필요
-const API_BASE_URL = '/api/auth';
+// .gemini.md 규칙 준수: 응답 포맷 { "success": bool, "data": {}, "error": str }
+// backend/app.py의 url_prefix='/api/auth'와 매칭
+
+const BASE_URL = '/api/auth';
 
 /**
  * 로그인 요청
- * @param {string} username 
- * @param {string} password 
  */
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Login error:', error);
-    return { success: false, error: 'Network error occurred' };
+    return { success: false, error: 'Network error occurred during login.' };
   }
 };
 
 /**
  * 회원가입 요청
- * @param {string} username 
- * @param {string} email 
- * @param {string} password 
  */
 export const registerUser = async (username, email, password) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/register`, {
+    const response = await fetch(`${BASE_URL}/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
     });
-
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Register error:', error);
-    return { success: false, error: 'Network error occurred' };
+    return { success: false, error: 'Network error occurred during registration.' };
   }
 };
 
 /**
- * 현재 사용자 정보 조회
- * @param {string} token 
+ * 현재 사용자 정보 조회 (Protected)
  */
 export const getCurrentUser = async (token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/me`, {
+    const response = await fetch(`${BASE_URL}/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        'Authorization': `Bearer ${token}`,
+      },
     });
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Get user error:', error);
-    return { success: false, error: 'Network error occurred' };
+    return { success: false, error: 'Failed to fetch user info.' };
   }
 };
 
 /**
- * 사용자 정보 수정
- * @param {string} token 
- * @param {Object} updateData { email, password }
+ * 사용자 정보 수정 (Protected)
  */
-export const updateUser = async (token, updateData) => {
+export const updateUser = async (token, data) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/me`, {
+    const response = await fetch(`${BASE_URL}/me`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(updateData),
+      body: JSON.stringify(data),
     });
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('Update user error:', error);
-    return { success: false, error: 'Network error occurred' };
+    return { success: false, error: 'Failed to update profile.' };
   }
 };
