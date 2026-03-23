@@ -1,5 +1,10 @@
 flask
 flask-sqlalchemy
 flask-cors
+flask-migrate
+flask-jwt-extended
+python-dotenv
 pymysql
+cryptography
 werkzeug
+gunicorn
