@@ -1,34 +1,23 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
-    """
-    Application Configuration
-    .gemini.md Rule: Type Hints required, No hardcoded secrets.
-    """
-    
-    # Security
-    SECRET_KEY: str = os.environ.get('SECRET_KEY', 'dev_key_for_local_only')
+    """Base Configuration"""
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
     
     # Database
-    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    # MariaDB Connector/J 사용 권장 (pymysql)
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://funnycms:funnycms@localhost:3306/cms_db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # JWT
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-prod')
+    JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
 
-    @property
-    def SQLALCHEMY_DATABASE_URI(self) -> str:
-        """
-        Constructs the Database URL.
-        Priority:
-        1. DATABASE_URL env var (Docker environment)
-        2. Constructed from individual vars (Local environment, default port 4807)
-        """
-        env_url: str | None = os.environ.get('DATABASE_URL')
-        if env_url:
-            return env_url
+class DevelopmentConfig(Config):
+    DEBUG = True
 
-        # Local Development Defaults
-        user: str = os.environ.get('CMS_DB_USER', 'funnycms')
-        password: str = os.environ.get('CMS_DB_APP_PASSWORD', 'change_this_to_secure_app_password')
-        host: str = os.environ.get('DB_HOST', 'localhost')
-        port: str = os.environ.get('DB_PORT', '4807') # Docker mapped port
-        db_name: str = os.environ.get('CMS_DB_NAME', 'cmsdb')
-
-        return f"mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}"
+class ProductionConfig(Config):
+    DEBUG = False

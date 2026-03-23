@@ -1,42 +1,33 @@
-import os
 from flask import Flask, jsonify
-from flask_cors import CORS
-from database import db
-from models import User, Post, Settings
-from config import Config
+from backend.config import DevelopmentConfig, ProductionConfig
+from backend.extensions import db, migrate, jwt
+import os
 
-def create_app():
+def create_app(config_class=None):
     app = Flask(__name__)
 
-    # 설정 로드 (.gemini.md Rules applied via config.py)
-    app.config.from_object(Config())
+    # 환경 설정 로드
+    if config_class is None:
+        env = os.getenv('FLASK_ENV', 'development')
+        config_class = ProductionConfig if env == 'production' else DevelopmentConfig
+    
+    app.config.from_object(config_class)
 
-    # CORS 설정 (프론트엔드 포트 허용)
-    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}})
-
-    # DB 초기화
+    # 확장 모듈 초기화
     db.init_app(app)
+    migrate.init_app(app, db)
+    jwt.init_app(app)
 
-    # 애플리케이션 컨텍스트 내에서 테이블 생성 (개발 편의용, 실제 배포 시엔 마이그레이션 도구 권장)
-    with app.app_context():
-        db.create_all()
-
-    @app.route('/')
+    # 기본 라우트 (Health Check)
+    @app.route('/health')
     def health_check():
-        return jsonify({
-            "status": "ok",
-            "service": "CMS Backend",
-            "database": "connected" # 실제 연결 체크 로직 추가 권장
-        })
+        return jsonify({"status": "ok", "service": "cms-backend"})
 
-    @app.route('/api/install-check')
-    def check_install():
-        # 설치 여부 확인 로직 (예: 관리자 계정 존재 여부)
-        is_installed = User.query.first() is not None
-        return jsonify({"installed": is_installed})
+    # Blueprint 등록
+    from backend.api.auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     return app
-
 
 if __name__ == '__main__':
     app = create_app()
