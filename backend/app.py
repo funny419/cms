@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
-from backend.config import DevelopmentConfig, ProductionConfig
-from backend.extensions import db, migrate, jwt
+from config import DevelopmentConfig, ProductionConfig
+from database import db
+from extensions import migrate, jwt
 import os
 
 def create_app(config_class=None):
@@ -24,7 +25,7 @@ def create_app(config_class=None):
         return jsonify({"status": "ok", "service": "cms-backend"})
 
     # Blueprint 등록
-    from backend.api.auth import auth_bp
+    from api.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     return app
