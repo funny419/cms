@@ -1,7 +1,10 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv 패키지가 없는 경우(Docker 등)에도 실행되도록 처리
+    pass
 
 class Config:
     """Base Configuration"""

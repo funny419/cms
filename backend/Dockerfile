@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED 1
 COPY requirements.txt .
 # Add gunicorn for production
 RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir gunicorn
+    pip install --no-cache-dir gunicorn python-dotenv
 
 COPY . .
 
