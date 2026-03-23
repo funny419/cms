@@ -40,21 +40,17 @@ jobs:
       - name: Send Discord Notification on Success
         if: success()
         run: |
-          # 1. 인코딩 강제 설정
-          $OutputEncoding = [System.Text.Encoding]::UTF8
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
           $commit_sha = "${{ github.sha }}".Substring(0, 7)
           
-          # 2. 페이로드 구성
-          $payload = @{
-            content = "🚀 **배포 성공**: CMS 서비스가 프로덕션에 정상 배포되었습니다. (by @${{ github.actor }}, commit: `$commit_sha`)"
-          } | ConvertTo-Json -Compress
+          # 1. JSON을 수동으로 작성 (PowerShell의 자동 변환 회피)
+          # 큰따옴표 이스케이프를 위해 `"` 대신 \" 사용
+          $jsonPayload = "{ \"content\": \"🚀 **배포 성공**: CMS 서비스가 프로덕션에 정상 배포되었습니다. (by @${{ github.actor }}, commit: ``$commit_sha``)\" }"
 
-          # 3. 바이너리 변환
-          $byteData = [System.Text.Encoding]::UTF8.GetBytes($payload)
+          # 2. UTF-8 바이트로 직접 변환 (BOM 없이 순수 UTF-8)
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          $byteData = $utf8.GetBytes($jsonPayload)
 
-          # 4. Invoke-WebRequest 호출 (UseBasicParsing 추가)
+          # 3. 전송
           Invoke-WebRequest -Uri "${{ secrets.DISCORD_WEBHOOK_URL }}" `
                             -Method Post `
                             -ContentType "application/json; charset=utf-8" `
@@ -65,17 +61,13 @@ jobs:
       - name: Send Discord Notification on Failure
         if: failure()
         run: |
-          $OutputEncoding = [System.Text.Encoding]::UTF8
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
           $commit_sha = "${{ github.sha }}".Substring(0, 7)
           $workflow_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
-          $payload = @{
-            content = "🔥 **배포 실패**: CMS 서비스 배포 중 오류가 발생했습니다. (by @${{ github.actor }}, commit: `$commit_sha`) `n> [워크플로우 로그 확인]($workflow_url)"
-          } | ConvertTo-Json -Compress
+          $jsonPayload = "{ \"content\": \"🔥 **배포 실패**: CMS 서비스 배포 중 오류가 발생했습니다. (by @${{ github.actor }}, commit: ``$commit_sha``) \n> [워크플로우 로그 확인]($workflow_url)\" }"
 
-          $byteData = [System.Text.Encoding]::UTF8.GetBytes($payload)
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          $byteData = $utf8.GetBytes($jsonPayload)
 
           Invoke-WebRequest -Uri "${{ secrets.DISCORD_WEBHOOK_URL }}" `
                             -Method Post `
