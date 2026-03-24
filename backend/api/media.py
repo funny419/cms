@@ -1,4 +1,5 @@
 import os
+import uuid
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import select
@@ -10,7 +11,7 @@ from database import db
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 THUMBNAIL_SIZE = (300, 300)
 
 
@@ -28,14 +29,15 @@ def upload_file() -> tuple:
         return jsonify({"success": False, "data": {}, "error": "Invalid file type"}), 400
 
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+    thumb_path = os.path.join(UPLOAD_FOLDER, f"thumb_{unique_filename}")
     file.save(filepath)
 
     # 썸네일 생성 (이미지 파일만)
     try:
         img = Image.open(filepath)
         img.thumbnail(THUMBNAIL_SIZE)
-        thumb_path = os.path.join(UPLOAD_FOLDER, f"thumb_{file.filename}")
         img.save(thumb_path)
     except Exception:
         pass  # 썸네일 생성 실패해도 업로드 자체는 성공
@@ -52,6 +54,10 @@ def upload_file() -> tuple:
         db.session.commit()
     except Exception:
         db.session.rollback()
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        if os.path.exists(thumb_path):
+            os.remove(thumb_path)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
     return jsonify({"success": True, "data": media.to_dict(), "error": ""}), 201
 
