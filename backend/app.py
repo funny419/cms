@@ -33,6 +33,9 @@ def create_app(config_class=None):
     from api.settings import settings_bp
     app.register_blueprint(settings_bp)
 
+    from api.posts import posts_bp
+    app.register_blueprint(posts_bp)
+
     return app
 
 if __name__ == '__main__':

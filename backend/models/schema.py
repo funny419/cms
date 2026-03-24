@@ -80,6 +80,20 @@ class Post(Base):
     metas: Mapped[List["PostMeta"]] = relationship(back_populates="post", cascade="all, delete-orphan")
     comments: Mapped[List["Comment"]] = relationship(back_populates="post")
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "slug": self.slug,
+            "content": self.content,
+            "excerpt": self.excerpt,
+            "status": self.status,
+            "post_type": self.post_type,
+            "author_id": self.author_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class PostMeta(Base):
     """
