@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { listPosts } from '../api/posts';
+
+const getUser = () => {
+  try { return JSON.parse(localStorage.getItem('user')); }
+  catch { return null; }
+};
+const isEditorOrAdmin = (user) =>
+  user && (user.role === 'admin' || user.role === 'editor');
 
 export default function PostList() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const user = getUser();
 
   useEffect(() => {
     listPosts().then((res) => {
@@ -26,7 +36,14 @@ export default function PostList() {
 
   return (
     <div className="page-content">
-      <h1 className="page-heading">포스트</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+        <h1 className="page-heading" style={{ margin: 0 }}>포스트</h1>
+        {isEditorOrAdmin(user) && (
+          <button className="btn btn-primary" onClick={() => navigate('/posts/new')}>
+            + 새 글
+          </button>
+        )}
+      </div>
 
       {posts.length === 0 ? (
         <div className="empty-state">
@@ -36,7 +53,12 @@ export default function PostList() {
       ) : (
         <ul className="post-list">
           {posts.map((post) => (
-            <li key={post.id} className="post-item">
+            <li
+              key={post.id}
+              className="post-item"
+              onClick={() => navigate(`/posts/${post.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="post-title">{post.title}</div>
               {post.excerpt && (
                 <div className="post-excerpt">{post.excerpt}</div>
