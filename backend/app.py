@@ -39,6 +39,9 @@ def create_app(config_class=None):
     from api.media import media_bp
     app.register_blueprint(media_bp)
 
+    from api.comments import comments_bp
+    app.register_blueprint(comments_bp)
+
     return app
 
 if __name__ == '__main__':

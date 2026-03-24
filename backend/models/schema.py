@@ -155,6 +155,18 @@ class Comment(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "post_id": self.post_id,
+            "author_id": self.author_id,
+            "parent_id": self.parent_id,
+            "author_name": self.author_name,
+            "content": self.content,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
     # Relationships
     post: Mapped["Post"] = relationship(back_populates="comments")
     author: Mapped[Optional["User"]] = relationship(back_populates="comments")
