@@ -16,6 +16,8 @@ def create_app(config_class=None):
 
     # 확장 모듈 초기화
     db.init_app(app)
+    from flask_cors import CORS
+    CORS(app, origins=["http://localhost:5173"])
     migrate.init_app(app, db)
     jwt.init_app(app)
 
