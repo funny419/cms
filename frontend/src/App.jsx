@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import PostList from './pages/PostList';
+import PostDetail from './pages/PostDetail';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/posts" element={<PostList />} />
+          <Route path="/posts/:id" element={<PostDetail />} />
           <Route path="*" element={
             <div className="empty-state" style={{ marginTop: 80 }}>
               404 — 페이지를 찾을 수 없습니다.
