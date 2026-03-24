@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import select
 from api.decorators import roles_required
 from models.schema import Comment
@@ -26,9 +27,15 @@ def create_comment() -> tuple:
     content: str = data["content"]
     status = "spam" if _is_spam(content) else "pending"
 
+    try:
+        verify_jwt_in_request(optional=True)
+        author_id = get_jwt_identity()
+    except Exception:
+        author_id = None
+
     comment = Comment(
         post_id=data["post_id"],
-        author_id=data.get("author_id"),
+        author_id=author_id,
         parent_id=data.get("parent_id"),
         author_name=data["author_name"],
         author_email=data.get("author_email", ""),

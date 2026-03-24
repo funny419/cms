@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import select
 from PIL import Image
+from werkzeug.utils import secure_filename
 from api.decorators import roles_required
 from models.schema import Media
 from database import db
@@ -28,8 +29,12 @@ def upload_file() -> tuple:
     if not file.filename or not _allowed_file(file.filename):
         return jsonify({"success": False, "data": {}, "error": "Invalid file type"}), 400
 
+    safe_name = secure_filename(file.filename)
+    if not safe_name:
+        return jsonify({"success": False, "data": {}, "error": "Invalid filename"}), 400
+
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    unique_filename = f"{uuid.uuid4().hex}_{safe_name}"
     filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
     thumb_path = os.path.join(UPLOAD_FOLDER, f"thumb_{unique_filename}")
     file.save(filepath)
@@ -43,7 +48,7 @@ def upload_file() -> tuple:
         pass  # 썸네일 생성 실패해도 업로드 자체는 성공
 
     media = Media(
-        filename=file.filename,
+        filename=safe_name,
         filepath=filepath,
         mimetype=file.mimetype,
         size=os.path.getsize(filepath),
