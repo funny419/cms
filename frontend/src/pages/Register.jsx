@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser } from '../api/auth';
 
 export default function Register() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -14,81 +15,76 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
+    setSuccess('');
     const result = await registerUser(formData.username, formData.email, formData.password);
-
     if (result.success) {
-      // 회원가입 성공 시 로그인 페이지로 이동
-      alert('Registration successful! Please login.');
-      navigate('/login');
+      setSuccess('가입이 완료됐습니다. 로그인 페이지로 이동합니다...');
+      setTimeout(() => navigate('/login'), 1500);
     } else {
-      setError(result.error || 'Registration failed');
+      setError(result.error || '회원가입에 실패했습니다.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">Create Account</h2>
-        
-        {error && (
-          <div className="mb-4 rounded bg-red-100 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+    <div className="page-center">
+      <div className="card">
+        <h1 className="card-title">회원가입</h1>
+
+        {error   && <div className="alert alert-error">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-bold text-gray-700" htmlFor="username">
-              Username
-            </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="username">아이디</label>
             <input
+              className="form-input"
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+              placeholder="사용할 아이디"
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-bold text-gray-700" htmlFor="email">
-              Email
-            </label>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="email">이메일</label>
             <input
+              className="form-input"
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+              placeholder="example@email.com"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-bold text-gray-700" htmlFor="password">
-              Password
-            </label>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">비밀번호</label>
             <input
+              className="form-input"
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+              placeholder="8자 이상 권장"
               required
             />
           </div>
-          <div className="flex items-center justify-between">
-            <button type="submit" className="focus:shadow-outline rounded bg-green-500 px-4 py-2 font-bold text-white hover:bg-green-700 focus:outline-none">
-              Register
-            </button>
-            <Link to="/login" className="inline-block align-baseline text-sm font-bold text-blue-500 hover:text-blue-800">
-              Already have an account?
-            </Link>
-          </div>
+
+          <button type="submit" className="btn btn-primary btn-full">
+            가입하기
+          </button>
         </form>
+
+        <div className="form-footer" style={{ marginTop: 20 }}>
+          <span className="text-muted">이미 계정이 있으신가요?</span>
+          <Link to="/login" className="text-link">로그인</Link>
+        </div>
       </div>
     </div>
   );

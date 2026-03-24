@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../api/auth';
 
@@ -14,69 +14,61 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     const result = await loginUser(formData.username, formData.password);
-
     if (result.success) {
-      // JWT 토큰 저장
       localStorage.setItem('token', result.data.access_token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
-      // 대시보드 또는 홈으로 이동
-      navigate('/');
+      navigate('/posts');
     } else {
-      setError(result.error || 'Login failed');
+      setError(result.error || '로그인에 실패했습니다.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">Sign In</h2>
-        
-        {error && (
-          <div className="mb-4 rounded bg-red-100 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+    <div className="page-center">
+      <div className="card">
+        <h1 className="card-title">로그인</h1>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-bold text-gray-700" htmlFor="username">
-              Username
-            </label>
+          <div className="form-group">
+            <label className="form-label" htmlFor="username">아이디</label>
             <input
+              className="form-input"
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+              placeholder="아이디를 입력하세요"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-bold text-gray-700" htmlFor="password">
-              Password
-            </label>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="password">비밀번호</label>
             <input
+              className="form-input"
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none"
+              placeholder="비밀번호를 입력하세요"
               required
             />
           </div>
-          <div className="flex items-center justify-between">
-            <button type="submit" className="focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none">
-              Sign In
-            </button>
-            <Link to="/register" className="inline-block align-baseline text-sm font-bold text-blue-500 hover:text-blue-800">
-              Create Account
-            </Link>
-          </div>
+
+          <button type="submit" className="btn btn-primary btn-full">
+            로그인
+          </button>
         </form>
+
+        <div className="form-footer" style={{ marginTop: 20 }}>
+          <span className="text-muted">계정이 없으신가요?</span>
+          <Link to="/register" className="text-link">회원가입</Link>
+        </div>
       </div>
     </div>
   );
