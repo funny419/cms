@@ -64,6 +64,9 @@ services:
     restart: always
     ports:
       - "5173:5173"
+    environment:
+      # Vite proxy가 Docker 내부 네트워크의 backend 서비스로 연결되도록 지정
+      BACKEND_URL: http://backend:5000
     volumes:
       - ./frontend:/app
       - /app/node_modules
