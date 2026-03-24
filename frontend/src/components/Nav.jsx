@@ -1,10 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
+const getUser = () => {
+  try { return JSON.parse(localStorage.getItem('user')); }
+  catch { return null; }
+};
+
 export default function Nav() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const user = getUser();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -14,19 +20,33 @@ export default function Nav() {
 
   return (
     <nav className="nav">
-      <Link to={token ? '/posts' : '/login'} className="nav-brand">
+      <Link
+        to={token ? (user?.role === 'admin' ? '/admin/posts' : '/my-posts') : '/login'}
+        className="nav-brand"
+      >
         ✦ CMS
       </Link>
 
       <div className="nav-links">
         {token ? (
-          <>
-            <Link to="/posts" className="nav-link">포스트</Link>
-            <Link to="/profile" className="nav-link">프로필</Link>
-            <button onClick={handleLogout} className="nav-link btn-danger" style={{ border: 'none', cursor: 'pointer', background: 'none' }}>
-              로그아웃
-            </button>
-          </>
+          user?.role === 'admin' ? (
+            <>
+              <Link to="/admin/posts" className="nav-link">포스트 관리</Link>
+              <Link to="/admin/users" className="nav-link">회원 관리</Link>
+              <button onClick={handleLogout} className="nav-link" style={{ border: 'none', cursor: 'pointer', background: 'none', color: 'var(--danger)' }}>
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/my-posts" className="nav-link">내 글</Link>
+              <Link to="/posts" className="nav-link">전체 글</Link>
+              <Link to="/profile" className="nav-link">프로필</Link>
+              <button onClick={handleLogout} className="nav-link" style={{ border: 'none', cursor: 'pointer', background: 'none', color: 'var(--danger)' }}>
+                로그아웃
+              </button>
+            </>
+          )
         ) : (
           <>
             <Link to="/login" className="nav-link">로그인</Link>

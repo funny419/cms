@@ -18,7 +18,8 @@ export default function Login() {
     if (result.success) {
       localStorage.setItem('token', result.data.access_token);
       localStorage.setItem('user', JSON.stringify(result.data.user));
-      navigate('/posts');
+      const role = result.data.user.role;
+      navigate(role === 'admin' ? '/admin/posts' : '/my-posts');
     } else {
       setError(result.error || '로그인에 실패했습니다.');
     }

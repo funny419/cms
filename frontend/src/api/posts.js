@@ -47,3 +47,12 @@ export const deletePost = async (token, id) => {
     return { success: false, error: error.response?.data?.error || 'Failed to delete post.' };
   }
 };
+
+export const getMyPosts = async (token) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/mine`, { headers: authHeader(token) });
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || 'Failed to fetch my posts.' };
+  }
+};
