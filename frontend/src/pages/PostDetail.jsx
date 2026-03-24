@@ -37,30 +37,35 @@ export default function PostDetail() {
 
   useEffect(() => {
     const load = async () => {
-      const [postRes, listRes] = await Promise.all([
-        getPost(id),
-        listPosts(),
-      ]);
+      try {
+        const [postRes, listRes] = await Promise.all([
+          getPost(id),
+          listPosts(),
+        ]);
 
-      if (!postRes.success) {
-        setError('포스트를 찾을 수 없습니다.');
+        if (!postRes.success) {
+          setError('포스트를 찾을 수 없습니다.');
+          setLoading(false);
+          return;
+        }
+
+        setPost(postRes.data);
+
+        if (listRes.success) {
+          // created_at 내림차순 (최신 글이 앞)
+          const sorted = [...listRes.data].sort(
+            (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          );
+          const idx = sorted.findIndex((p) => p.id === postRes.data.id);
+          if (idx > 0) setPrev(sorted[idx - 1]);
+          if (idx < sorted.length - 1) setNext(sorted[idx + 1]);
+        }
+
         setLoading(false);
-        return;
+      } catch {
+        setError('포스트를 불러오는 중 오류가 발생했습니다.');
+        setLoading(false);
       }
-
-      setPost(postRes.data);
-
-      if (listRes.success) {
-        // created_at 내림차순 (최신 글이 앞)
-        const sorted = [...listRes.data].sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
-        );
-        const idx = sorted.findIndex((p) => p.id === postRes.data.id);
-        if (idx > 0) setPrev(sorted[idx - 1]);
-        if (idx < sorted.length - 1) setNext(sorted[idx + 1]);
-      }
-
-      setLoading(false);
     };
 
     load();
