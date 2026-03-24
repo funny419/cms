@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import PostList from './pages/PostList';
 import PostDetail from './pages/PostDetail';
+import PostEditor from './pages/PostEditor';
 
 function App() {
   return (
@@ -19,6 +20,9 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/posts" element={<PostList />} />
+          {/* /posts/new 는 /posts/:id 보다 반드시 먼저 */}
+          <Route path="/posts/new" element={<PostEditor />} />
+          <Route path="/posts/:id/edit" element={<PostEditor />} />
           <Route path="/posts/:id" element={<PostDetail />} />
           <Route path="*" element={
             <div className="empty-state" style={{ marginTop: 80 }}>
