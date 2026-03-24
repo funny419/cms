@@ -3,6 +3,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from sqlalchemy import select
 from models import User
 from database import db
+from api.decorators import roles_required
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -75,3 +76,13 @@ def update_me() -> tuple:
         db.session.rollback()
         print(e)
         return jsonify({'success': False, 'data': {}, 'error': 'An internal error occurred.'}), 500
+
+@auth_bp.route('/users', methods=['GET'])
+@roles_required('admin')
+def list_users() -> tuple:
+    users = db.session.execute(select(User)).scalars().all()
+    return jsonify({
+        'success': True,
+        'data': [u.to_dict() for u in users],
+        'error': ''
+    }), 200
