@@ -10,7 +10,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # 의존성 설치
-RUN npm ci
+# strict-ssl false: 로컬 네트워크 SSL 프록시 대응
+# npm install: package-lock.json 자동 갱신 (dev 환경)
+RUN npm config set strict-ssl false && npm install
 
 # 소스 코드 복사
 COPY . .
