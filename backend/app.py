@@ -50,6 +50,9 @@ def create_app(config_class=None):
     from api.menus import menus_bp
     app.register_blueprint(menus_bp)
 
+    from api.admin import admin_bp
+    app.register_blueprint(admin_bp)
+
     return app
 
 if __name__ == '__main__':

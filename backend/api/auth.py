@@ -34,6 +34,8 @@ def login() -> tuple:
         return jsonify({'success': False, 'data': {}, 'error': 'Missing request body'}), 400
     user = db.session.execute(select(User).where(User.username == data.get('username'))).scalar_one_or_none()
     if user and user.check_password(data.get('password')):
+        if user.role == 'deactivated':
+            return jsonify({'success': False, 'data': {}, 'error': '비활성화된 계정입니다.'}), 401
         access_token = create_access_token(identity=str(user.id))
         return jsonify({
             'success': True,
