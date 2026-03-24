@@ -1,5 +1,5 @@
 // .gemini.md 규칙 준수: 응답 포맷 { "success": bool, "data": {}, "error": str }
-// backend/app.py의 url_prefix='/api/auth'와 매칭
+import axios from 'axios';
 
 const BASE_URL = '/api/auth';
 
@@ -8,14 +8,10 @@ const BASE_URL = '/api/auth';
  */
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch(`${BASE_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    return await response.json();
+    const response = await axios.post(`${BASE_URL}/login`, { username, password });
+    return response.data;
   } catch (error) {
-    return { success: false, error: 'Network error occurred during login.' };
+    return { success: false, error: error.response?.data?.error || 'Network error occurred during login.' };
   }
 };
 
@@ -24,14 +20,10 @@ export const loginUser = async (username, password) => {
  */
 export const registerUser = async (username, email, password) => {
   try {
-    const response = await fetch(`${BASE_URL}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password }),
-    });
-    return await response.json();
+    const response = await axios.post(`${BASE_URL}/register`, { username, email, password });
+    return response.data;
   } catch (error) {
-    return { success: false, error: 'Network error occurred during registration.' };
+    return { success: false, error: error.response?.data?.error || 'Network error occurred during registration.' };
   }
 };
 
@@ -40,16 +32,12 @@ export const registerUser = async (username, email, password) => {
  */
 export const getCurrentUser = async (token) => {
   try {
-    const response = await fetch(`${BASE_URL}/me`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await axios.get(`${BASE_URL}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    return await response.json();
+    return response.data;
   } catch (error) {
-    return { success: false, error: 'Failed to fetch user info.' };
+    return { success: false, error: error.response?.data?.error || 'Failed to fetch user info.' };
   }
 };
 
@@ -58,16 +46,11 @@ export const getCurrentUser = async (token) => {
  */
 export const updateUser = async (token, data) => {
   try {
-    const response = await fetch(`${BASE_URL}/me`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+    const response = await axios.put(`${BASE_URL}/me`, data, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    return await response.json();
+    return response.data;
   } catch (error) {
-    return { success: false, error: 'Failed to update profile.' };
+    return { success: false, error: error.response?.data?.error || 'Failed to update profile.' };
   }
 };
