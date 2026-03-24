@@ -23,8 +23,13 @@ def create_app(config_class=None):
     jwt.init_app(app)
 
     # 앱 시작 시 마이그레이션 자동 적용
+    # 테이블이 이미 존재하는 경우(alembic_version 미설정) 경고만 출력하고 계속 진행
     with app.app_context():
-        db_upgrade()
+        try:
+            db_upgrade()
+        except Exception as e:
+            print(f"[WARNING] DB migration skipped: {e}")
+            print("[WARNING] Run 'flask db stamp head' on the server to fix this.")
 
     # 기본 라우트 (Health Check)
     @app.route('/health')
