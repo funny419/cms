@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_migrate import upgrade as db_upgrade
 from config import DevelopmentConfig, ProductionConfig
 from database import db
 from extensions import migrate, jwt
@@ -12,7 +13,7 @@ def create_app(config_class=None):
     if config_class is None:
         env = os.getenv('FLASK_ENV', 'development')
         config_class = ProductionConfig if env == 'production' else DevelopmentConfig
-    
+
     app.config.from_object(config_class)
 
     # 확장 모듈 초기화
@@ -20,6 +21,10 @@ def create_app(config_class=None):
     CORS(app, origins=["http://localhost:5173"])
     migrate.init_app(app, db)
     jwt.init_app(app)
+
+    # 앱 시작 시 마이그레이션 자동 적용
+    with app.app_context():
+        db_upgrade()
 
     # 기본 라우트 (Health Check)
     @app.route('/health')
