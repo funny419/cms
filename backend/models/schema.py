@@ -73,7 +73,7 @@ class Post(Base):
     post_type: Mapped[str] = mapped_column(String(20), default='post')  # post, page, attachment, custom...
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
