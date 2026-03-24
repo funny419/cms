@@ -18,6 +18,7 @@ export default function AdminUsers() {
   const [error, setError] = useState('');
   const [expandedUser, setExpandedUser] = useState(null);
   const [userPosts, setUserPosts] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null); // 정보 모달용
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -84,6 +85,38 @@ export default function AdminUsers() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {/* 사용자 정보 모달 */}
+      {selectedUser && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setSelectedUser(null)}
+        >
+          <div
+            style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 28, minWidth: 320, boxShadow: 'var(--shadow)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-h)', margin: 0 }}>사용자 정보</h2>
+              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-light)' }}>✕</button>
+            </div>
+            <div className="info-row"><span className="info-label">아이디</span><span className="info-value">{selectedUser.username}</span></div>
+            <div className="info-row"><span className="info-label">이메일</span><span className="info-value">{selectedUser.email}</span></div>
+            <div className="info-row">
+              <span className="info-label">권한</span>
+              <span className="badge" style={{ ...(ROLE_STYLE[selectedUser.role] || ROLE_STYLE.editor) }}>
+                {ROLE_LABEL[selectedUser.role] || selectedUser.role}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">가입일</span>
+              <span className="info-value">
+                {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -99,7 +132,12 @@ export default function AdminUsers() {
             return (
               <React.Fragment key={user.id}>
                 <tr style={{ borderBottom: expandedUser === user.id ? 'none' : '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 12px', color: 'var(--text-h)', fontWeight: 500 }}>{user.username}</td>
+                  <td
+                    style={{ padding: '10px 12px', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    {user.username}
+                  </td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-light)' }}>{user.email}</td>
                   <td style={{ padding: '10px 12px' }}>
                     <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 500, ...(ROLE_STYLE[user.role] || ROLE_STYLE.editor) }}>

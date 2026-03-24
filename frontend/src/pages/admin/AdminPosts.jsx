@@ -60,7 +60,12 @@ export default function AdminPosts() {
           <tbody>
             {posts.map((post) => (
               <tr key={post.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '10px 12px', color: 'var(--text-h)', fontWeight: 500 }}>{post.title}</td>
+                <td
+                  style={{ padding: '10px 12px', color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}
+                  onClick={() => navigate(`/posts/${post.id}`)}
+                >
+                  {post.title}
+                </td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-light)' }}>
                   {post.author_id ?? '(삭제된 회원)'}
                 </td>
