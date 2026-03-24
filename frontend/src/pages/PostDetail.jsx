@@ -7,9 +7,6 @@ const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
   catch { return null; }
 };
-const isEditorOrAdmin = (user) =>
-  user && (user.role === 'admin' || user.role === 'editor');
-
 const STATUS_BADGE = {
   published: {
     label: '발행됨',
@@ -94,7 +91,7 @@ export default function PostDetail() {
       {/* 상단 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Link to="/posts" className="text-link">← 포스트 목록</Link>
-        {isEditorOrAdmin(user) && (
+        {user && (user.role === 'admin' || post.author_id === user.id) && (
           <button
             className="btn btn-ghost"
             style={{ fontSize: 13 }}
