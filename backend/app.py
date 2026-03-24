@@ -30,6 +30,9 @@ def create_app(config_class=None):
     from api.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
+    from api.settings import settings_bp
+    app.register_blueprint(settings_bp)
+
     return app
 
 if __name__ == '__main__':
