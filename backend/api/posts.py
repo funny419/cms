@@ -31,7 +31,7 @@ def create_post() -> tuple:
     data: dict = request.get_json() or {}
     if not data.get("title"):
         return jsonify({"success": False, "data": {}, "error": "title is required"}), 400
-    author_id: int = get_jwt_identity()
+    author_id: int = int(get_jwt_identity())
     post = Post(
         title=data["title"],
         slug=data.get("slug", ""),

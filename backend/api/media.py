@@ -52,7 +52,7 @@ def upload_file() -> tuple:
         filepath=filepath,
         mimetype=file.mimetype,
         size=os.path.getsize(filepath),
-        uploaded_by=get_jwt_identity(),
+        uploaded_by=int(get_jwt_identity()),
     )
     db.session.add(media)
     try:

@@ -29,7 +29,8 @@ def create_comment() -> tuple:
 
     try:
         verify_jwt_in_request(optional=True)
-        author_id = get_jwt_identity()
+        raw_id = get_jwt_identity()
+        author_id = int(raw_id) if raw_id else None
     except Exception:
         author_id = None
 

@@ -34,7 +34,7 @@ def login() -> tuple:
         return jsonify({'success': False, 'data': {}, 'error': 'Missing request body'}), 400
     user = db.session.execute(select(User).where(User.username == data.get('username'))).scalar_one_or_none()
     if user and user.check_password(data.get('password')):
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         return jsonify({
             'success': True,
             'data': {'access_token': access_token, 'user': user.to_dict()},
@@ -45,7 +45,7 @@ def login() -> tuple:
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def me() -> tuple:
-    current_user_id: int = get_jwt_identity()
+    current_user_id: int = int(get_jwt_identity())
     user: User | None = db.session.get(User, current_user_id)
     if not user:
         return jsonify({'success': False, 'data': {}, 'error': 'User not found'}), 404
@@ -54,7 +54,7 @@ def me() -> tuple:
 @auth_bp.route('/me', methods=['PUT'])
 @jwt_required()
 def update_me() -> tuple:
-    current_user_id: int = get_jwt_identity()
+    current_user_id: int = int(get_jwt_identity())
     user: User | None = db.session.get(User, current_user_id)
     if not user:
         return jsonify({'success': False, 'data': {}, 'error': 'User not found'}), 404
