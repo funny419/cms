@@ -23,11 +23,14 @@ def register() -> tuple:
         return jsonify({'success': True, 'data': {'message': 'User registered successfully'}, 'error': ''}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'data': {}, 'error': str(e)}), 500
+        print(e)
+        return jsonify({'success': False, 'data': {}, 'error': 'An internal error occurred.'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login() -> tuple:
     data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'data': {}, 'error': 'Missing request body'}), 400
     user = db.session.execute(select(User).where(User.username == data.get('username'))).scalar_one_or_none()
     if user and user.check_password(data.get('password')):
         access_token = create_access_token(identity=user.id)
@@ -56,8 +59,19 @@ def update_me() -> tuple:
         return jsonify({'success': False, 'data': {}, 'error': 'User not found'}), 404
     data: dict = request.get_json() or {}
     if 'username' in data:
+        existing = db.session.execute(select(User).where(User.username == data['username'])).scalar_one_or_none()
+        if existing and existing.id != current_user_id:
+            return jsonify({'success': False, 'data': {}, 'error': 'Username already exists'}), 400
         user.username = data['username']
     if 'email' in data:
+        existing = db.session.execute(select(User).where(User.email == data['email'])).scalar_one_or_none()
+        if existing and existing.id != current_user_id:
+            return jsonify({'success': False, 'data': {}, 'error': 'Email already exists'}), 400
         user.email = data['email']
-    db.session.commit()
-    return jsonify({'success': True, 'data': user.to_dict(), 'error': ''}), 200
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'data': user.to_dict(), 'error': ''}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(e)
+        return jsonify({'success': False, 'data': {}, 'error': 'An internal error occurred.'}), 500
