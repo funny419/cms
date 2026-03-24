@@ -125,6 +125,17 @@ class Media(Base):
     meta_data: Mapped[Optional[dict]] = mapped_column(JSON) # Dimensions, alt text, etc.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "filename": self.filename,
+            "filepath": self.filepath,
+            "mimetype": self.mimetype,
+            "size": self.size,
+            "uploaded_by": self.uploaded_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
 
 class Comment(Base):
     """

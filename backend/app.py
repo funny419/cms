@@ -36,6 +36,9 @@ def create_app(config_class=None):
     from api.posts import posts_bp
     app.register_blueprint(posts_bp)
 
+    from api.media import media_bp
+    app.register_blueprint(media_bp)
+
     return app
 
 if __name__ == '__main__':
