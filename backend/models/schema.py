@@ -133,7 +133,17 @@ class Comment(Base):
     # Relationships
     post: Mapped["Post"] = relationship(back_populates="comments")
     author: Mapped[Optional["User"]] = relationship(back_populates="comments")
-    replies: Mapped[List["Comment"]] = relationship("Comment", backref=relationship("Comment", remote_side=[id]))
+    parent: Mapped[Optional["Comment"]] = relationship(
+        "Comment",
+        back_populates="replies",
+        remote_side="Comment.id",
+        foreign_keys="[Comment.parent_id]",
+    )
+    replies: Mapped[List["Comment"]] = relationship(
+        "Comment",
+        back_populates="parent",
+        foreign_keys="[Comment.parent_id]",
+    )
 
 
 class Menu(Base):

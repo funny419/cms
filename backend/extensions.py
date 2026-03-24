@@ -1,10 +1,6 @@
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from models.schema import Base
-
-# SQLAlchemy 3.x+ 스타일: 기존에 정의한 DeclarativeBase(Base)를 model_class로 지정
-db = SQLAlchemy(model_class=Base)
+from database import db  # 단일 db 인스턴스 (model_class=Base 포함)
 
 migrate = Migrate()
 jwt = JWTManager()
