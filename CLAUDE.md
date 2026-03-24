@@ -5,9 +5,23 @@ Docker 컨테이너로 관리. main 브랜치 push → GitHub Actions → Window
 
 ---
 
+## ⚠️ 브랜치별 작업 환경 규칙
+
+**반드시 현재 브랜치를 확인하고 올바른 환경에 접속할 것.**
+
+| 브랜치 | Docker 환경 | 설명 |
+|--------|------------|------|
+| `dev` | **로컬 Mac Docker** | `docker compose exec ...` 사용 |
+| `main` | **리모트 Windows Docker** | 서버에서 직접 실행하거나 SSH 접속 |
+
+- `main` 브랜치에서 `docker compose exec backend ...` 실행 → **로컬 dev 환경에 접속하는 것** → 잘못된 접근
+- `main` 브랜치 관련 DB/마이그레이션 작업 → **Windows 서버에서 `docker exec cms_backend_prod ...` 실행**
+
+---
+
 ## 개발 환경 명령어
 
-**Mac 로컬 개발 (docker compose v2):**
+### dev 브랜치 (로컬 Mac Docker)
 ```bash
 docker compose up -d --build   # 최초 시작
 docker compose watch            # 파일 변경 자동 반영 (권장)
@@ -24,10 +38,20 @@ docker compose exec backend flask db migrate -m "변경 내용"
 # 마이그레이션 파일은 반드시 git 커밋할 것
 ```
 
-**프로덕션:**
+### main 브랜치 (리모트 Windows Docker)
+```powershell
+# 프로덕션 컨테이너에서 실행
+docker exec cms_backend_prod flask db upgrade
+docker exec cms_backend_prod flask db stamp head
+docker exec cms_db_prod mariadb -u funnycms -p<PASSWORD> cmsdb -e "SQL"
+docker logs cms_backend_prod --tail=30
+docker restart cms_backend_prod
+```
+
+**프로덕션 재배포:**
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
@@ -129,21 +153,23 @@ docker compose -f docker-compose.prod.yml down --remove-orphans
 **Docker 빌드:**
 - `SELF_SIGNED_CERT_IN_CHAIN`: 개발용 `frontend/Dockerfile`에 `npm config set strict-ssl false` 적용됨
 - `npm ci` 실패(lock 불일치): 개발용은 `npm install` 사용, `Dockerfile.prod`만 `npm ci` 사용
-- Gunicorn 500: `app:create_app()` 팩토리 문법 확인 → `docker compose exec backend python app.py`로 ImportError 확인
+- Gunicorn 500: `app:create_app()` 팩토리 문법 확인 → `docker exec cms_backend_prod python app.py`로 ImportError 확인
 
 **API 연결:**
 - Docker 내부 API 호출 실패: `vite.config.js`의 `BACKEND_URL` 환경변수 확인
-- 테이블 없음 오류: `docker compose exec backend flask db upgrade` 실행
+- 테이블 없음 오류: `docker exec cms_backend_prod flask db upgrade` 실행
 - JWT "Subject must be a string": `create_access_token(identity=str(user.id))` 확인
 
-**Nginx (프로덕션):**
-- `npm run build` 실패 시 반드시 로컬에서 선행 빌드 후 오류 수정
+**프로덕션 마이그레이션 오류:**
+- `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
+- `Can't locate revision`: DB의 `alembic_version`이 존재하지 않는 마이그레이션 참조 → 서버에서 직접 DB 수정
+- `Unknown column`: 프로덕션 DB에 컬럼 누락 → `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` 실행 후 stamp
 
 ---
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-24 (dev 브랜치 — 블로그 소유권 + Admin 대시보드 완료)
+> 마지막 업데이트: 2026-03-24 (dev 브랜치 → main 배포)
 
 ### 완료
 
@@ -196,7 +222,7 @@ cms/
 ├── frontend/
 │   └── src/
 │       ├── api/             # axios 클라이언트 (auth, posts, admin)
-│       ├── components/      # Nav, widgets (RecentPosts, Sidebar)
+│       ├── components/      # Nav, widgets
 │       ├── context/         # ThemeContext
 │       └── pages/
 │           ├── admin/       # AdminPosts, AdminUsers
