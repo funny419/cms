@@ -42,11 +42,13 @@ docker compose -f docker-compose.prod.yml down --remove-orphans
 | 로컬 개발 포트 | FE: 5173, BE: 5000, DB: 4807 |
 
 **권한 체계 (Role):**
-- `admin` — 전체 포스트/회원 관리, Admin 대시보드 접근
-- `editor` — 본인 글 작성/수정/삭제 (회원가입 시 기본 권한)
-- `deactivated` — 로그인 차단
+- `admin` — 전체 포스트/회원 관리, Admin 대시보드 (`/admin/*`) 접근
+- `editor` — 본인 글만 작성/수정/삭제, 내 블로그 (`/my-posts`) 접근 (회원가입 시 기본)
+- `deactivated` — 로그인 차단 (기존 JWT도 roles_required에서 자동 차단)
 
 **로그인 후 분기:** admin → `/admin/posts`, editor → `/my-posts`
+
+**포스트 소유권:** PUT/DELETE `/api/posts/:id` — admin은 모두, editor는 본인 글(`author_id == 현재 유저`)만 가능. 위반 시 403.
 
 ---
 
@@ -141,21 +143,23 @@ docker compose -f docker-compose.prod.yml down --remove-orphans
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-24 (dev 브랜치)
+> 마지막 업데이트: 2026-03-24 (dev 브랜치 — 블로그 소유권 + Admin 대시보드 완료)
 
 ### 완료
 
 | 영역 | 기능 |
 |------|------|
-| 인증 | 로그인/회원가입/프로필 수정/JWT/RBAC |
-| 포스트 | CRUD API + WYSIWYG 에디터(Quill) + 소유권 검사 |
-| 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 |
-| 댓글 | 계층형 + 스팸 필터링 |
+| 인증 | 로그인/회원가입/프로필 수정/JWT/RBAC/deactivated 차단 |
+| 포스트 | CRUD API + WYSIWYG 에디터(react-quill-new) + 소유권 검사 |
+| 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
+| 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 + path traversal 방어 |
+| 댓글 | 계층형 + 스팸 필터링 + JWT author_id 위조 방지 |
 | 메뉴 | 동적 메뉴 관리 API |
-| 사이트 설정 | GET/PUT `/api/settings` |
-| Admin | 포스트/회원 관리 대시보드 |
-| UI/UX | Notion/Bear 테마 + 라이트/다크 모드 + Nav |
-| 인프라 | Docker Watch(로컬) + Gunicorn(프로덕션) + CI/CD |
+| 사이트 설정 | GET/PUT `/api/settings` (Option 모델) |
+| Admin 대시보드 | 포스트 관리(`/admin/posts`) + 회원 관리(`/admin/users`) |
+| Admin 회원 관리 | 권한변경·비활성화·활성화·삭제·글 보기(인라인 토글) |
+| UI/UX | Notion/Bear 테마 + 라이트/다크 모드 + role별 Nav |
+| 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
 
 ### 미구현
 
@@ -163,9 +167,9 @@ docker compose -f docker-compose.prod.yml down --remove-orphans
 |------|------|
 | DB 연결 마법사 (Setup Wizard) | |
 | Post Meta API | DB 스키마만 존재 |
-| 리치 텍스트/마크다운 에디터 UI | Quill은 있으나 마크다운 렌더링 없음 |
 | 포스트 검색/필터 | |
 | 페이지네이션 | 현재 전체 반환 |
+| 댓글 UI | API만 구현됨 |
 
 ---
 
