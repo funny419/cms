@@ -16,7 +16,7 @@ def register() -> tuple:
         return jsonify({'success': False, 'data': {}, 'error': 'Username already exists'}), 400
     if db.session.execute(select(User).where(User.email == data['email'])).scalar_one_or_none():
         return jsonify({'success': False, 'data': {}, 'error': 'Email already exists'}), 400
-    new_user = User(username=data['username'], email=data['email'])
+    new_user = User(username=data['username'], email=data['email'], role='editor')
     new_user.set_password(data['password'])
     try:
         db.session.add(new_user)
