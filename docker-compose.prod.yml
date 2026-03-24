@@ -21,7 +21,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile # Production-ready Dockerfile
+      dockerfile: Dockerfile
     container_name: cms_backend_prod
     restart: always
     depends_on:
@@ -29,10 +29,12 @@ services:
         condition: service_healthy
     environment:
       FLASK_APP: app.py
-      FLASK_DEBUG: 0 # Production Mode
+      FLASK_ENV: production
+      FLASK_DEBUG: "0"
       DATABASE_URL: mysql+pymysql://${CMS_DB_USER:-funnycms}:${CMS_DB_APP_PASSWORD}@db:3306/${CMS_DB_NAME:-cmsdb}
       SECRET_KEY: ${SECRET_KEY}
-    command: ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]
 
   # Nginx reverse proxy and frontend server
   nginx:

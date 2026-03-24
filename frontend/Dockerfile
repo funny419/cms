@@ -1,5 +1,5 @@
 # Node.js LTS 버전 사용
-FROM node:latest
+FROM node:20-alpine
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 의존성 설치
-RUN npm install
+RUN npm ci
 
 # 소스 코드 복사
 COPY . .

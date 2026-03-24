@@ -9,10 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 COPY requirements.txt .
-# Add gunicorn for production
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir gunicorn python-dotenv
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# The command (flask run vs gunicorn) will be specified in docker-compose
+# CMD는 docker-compose에서 서비스별로 지정 (dev: flask run, prod: gunicorn)

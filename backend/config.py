@@ -24,3 +24,6 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # 환경변수 미설정 시 None → Flask/JWT 시작 시 즉시 에러 발생 (의도적)
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
