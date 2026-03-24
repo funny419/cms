@@ -63,7 +63,7 @@ class Post(Base):
     __tablename__ = 'posts'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
+    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey('users.id'), nullable=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), index=True)
     content: Mapped[Optional[str]] = mapped_column(Text)  # HTML or Markdown
