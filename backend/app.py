@@ -42,6 +42,9 @@ def create_app(config_class=None):
     from api.comments import comments_bp
     app.register_blueprint(comments_bp)
 
+    from api.menus import menus_bp
+    app.register_blueprint(menus_bp)
+
     return app
 
 if __name__ == '__main__':
