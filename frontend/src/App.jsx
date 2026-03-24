@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import PostList from './pages/PostList';
 
 function App() {
   return (
@@ -15,7 +16,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
-        
+        <Route path="/posts" element={<PostList />} />
+
         {/* 404 처리 */}
         <Route path="*" element={<div className="p-10 text-center">404 - Not Found</div>} />
       </Routes>
