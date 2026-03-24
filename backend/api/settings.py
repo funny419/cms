@@ -9,6 +9,8 @@ settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 # 공개 허용 키 목록
 PUBLIC_KEYS = ["site_title", "tagline", "site_url"]
 
+ADMIN_ALLOWED_KEYS = {"site_title", "tagline", "site_url", "admin_email", "posts_per_page"}
+
 
 @settings_bp.route("", methods=["GET"])
 def get_settings() -> tuple:
@@ -26,6 +28,8 @@ def update_settings() -> tuple:
     """관리자 전용 사이트 설정 수정."""
     data: dict = request.get_json() or {}
     for key, value in data.items():
+        if key not in ADMIN_ALLOWED_KEYS:
+            continue  # 허용되지 않는 키는 무시
         option = db.session.execute(
             select(Option).where(Option.option_name == key)
         ).scalar_one_or_none()
@@ -33,5 +37,9 @@ def update_settings() -> tuple:
             option.option_value = str(value)
         else:
             db.session.add(Option(option_name=key, option_value=str(value)))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
     return jsonify({"success": True, "data": data, "error": ""}), 200
