@@ -1,0 +1,58 @@
+<h2>글 내용 입력 방식</h2>
+<p class="subtitle">에디터 내 본문 입력 영역을 어떻게 구성할까요?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:560px;margin:0 auto;">
+        <div style="font-size:14px;font-weight:700;color:#37352f;border-bottom:2px solid #e9e9e7;padding-bottom:8px;margin-bottom:10px;">포스트 제목을 입력하세요</div>
+        <textarea style="width:100%;height:160px;border:1px solid #e9e9e7;border-radius:6px;padding:12px;font-size:11px;color:#6b6f76;box-sizing:border-box;resize:none;background:#fff;font-family:monospace;" readonly># 소제목
+
+여기에 내용을 작성합니다.
+
+- 리스트 항목 1
+- 리스트 항목 2
+
+**굵게** 또는 *기울임*으로 텍스트를 강조합니다.</textarea>
+        <div style="margin-top:6px;font-size:8px;color:#9b9a97;">마크다운 문법 지원 (렌더링 없이 텍스트로 저장)</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — 단순 Textarea</h3>
+      <p>마크다운 텍스트 그대로 입력. 빠르고 단순. 상세 페이지에서 렌더링.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:580px;margin:0 auto;">
+        <div style="font-size:14px;font-weight:700;color:#37352f;border-bottom:2px solid #e9e9e7;padding-bottom:8px;margin-bottom:10px;">포스트 제목을 입력하세요</div>
+        <div style="display:flex;border:1px solid #e9e9e7;border-radius:6px;overflow:hidden;">
+          <div style="flex:1;border-right:1px solid #e9e9e7;">
+            <div style="font-size:8px;font-weight:600;color:#9b9a97;padding:5px 10px;border-bottom:1px solid #e9e9e7;background:#f7f6f3;">✏️ 편집</div>
+            <textarea style="width:100%;height:120px;border:none;padding:10px;font-size:9px;color:#6b6f76;box-sizing:border-box;resize:none;font-family:monospace;" readonly># 소제목
+
+내용을 작성합니다.
+
+**굵게** *기울임*</textarea>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:8px;font-weight:600;color:#9b9a97;padding:5px 10px;border-bottom:1px solid #e9e9e7;background:#f7f6f3;">👁 미리보기</div>
+            <div style="padding:10px;font-size:9px;color:#37352f;line-height:1.6;">
+              <div style="font-size:12px;font-weight:700;margin-bottom:4px;">소제목</div>
+              <p style="margin:0 0 4px;">내용을 작성합니다.</p>
+              <p style="margin:0;"><strong>굵게</strong> <em>기울임</em></p>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:8px;color:#9b9a97;">좌: 마크다운 입력 / 우: 실시간 렌더링 미리보기</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 마크다운 + 실시간 미리보기</h3>
+      <p>좌우 분할. 왼쪽 작성, 오른쪽 렌더링 즉시 확인. <code>marked.js</code> 사용.</p>
+    </div>
+  </div>
+
+</div>

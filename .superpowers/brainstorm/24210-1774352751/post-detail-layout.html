@@ -1,0 +1,91 @@
+<h2>포스트 상세 페이지 레이아웃</h2>
+<p class="subtitle">클릭하면 포스트를 열었을 때 어떤 형태로 보여줄지 선택해주세요</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div class="mock-nav" style="margin-bottom:12px;font-size:11px;color:#9b9a97;">✦ CMS &nbsp;/&nbsp; 포스트 목록 &nbsp;/&nbsp; 포스트 제목</div>
+      <div style="max-width:560px;margin:0 auto;">
+        <div style="font-size:9px;color:#9b9a97;margin-bottom:6px;">2026년 3월 24일</div>
+        <div style="font-size:16px;font-weight:700;color:#37352f;margin-bottom:8px;line-height:1.3;">포스트 제목이 여기에 표시됩니다</div>
+        <div style="height:4px;background:#e9e9e7;border-radius:2px;margin-bottom:12px;"></div>
+        <div style="font-size:10px;color:#6b6f76;line-height:1.6;">
+          <div style="height:7px;background:#e9e9e7;border-radius:3px;margin-bottom:5px;width:100%;"></div>
+          <div style="height:7px;background:#e9e9e7;border-radius:3px;margin-bottom:5px;width:90%;"></div>
+          <div style="height:7px;background:#e9e9e7;border-radius:3px;margin-bottom:5px;width:95%;"></div>
+          <div style="height:7px;background:#e9e9e7;border-radius:3px;margin-bottom:5px;width:80%;"></div>
+        </div>
+        <div style="margin-top:16px;">
+          <span style="font-size:9px;background:#f0edff;color:#6c47ff;padding:2px 8px;border-radius:99px;">← 목록으로</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — 심플 단일 컬럼</h3>
+      <p>680px 너비 중앙 정렬. 콘텐츠에 집중. Notion/Medium 스타일.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:9px;color:#9b9a97;margin-bottom:6px;">2026년 3월 24일</div>
+          <div style="font-size:14px;font-weight:700;color:#37352f;margin-bottom:6px;line-height:1.3;">포스트 제목</div>
+          <div style="height:3px;background:#e9e9e7;border-radius:2px;margin-bottom:8px;"></div>
+          <div style="font-size:9px;color:#6b6f76;line-height:1.6;">
+            <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:100%;"></div>
+            <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:88%;"></div>
+            <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:95%;"></div>
+            <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:75%;"></div>
+            <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:90%;"></div>
+          </div>
+        </div>
+        <div style="width:100px;flex-shrink:0;border-left:1px solid #e9e9e7;padding-left:10px;">
+          <div style="font-size:8px;font-weight:600;color:#37352f;margin-bottom:8px;">최근 포스트</div>
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:5px;"></div>
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:5px;width:80%;"></div>
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:5px;width:90%;"></div>
+          <div style="margin-top:12px;font-size:8px;font-weight:600;color:#37352f;margin-bottom:6px;">태그</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;">
+            <span style="font-size:7px;background:#f0edff;color:#6c47ff;padding:1px 5px;border-radius:99px;">공지</span>
+            <span style="font-size:7px;background:#f0edff;color:#6c47ff;padding:1px 5px;border-radius:99px;">일반</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 콘텐츠 + 사이드바</h3>
+      <p>본문 옆에 최근글/태그 사이드바 배치. 블로그 스타일.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:560px;margin:0 auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:9px;color:#9b9a97;">← 목록</span>
+          <span style="font-size:8px;background:#f0edff;color:#6c47ff;padding:2px 8px;border-radius:99px;">✏️ 편집</span>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:#37352f;margin-bottom:4px;">포스트 제목</div>
+        <div style="font-size:9px;color:#9b9a97;margin-bottom:10px;">by testuser &nbsp;·&nbsp; 2026년 3월 24일 &nbsp;·&nbsp; <span style="color:#6c47ff;">published</span></div>
+        <div style="height:3px;background:#e9e9e7;border-radius:2px;margin-bottom:10px;"></div>
+        <div style="font-size:9px;color:#6b6f76;line-height:1.6;">
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:100%;"></div>
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:90%;"></div>
+          <div style="height:5px;background:#e9e9e7;border-radius:2px;margin-bottom:4px;width:85%;"></div>
+        </div>
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid #e9e9e7;display:flex;gap:8px;">
+          <span style="font-size:8px;background:#f7f6f3;border:1px solid #e9e9e7;padding:3px 10px;border-radius:4px;color:#37352f;">← 이전 글</span>
+          <span style="font-size:8px;background:#f7f6f3;border:1px solid #e9e9e7;padding:3px 10px;border-radius:4px;color:#37352f;">다음 글 →</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — 심플 + 메타 정보 강조</h3>
+      <p>작성자·날짜·상태 표시, 이전/다음 글 네비게이션, 편집 버튼 포함.</p>
+    </div>
+  </div>
+
+</div>

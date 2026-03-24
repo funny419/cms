@@ -1,0 +1,89 @@
+<h2>WYSIWYG 에디터 라이브러리</h2>
+<p class="subtitle">A 레이아웃(풀페이지)에 적용할 에디터를 선택해주세요</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:540px;margin:0 auto;">
+        <input style="font-size:15px;font-weight:700;color:#37352f;border:none;border-bottom:2px solid #e9e9e7;padding:0 0 8px;width:100%;background:transparent;margin-bottom:10px;" value="포스트 제목" readonly>
+        <!-- Quill 툴바 -->
+        <div style="border:1px solid #e9e9e7;border-radius:6px 6px 0 0;background:#fff;padding:5px 8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:9px;font-weight:700;color:#37352f;cursor:pointer;padding:2px 4px;border-radius:3px;background:#f0edff;">B</span>
+          <span style="font-size:9px;font-style:italic;color:#37352f;cursor:pointer;padding:2px 4px;">I</span>
+          <span style="font-size:9px;text-decoration:underline;color:#37352f;cursor:pointer;padding:2px 4px;">U</span>
+          <span style="color:#e9e9e7;">|</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">H1</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">H2</span>
+          <span style="color:#e9e9e7;">|</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">≡ 목록</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">1. 번호</span>
+          <span style="color:#e9e9e7;">|</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">🔗</span>
+          <span style="font-size:9px;color:#37352f;cursor:pointer;padding:2px 4px;">🖼</span>
+        </div>
+        <div style="border:1px solid #e9e9e7;border-top:none;border-radius:0 0 6px 6px;background:#fff;padding:12px;min-height:90px;font-size:10px;color:#37352f;line-height:1.7;">
+          <p style="margin:0 0 4px;">여기에 내용을 직접 <strong>서식 있게</strong> 작성합니다.</p>
+          <p style="margin:0;color:#9b9a97;font-style:italic;">텍스트를 드래그하면 툴바가 나타납니다.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Quill (react-quill)</h3>
+      <p>가장 널리 쓰이는 React WYSIWYG. 상단 고정 툴바, 안정적. npm 설치만으로 사용 가능.</p>
+      <p style="font-size:12px;color:#9b9a97;margin-top:4px;">설치: <code>npm install react-quill</code></p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:540px;margin:0 auto;">
+        <input style="font-size:15px;font-weight:700;color:#37352f;border:none;border-bottom:2px solid #e9e9e7;padding:0 0 8px;width:100%;background:transparent;margin-bottom:10px;" value="포스트 제목" readonly>
+        <!-- TipTap - 인라인 툴바 스타일 -->
+        <div style="border:1px solid #e9e9e7;border-radius:6px;background:#fff;padding:14px;min-height:110px;font-size:10px;color:#37352f;line-height:1.7;position:relative;">
+          <p style="margin:0 0 6px;"><strong>제목 텍스트</strong></p>
+          <p style="margin:0 0 4px;">텍스트를 선택하면 <span style="background:#1a1a1a;color:#fff;padding:2px 8px;border-radius:4px;font-size:8px;display:inline-flex;gap:4px;"><span>B</span><span>|</span><span>I</span><span>|</span><span>🔗</span><span>|</span><span>H1</span></span> 형태의 팝업 툴바 등장.</p>
+          <p style="margin:0;color:#9b9a97;">/를 입력하면 블록 삽입 메뉴...</p>
+        </div>
+        <div style="margin-top:5px;font-size:8px;color:#9b9a97;">텍스트 선택 시 플로팅 툴바 · / 입력 시 블록 메뉴 (Notion 스타일)</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — TipTap</h3>
+      <p>Notion과 동일한 ProseMirror 기반. 선택 시 플로팅 툴바, / 슬래시 커맨드. 가장 현대적.</p>
+      <p style="font-size:12px;color:#9b9a97;margin-top:4px;">설치: <code>npm install @tiptap/react @tiptap/starter-kit</code></p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#f7f6f3;border-radius:6px;font-family:system-ui;">
+      <div style="max-width:540px;margin:0 auto;">
+        <input style="font-size:15px;font-weight:700;color:#37352f;border:none;border-bottom:2px solid #e9e9e7;padding:0 0 8px;width:100%;background:transparent;margin-bottom:10px;" value="포스트 제목" readonly>
+        <!-- CKEditor 툴바 -->
+        <div style="border:1px solid #e9e9e7;border-radius:6px 6px 0 0;background:#f0f0f0;padding:5px 8px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+          <select style="font-size:8px;padding:1px 3px;border:1px solid #ccc;border-radius:2px;"><option>문단</option></select>
+          <span style="color:#ccc;">|</span>
+          <span style="font-size:9px;font-weight:700;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">B</span>
+          <span style="font-size:9px;font-style:italic;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">I</span>
+          <span style="font-size:9px;text-decoration:underline;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">U</span>
+          <span style="color:#ccc;">|</span>
+          <span style="font-size:9px;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">≡</span>
+          <span style="font-size:9px;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">1.</span>
+          <span style="color:#ccc;">|</span>
+          <span style="font-size:9px;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">🔗</span>
+          <span style="font-size:9px;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">🖼</span>
+          <span style="font-size:9px;cursor:pointer;padding:2px 4px;background:#fff;border:1px solid #ccc;border-radius:2px;">표</span>
+        </div>
+        <div style="border:1px solid #e9e9e7;border-top:none;border-radius:0 0 6px 6px;background:#fff;padding:12px;min-height:80px;font-size:10px;color:#37352f;line-height:1.7;">
+          <p style="margin:0 0 4px;">풍부한 기능의 에디터. 표, 미디어 삽입, 고급 서식 지원.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — CKEditor 5</h3>
+      <p>기능이 가장 풍부함. 표·미디어 삽입 등 고급 기능. 번들 크기가 크고 설정이 복잡.</p>
+      <p style="font-size:12px;color:#9b9a97;margin-top:4px;">설치: <code>npm install @ckeditor/ckeditor5-react</code></p>
+    </div>
+  </div>
+
+</div>
