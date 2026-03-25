@@ -51,7 +51,7 @@ export default function PostEditor() {
     if (!isEditorOrAdmin(user)) { navigate('/posts'); return; }
 
     if (isEdit) {
-      getPost(id).then((res) => {
+      getPost(id, token, true).then((res) => {   // skipCount=true → view_count 미증가
         if (res.success) {
           setForm({
             title: res.data.title || '',

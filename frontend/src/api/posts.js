@@ -3,18 +3,23 @@ import axios from 'axios';
 const BASE_URL = '/api/posts';
 const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
-export const listPosts = async () => {
+// listPosts: token이 있으면 Authorization 헤더 포함 (user_liked 반영)
+export const listPosts = async (token) => {
   try {
-    const response = await axios.get(BASE_URL);
+    const headers = token ? authHeader(token) : {};
+    const response = await axios.get(BASE_URL, { headers });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch posts.' };
   }
 };
 
-export const getPost = async (id) => {
+// getPost: token optional (user_liked 반영), skipCount=true 시 view_count 미증가 (편집 페이지용)
+export const getPost = async (id, token, skipCount = false) => {
   try {
-    const response = await axios.get(`${BASE_URL}/${id}`);
+    const headers = token ? authHeader(token) : {};
+    const params = skipCount ? { skip_count: 1 } : {};
+    const response = await axios.get(`${BASE_URL}/${id}`, { headers, params });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch post.' };
@@ -54,5 +59,15 @@ export const getMyPosts = async (token) => {
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch my posts.' };
+  }
+};
+
+// likePost: POST /api/posts/:id/like
+export const likePost = async (token, id) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/${id}/like`, {}, { headers: authHeader(token) });
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || 'Failed to like post.' };
   }
 };
