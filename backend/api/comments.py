@@ -2,8 +2,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import select
 from api.decorators import roles_required
-from models.schema import Comment
+from models.schema import Comment, User
 from database import db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 comments_bp = Blueprint("comments", __name__, url_prefix="/api/comments")
 
@@ -17,32 +18,69 @@ def _is_spam(content: str) -> bool:
 
 @comments_bp.route("", methods=["POST"])
 def create_comment() -> tuple:
-    """댓글 작성 — 로그인 불필요 (게스트 작성 가능)."""
+    """댓글 작성 — 로그인 사용자(즉시 공개) 또는 게스트(이름+이메일+패스워드 필수, 승인 대기)."""
     data: dict = request.get_json() or {}
-    if not data.get("post_id") or not data.get("content"):
+    post_id = data.get("post_id")
+    content: str = (data.get("content") or "").strip()
+
+    if not post_id or not content:
         return jsonify({"success": False, "data": {}, "error": "post_id and content are required"}), 400
-    if not data.get("author_name"):
-        return jsonify({"success": False, "data": {}, "error": "author_name is required"}), 400
+    if len(content) > 2000:
+        return jsonify({"success": False, "data": {}, "error": "댓글은 2000자 이하여야 합니다."}), 400
 
-    content: str = data["content"]
-    status = "spam" if _is_spam(content) else "pending"
+    # parent_id 유효성 검사
+    parent_id = data.get("parent_id")
+    if parent_id:
+        parent: Comment | None = db.session.get(Comment, parent_id)
+        if not parent:
+            return jsonify({"success": False, "data": {}, "error": "부모 댓글을 찾을 수 없습니다."}), 404
+        if parent.post_id != post_id:
+            return jsonify({"success": False, "data": {}, "error": "잘못된 parent_id입니다."}), 400
+        if parent.parent_id is not None:
+            return jsonify({"success": False, "data": {}, "error": "답글에는 답글을 달 수 없습니다."}), 400
 
+    # JWT 확인 (optional)
     try:
         verify_jwt_in_request(optional=True)
         raw_id = get_jwt_identity()
-        author_id = int(raw_id) if raw_id else None
     except Exception:
-        author_id = None
+        raw_id = None
 
-    comment = Comment(
-        post_id=data["post_id"],
-        author_id=author_id,
-        parent_id=data.get("parent_id"),
-        author_name=data["author_name"],
-        author_email=data.get("author_email", ""),
-        content=content,
-        status=status,
-    )
+    if raw_id:
+        # 로그인 사용자
+        user: User | None = db.session.get(User, int(raw_id))
+        if not user or user.role == "deactivated":
+            return jsonify({"success": False, "data": {}, "error": "Permission denied"}), 403
+        comment = Comment(
+            post_id=post_id,
+            author_id=user.id,
+            parent_id=parent_id,
+            author_name=user.username,
+            author_email="",
+            author_password_hash=None,
+            content=content,
+            status="approved",
+        )
+    else:
+        # 게스트
+        author_name: str = (data.get("author_name") or "").strip()
+        author_email: str = (data.get("author_email") or "").strip()
+        author_password: str = (data.get("author_password") or "").strip()
+        if not author_name or not author_email or not author_password:
+            return jsonify({"success": False, "data": {}, "error": "게스트 댓글은 이름, 이메일, 패스워드가 필요합니다."}), 400
+
+        status = "spam" if _is_spam(content) else "pending"
+        comment = Comment(
+            post_id=post_id,
+            author_id=None,
+            parent_id=parent_id,
+            author_name=author_name,
+            author_email=author_email,
+            author_password_hash=generate_password_hash(author_password),
+            content=content,
+            status=status,
+        )
+
     db.session.add(comment)
     try:
         db.session.commit()

@@ -163,6 +163,7 @@ class Comment(Base):
             "author_id": self.author_id,
             "parent_id": self.parent_id,
             "author_name": self.author_name,
+            "author_email": self.author_email,   # 게스트 식별용, 프론트엔드가 사용
             "content": self.content,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
