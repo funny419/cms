@@ -95,6 +95,55 @@ def create_comment() -> tuple:
     return jsonify({"success": True, "data": comment.to_dict(), "error": ""}), 201
 
 
+@comments_bp.route("/<int:comment_id>", methods=["PUT"])
+def update_comment(comment_id: int) -> tuple:
+    """댓글 수정 — 로그인 사용자는 본인 글만(admin 제외), 게스트는 이메일+패스워드 인증."""
+    comment: Comment | None = db.session.get(Comment, comment_id)
+    if not comment:
+        return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
+
+    data: dict = request.get_json() or {}
+    content: str = (data.get("content") or "").strip()
+    if not content:
+        return jsonify({"success": False, "data": {}, "error": "content is required"}), 400
+    if len(content) > 2000:
+        return jsonify({"success": False, "data": {}, "error": "댓글은 2000자 이하여야 합니다."}), 400
+
+    # 소유권 검증
+    try:
+        verify_jwt_in_request(optional=True)
+        raw_id = get_jwt_identity()
+    except Exception:
+        raw_id = None
+
+    if raw_id:
+        user: User | None = db.session.get(User, int(raw_id))
+        if not user or user.role == "deactivated":
+            return jsonify({"success": False, "data": {}, "error": "Permission denied"}), 403
+        # admin은 모두 수정 가능, 그 외는 본인 글만
+        if user.role != "admin" and comment.author_id != user.id:
+            return jsonify({"success": False, "data": {}, "error": "본인 댓글만 수정할 수 있습니다."}), 403
+    else:
+        # 게스트 인증
+        author_email: str = (data.get("author_email") or "").strip()
+        author_password: str = (data.get("author_password") or "").strip()
+        if not author_email or not author_password:
+            return jsonify({"success": False, "data": {}, "error": "이메일과 패스워드를 입력하세요."}), 400
+        if (comment.author_id is not None
+                or comment.author_email != author_email
+                or not comment.author_password_hash
+                or not check_password_hash(comment.author_password_hash, author_password)):
+            return jsonify({"success": False, "data": {}, "error": "이메일 또는 패스워드가 올바르지 않습니다."}), 401
+
+    comment.content = content
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
+    return jsonify({"success": True, "data": comment.to_dict(), "error": ""}), 200
+
+
 @comments_bp.route("/post/<int:post_id>", methods=["GET"])
 def list_comments(post_id: int) -> tuple:
     """포스트별 승인된 댓글 목록 조회."""
@@ -124,13 +173,47 @@ def approve_comment(comment_id: int) -> tuple:
 
 
 @comments_bp.route("/<int:comment_id>", methods=["DELETE"])
-@roles_required("admin")
 def delete_comment(comment_id: int) -> tuple:
-    """관리자 전용 — 댓글 삭제."""
+    """댓글 삭제 — admin 항상 허용, 로그인 사용자는 본인 글만, 게스트는 이메일+패스워드 인증."""
     comment: Comment | None = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
+
+    data: dict = request.get_json() or {}
+
+    # 소유권 검증
+    try:
+        verify_jwt_in_request(optional=True)
+        raw_id = get_jwt_identity()
+    except Exception:
+        raw_id = None
+
+    if raw_id:
+        user: User | None = db.session.get(User, int(raw_id))
+        if not user or user.role == "deactivated":
+            return jsonify({"success": False, "data": {}, "error": "Permission denied"}), 403
+        if user.role != "admin" and comment.author_id != user.id:
+            return jsonify({"success": False, "data": {}, "error": "본인 댓글만 삭제할 수 있습니다."}), 403
+    else:
+        # 게스트 인증
+        author_email: str = (data.get("author_email") or "").strip()
+        author_password: str = (data.get("author_password") or "").strip()
+        if not author_email or not author_password:
+            return jsonify({"success": False, "data": {}, "error": "이메일과 패스워드를 입력하세요."}), 400
+        if (comment.author_id is not None
+                or comment.author_email != author_email
+                or not comment.author_password_hash
+                or not check_password_hash(comment.author_password_hash, author_password)):
+            return jsonify({"success": False, "data": {}, "error": "이메일 또는 패스워드가 올바르지 않습니다."}), 401
+
+    # 답글(children) 먼저 삭제
+    replies = db.session.execute(
+        select(Comment).where(Comment.parent_id == comment_id)
+    ).scalars().all()
+    for reply in replies:
+        db.session.delete(reply)
     db.session.delete(comment)
+
     try:
         db.session.commit()
     except Exception:
