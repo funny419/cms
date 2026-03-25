@@ -112,7 +112,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `GET /api/posts` | 공개 | published 포스트 목록 |
+| `GET /api/posts` | 공개 | published 포스트 목록 (author_username·view_count·comment_count·like_count·user_liked 포함) |
+| `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가, 편집 페이지용) |
+| `POST /api/posts/:id/like` | editor/admin | 추천 토글 (본인 글 불가, 1인 1추천) |
 | `GET /api/posts/mine` | 로그인 | 내 글 전체 (draft+published) |
 | `POST /api/posts` | editor/admin | 글 작성 |
 | `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사) |
@@ -123,11 +125,16 @@ docker compose -f docker-compose.prod.yml up -d --build
 | `PUT /api/settings` | admin | 사이트 설정 수정 |
 | `GET /api/media` | editor/admin | 미디어 목록 |
 | `POST /api/media` | editor/admin | 파일 업로드 + 썸네일 |
+| `GET /api/comments/post/:id` | 공개 | 포스트별 승인된 댓글 목록 |
+| `POST /api/comments` | 공개 | 댓글 작성 (로그인=즉시공개, 게스트=이름+이메일+패스워드 필수+승인대기) |
+| `PUT /api/comments/:id` | 소유자/게스트인증 | 댓글 수정 (로그인=author_id 일치, 게스트=이메일+패스워드 인증) |
+| `DELETE /api/comments/:id` | admin/소유자/게스트인증 | 댓글 삭제 (cascade 답글 포함) |
 | `GET /api/admin/posts` | admin | 전체 포스트 관리 |
 | `GET /api/admin/users` | admin | 전체 회원 목록 |
+| `GET /api/admin/comments` | admin | 전체 댓글 목록 (post_title 포함) |
 | `PUT /api/admin/users/:id/role` | admin | 권한 변경 |
 | `PUT /api/admin/users/:id/deactivate` | admin | 비활성화 |
-| `DELETE /api/admin/users/:id` | admin | 회원 삭제 (포스트 orphan 처리) |
+| `DELETE /api/admin/users/:id` | admin | 회원 삭제 (포스트·댓글 orphan 처리) |
 
 ---
 
@@ -164,12 +171,19 @@ docker compose -f docker-compose.prod.yml up -d --build
 - `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
 - `Can't locate revision`: DB의 `alembic_version`이 존재하지 않는 마이그레이션 참조 → 서버에서 직접 DB 수정
 - `Unknown column`: 프로덕션 DB에 컬럼 누락 → `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` 실행 후 stamp
+- `Multiple head revisions`: 마이그레이션 히스토리가 분기됨 → `flask db heads`로 두 head 확인 후 merge migration 파일 생성 (`down_revision = ('head1', 'head2')`, `upgrade()/downgrade()` 모두 pass)
+
+**포스트 통계:**
+- 개발 환경(`<StrictMode>`)에서 포스트 상세 진입 시 view_count가 +2로 보이는 것은 정상 — React StrictMode가 useEffect를 2번 실행하는 개발 전용 동작. 프로덕션 빌드에서는 +1.
+
+**권한 관련:**
+- User 모델 DB 기본값(`default='subscriber'`)과 register API(`role='editor'`)가 다름 — 회원가입 API로 생성된 계정은 항상 editor. DB에 직접 삽입한 계정은 subscriber가 될 수 있어 PostEditor 접근 시 전체 글 페이지로 리다이렉트될 수 있음 → `UPDATE users SET role='editor' WHERE username='...'` 로 수정
 
 ---
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-24 (dev 브랜치 → main 배포)
+> 마지막 업데이트: 2026-03-25 (댓글 UI + 포스트 통계/추천 구현)
 
 ### 완료
 
@@ -177,13 +191,18 @@ docker compose -f docker-compose.prod.yml up -d --build
 |------|------|
 | 인증 | 로그인/회원가입/프로필 수정/JWT/RBAC/deactivated 차단 |
 | 포스트 | CRUD API + WYSIWYG 에디터(react-quill-new) + 소유권 검사 |
+| 포스트 통계 | 조회수(view_count) + 댓글수 + 추천수 — PostList/PostDetail에 표시 |
+| 포스트 추천 | 로그인 사용자 추천/취소 토글, 본인 글 추천 불가, 1인 1추천(DB UniqueConstraint) |
 | 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
 | 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 + path traversal 방어 |
-| 댓글 | 계층형 + 스팸 필터링 + JWT author_id 위조 방지 |
+| 댓글 | 계층형(1단 답글) + 로그인/게스트 분기 + 수정/삭제 소유권 인증 + 스팸 필터링 |
+| 댓글 UI | PostDetail 댓글 섹션 — 로그인(즉시공개), 게스트(이름+이메일+패스워드, 승인대기) |
+| 댓글 수정/삭제 | 로그인: author_id 일치, 게스트: 이메일+패스워드 인증 |
 | 메뉴 | 동적 메뉴 관리 API |
 | 사이트 설정 | GET/PUT `/api/settings` (Option 모델) |
-| Admin 대시보드 | 포스트 관리(`/admin/posts`) + 회원 관리(`/admin/users`) |
+| Admin 대시보드 | 포스트 관리 + 회원 관리 + 댓글 관리(`/admin/comments`) |
 | Admin 회원 관리 | 권한변경·비활성화·활성화·삭제·글 보기(인라인 토글) |
+| Admin 댓글 관리 | 전체 댓글 목록(상태 뱃지)·삭제 |
 | UI/UX | Notion/Bear 테마 + 라이트/다크 모드 + role별 Nav |
 | 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
 
@@ -195,7 +214,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 | Post Meta API | DB 스키마만 존재 |
 | 포스트 검색/필터 | |
 | 페이지네이션 | 현재 전체 반환 |
-| 댓글 UI | API만 구현됨 |
+| Admin 댓글 승인 UI | approve 엔드포인트 존재, UI 미구현 (게스트 댓글 승인용) |
 
 ---
 
@@ -221,14 +240,14 @@ cms/
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── api/             # axios 클라이언트 (auth, posts, admin)
-│       ├── components/      # Nav, widgets
+│       ├── api/             # axios 클라이언트 (auth, posts, admin, comments)
+│       ├── components/      # Nav, CommentSection, widgets
 │       ├── context/         # ThemeContext
 │       └── pages/
-│           ├── admin/       # AdminPosts, AdminUsers
+│           ├── admin/       # AdminPosts, AdminUsers, AdminComments
 │           ├── MyPosts.jsx  # 내 블로그 (editor 로그인 후)
-│           ├── PostList.jsx # 전체 공개 글
-│           ├── PostDetail.jsx
+│           ├── PostList.jsx # 전체 공개 글 (작성자·조회수·댓글수·추천수)
+│           ├── PostDetail.jsx  # 추천 버튼 + 댓글 섹션
 │           └── PostEditor.jsx  # Quill WYSIWYG
 ├── docs/superpowers/        # 설계 스펙 및 구현 계획서
 ├── .github/workflows/deploy.yml
