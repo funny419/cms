@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPost, listPosts } from '../api/posts';
+import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
 import CommentSection from '../components/CommentSection';
 
@@ -32,13 +32,17 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const user = getUser();
+  const token = localStorage.getItem('token');
+  const [likeCount, setLikeCount] = useState(0);
+  const [userLiked, setUserLiked] = useState(false);
+  const [liking, setLiking] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const [postRes, listRes] = await Promise.all([
-          getPost(id),
-          listPosts(),
+          getPost(id, token),
+          listPosts(token),
         ]);
 
         if (!postRes.success) {
@@ -48,6 +52,8 @@ export default function PostDetail() {
         }
 
         setPost(postRes.data);
+        setLikeCount(postRes.data.like_count ?? 0);
+        setUserLiked(postRes.data.user_liked ?? false);
 
         if (listRes.success) {
           // created_at 내림차순 (최신 글이 앞)
@@ -68,6 +74,17 @@ export default function PostDetail() {
 
     load();
   }, [id]);
+
+  const handleLike = async () => {
+    if (!token || !user) return;
+    setLiking(true);
+    const res = await likePost(token, post.id);
+    setLiking(false);
+    if (res.success) {
+      setLikeCount(res.data.like_count);
+      setUserLiked(res.data.liked);
+    }
+  };
 
   if (loading) return (
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
@@ -108,13 +125,51 @@ export default function PostDetail() {
         {post.title}
       </h1>
 
-      {/* 메타 — API가 author_id(숫자)만 반환하고 이름 없음, 작성자 표시 생략 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13, color: 'var(--text-light)' }}>
+      {/* 메타 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13, color: 'var(--text-light)', flexWrap: 'wrap' }}>
+        {post.author_username && <span>{post.author_username}</span>}
+        {post.author_username && dateStr && <span>·</span>}
         {dateStr && <span>{dateStr}</span>}
         {dateStr && <span>·</span>}
         <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 500, ...badge.style }}>
           {badge.label}
         </span>
+        <span>·</span>
+        <span>👁 {post.view_count ?? 0}</span>
+
+        {/* 추천 버튼 */}
+        <button
+          onClick={handleLike}
+          disabled={
+            liking ||
+            !token ||
+            !user ||
+            post.author_id === user?.id
+          }
+          title={
+            !token || !user
+              ? '로그인 후 추천할 수 있습니다'
+              : post.author_id === user?.id
+              ? '본인 글은 추천할 수 없습니다'
+              : userLiked
+              ? '추천 취소'
+              : '추천'
+          }
+          style={{
+            marginLeft: 4,
+            padding: '2px 10px',
+            borderRadius: 99,
+            border: '1px solid var(--border)',
+            background: userLiked ? 'var(--accent-bg)' : 'transparent',
+            color: userLiked ? 'var(--accent-text)' : 'var(--text-light)',
+            cursor: (!token || !user || post.author_id === user?.id) ? 'default' : 'pointer',
+            fontSize: 12,
+            fontWeight: 500,
+            transition: 'all 0.15s',
+          }}
+        >
+          ♥ {likeCount}
+        </button>
       </div>
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: 28 }} />
