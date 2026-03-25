@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPost, listPosts } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
+import CommentSection from '../components/CommentSection';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
@@ -126,6 +127,10 @@ export default function PostDetail() {
           dangerouslySetInnerHTML={{ __html: post.content || '' }}
         />
       </div>
+
+      {/* 댓글 */}
+      <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '40px 0 0' }} />
+      <CommentSection postId={post.id} user={user} />
 
       {/* 이전/다음 */}
       {(prev || next) && (
