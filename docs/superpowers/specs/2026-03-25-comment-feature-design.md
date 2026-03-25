@@ -29,10 +29,20 @@
 
 **`create_comment` 변경사항:**
 
-- `verify_jwt_in_request(optional=True)` → `@jwt_required()` 데코레이터로 교체 (비로그인 차단)
+- `verify_jwt_in_request(optional=True)` 제거 → `@roles_required("editor", "admin")` 데코레이터로 교체
+  - `deactivated` 계정 차단은 기존 `roles_required`가 처리
 - JWT identity에서 `User` 조회 후 `author_name = user.username`, `author_id = user.id` 자동 설정
 - `author_name`, `author_email` 요청 바디에서 제거
 - `status` 고정값 `"approved"` (로그인 사용자 즉시 공개)
+- **`parent_id` 유효성 검사:**
+  - 지정된 `parent_id` 댓글 존재 확인 (없으면 404)
+  - 해당 댓글의 `post_id`가 요청 `post_id`와 일치 확인 (불일치 시 400)
+  - 해당 댓글이 이미 답글(`parent_id != null`)인 경우 400 반환 (1단 초과 차단)
+- **댓글 내용 길이:** 최대 2000자 초과 시 400 반환
+
+**부모 댓글 삭제 시 자식(답글) 처리:**
+
+- `DELETE /api/comments/<id>` 시 해당 댓글의 답글(`parent_id == comment_id`)을 먼저 삭제 후 부모 삭제
 
 **신규 엔드포인트:**
 
@@ -40,16 +50,21 @@
 GET /api/admin/comments
   - 권한: admin
   - 쿼리 파라미터: status (선택, 미지정 시 전체)
-  - 응답: { success, data: [comment, ...], error }
+  - 응답: { success, data: [{ ...comment_fields, post_title: str }], error }
+  - Comment + Post JOIN으로 post_title 포함 (프론트엔드 추가 요청 불필요)
 ```
 
-**유지되는 기존 엔드포인트:**
+**기존 엔드포인트 처리 방침:**
 
-| 엔드포인트 | 변경 없음 |
-|-----------|----------|
-| `GET /api/comments/post/<post_id>` | 승인된 댓글 목록 |
-| `PUT /api/comments/<id>/approve` | admin/editor 승인 |
-| `DELETE /api/comments/<id>` | admin 삭제 |
+| 엔드포인트 | 처리 |
+|-----------|------|
+| `GET /api/comments/post/<post_id>` | 유지 (approved 목록) |
+| `PUT /api/comments/<id>/approve` | 유지 (코드 삭제 안 함), 이번 Admin UI 미노출. 향후 게스트 댓글 기능용 |
+| `DELETE /api/comments/<id>` | 유지 + cascade 삭제 로직 추가 |
+
+**`admin.py` 회원 삭제 수정:**
+
+- 기존 `admin_delete_user`에서 `Post.author_id` NULL 처리와 동일 패턴으로 `Comment.author_id` NULL 처리 추가
 
 ---
 
@@ -69,6 +84,8 @@ axios 기반 API 클라이언트. 4개 함수:
 #### `frontend/src/components/CommentSection.jsx`
 
 `PostDetail`에 삽입되는 독립 컴포넌트. props: `postId`, `user`.
+
+**댓글 목록 계층 구조 구성:** 프론트엔드에서 `parent_id` 기준으로 그룹핑. `listComments` 응답(flat list)에서 `parent_id === null`인 루트 댓글 렌더링 후, 각 루트 댓글 아래 `parent_id === comment.id`인 답글을 들여쓰기로 표시.
 
 ```
 CommentSection
