@@ -165,6 +165,78 @@ function GuestDeleteForm({ comment, onSuccess, onCancel }) {
   );
 }
 
+// ─── 답글 아이템 ──────────────────────────────────────────────
+function ReplyItem({ reply, token, user, onRefresh }) {
+  const [editMode, setEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+
+  const guestEmail = getGuestEmail();
+  const isLoggedIn = !!token && !!user;
+  const isOwner = isLoggedIn
+    ? (user.role === 'admin' || reply.author_id === user.id)
+    : (reply.author_id === null && reply.author_email === guestEmail && guestEmail !== '');
+
+  const handleLoggedInDelete = async () => {
+    if (!window.confirm('답글을 삭제할까요?')) return;
+    const res = await deleteComment(token, reply.id);
+    if (res.success) onRefresh();
+    else alert(res.error);
+  };
+
+  return (
+    <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, marginBottom: 12 }}>
+      {editMode ? (
+        <EditForm
+          comment={reply}
+          token={token}
+          onSuccess={() => { setEditMode(false); onRefresh(); }}
+          onCancel={() => setEditMode(false)}
+        />
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-h)' }}>{reply.author_name}</span>
+              {reply.author_id === null && (
+                <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-light)',
+                  background: 'var(--bg-subtle)', padding: '1px 6px', borderRadius: 99 }}>
+                  게스트
+                </span>
+              )}
+              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-light)' }}>
+                {formatDate(reply.created_at)}
+              </span>
+              <p style={{ marginTop: 4, fontSize: 13, lineHeight: 1.7, color: 'var(--text-h)', whiteSpace: 'pre-wrap' }}>
+                {reply.content}
+              </p>
+            </div>
+            {isOwner && !deleteMode && (
+              <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: '2px 8px' }}
+                  onClick={() => setEditMode(true)}>수정</button>
+                {isLoggedIn ? (
+                  <button className="btn btn-danger" style={{ fontSize: 12, padding: '2px 8px' }}
+                    onClick={handleLoggedInDelete}>삭제</button>
+                ) : (
+                  <button className="btn btn-danger" style={{ fontSize: 12, padding: '2px 8px' }}
+                    onClick={() => setDeleteMode(true)}>삭제</button>
+                )}
+              </div>
+            )}
+          </div>
+          {deleteMode && (
+            <GuestDeleteForm
+              comment={reply}
+              onSuccess={() => { setDeleteMode(false); onRefresh(); }}
+              onCancel={() => setDeleteMode(false)}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── 댓글 아이템 ──────────────────────────────────────────────
 function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -267,21 +339,13 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
       {replies.length > 0 && (
         <div style={{ marginLeft: 24, marginTop: 12 }}>
           {replies.map((reply) => (
-            <div key={reply.id} style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, marginBottom: 12 }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-h)' }}>{reply.author_name}</span>
-              {reply.author_id === null && (
-                <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-light)',
-                  background: 'var(--bg-subtle)', padding: '1px 6px', borderRadius: 99 }}>
-                  게스트
-                </span>
-              )}
-              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-light)' }}>
-                {formatDate(reply.created_at)}
-              </span>
-              <p style={{ marginTop: 4, fontSize: 13, lineHeight: 1.7, color: 'var(--text-h)', whiteSpace: 'pre-wrap' }}>
-                {reply.content}
-              </p>
-            </div>
+            <ReplyItem
+              key={reply.id}
+              reply={reply}
+              token={token}
+              user={user}
+              onRefresh={onRefresh}
+            />
           ))}
         </div>
       )}
