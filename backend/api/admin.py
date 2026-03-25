@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import select, update
 from api.decorators import roles_required
-from models.schema import User, Post
+from models.schema import User, Post, Comment
 from database import db
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -89,6 +89,9 @@ def admin_delete_user(user_id: int) -> tuple:
     db.session.execute(
         update(Post).where(Post.author_id == user_id).values(author_id=None)
     )
+    db.session.execute(
+        update(Comment).where(Comment.author_id == user_id).values(author_id=None)
+    )
     db.session.delete(user)
     try:
         db.session.commit()
@@ -115,4 +118,25 @@ def admin_user_posts(user_id: int) -> tuple:
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     } for p in posts]
+    return jsonify({"success": True, "data": data, "error": ""}), 200
+
+
+@admin_bp.route("/comments", methods=["GET"])
+@roles_required("admin")
+def admin_list_comments() -> tuple:
+    """관리자 전용 — 전체 댓글 목록 (post_title 포함)."""
+    status_filter = request.args.get("status")
+    query = (
+        select(Comment, Post.title.label("post_title"))
+        .join(Post, Comment.post_id == Post.id)
+        .order_by(Comment.created_at.desc())
+    )
+    if status_filter:
+        query = query.where(Comment.status == status_filter)
+    rows = db.session.execute(query).all()
+    data = []
+    for comment, post_title in rows:
+        d = comment.to_dict()
+        d["post_title"] = post_title
+        data.append(d)
     return jsonify({"success": True, "data": data, "error": ""}), 200
