@@ -1,6 +1,6 @@
 # 댓글 기능 설계 문서
 
-**날짜:** 2026-03-25
+**날짜:** 2026-03-25 (v2 — 2026-03-25 요구사항 변경 반영)
 **상태:** 승인됨
 **범위:** 포스트 상세 페이지 댓글 UI + Admin 댓글 관리 패널
 
@@ -8,7 +8,7 @@
 
 ## 목표
 
-포스트 상세 페이지(`PostDetail`)에 댓글 작성/조회/답글 기능을 추가하고, Admin 대시보드에서 전체 댓글을 관리(삭제)할 수 있도록 한다.
+포스트 상세 페이지(`PostDetail`)에 댓글 작성/조회/답글/수정/삭제 기능을 추가하고, Admin 대시보드에서 전체 댓글을 관리(삭제)할 수 있도록 한다.
 
 ---
 
@@ -16,10 +16,25 @@
 
 | 항목 | 결정 |
 |------|------|
-| 작성 권한 | 로그인 사용자(editor/admin)만 |
-| 승인 정책 | 로그인 사용자 작성 시 즉시 공개(auto-approve) |
+| 작성 권한 | 로그인 사용자(editor/admin) + 비로그인 게스트 모두 가능 |
+| 게스트 작성 조건 | 이름(author_name) + 이메일(author_email) + 패스워드(author_password) 필수 |
+| 승인 정책 | 로그인 사용자 → 즉시 공개(approved), 게스트 → 승인 대기(pending) |
+| 수정/삭제 권한 | 로그인 사용자: 본인 글만(author_id 일치), 게스트: 이메일+패스워드 인증 |
 | 계층 구조 | 1단 답글(parent_id) 지원 |
-| Admin 관리 | 전체 댓글 목록 조회 + 삭제 |
+| Admin 관리 | 전체 댓글 목록 조회 + 삭제(cascade) |
+
+---
+
+## DB 스키마 변경
+
+### `backend/models/schema.py` — Comment 모델에 컬럼 추가
+
+```python
+author_password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+# 게스트 댓글 전용. 로그인 사용자 댓글은 NULL.
+```
+
+**마이그레이션:** `flask db migrate -m "add Comment.author_password_hash"` 후 `flask db upgrade` (앱 재시작 시 자동 실행)
 
 ---
 
@@ -27,138 +42,148 @@
 
 ### `backend/api/comments.py` 수정
 
-**`create_comment` 변경사항:**
+#### `create_comment`
 
-- `verify_jwt_in_request(optional=True)` 제거 → `@roles_required("editor", "admin")` 데코레이터로 교체
-  - `deactivated` 계정 차단은 기존 `roles_required`가 처리
-- JWT identity에서 `User` 조회 후 `author_name = user.username`, `author_id = user.id` 자동 설정
-- `author_name`, `author_email` 요청 바디에서 제거
-- `status` 고정값 `"approved"` (로그인 사용자 즉시 공개)
-- **`parent_id` 유효성 검사:**
-  - 지정된 `parent_id` 댓글 존재 확인 (없으면 404)
-  - 해당 댓글의 `post_id`가 요청 `post_id`와 일치 확인 (불일치 시 400)
-  - 해당 댓글이 이미 답글(`parent_id != null`)인 경우 400 반환 (1단 초과 차단)
-- **댓글 내용 길이:** 최대 2000자 초과 시 400 반환
+| 경우 | 처리 |
+|------|------|
+| JWT 있음 (로그인) | `author_id = user.id`, `author_name = user.username`, `author_password_hash = None`, `status = "approved"` |
+| JWT 없음 (게스트) | `author_name`, `author_email`, `author_password` 필수, `author_password_hash = hash(password)`, `status = "pending"` |
 
-**부모 댓글 삭제 시 자식(답글) 처리:**
+- `deactivated` 차단: JWT 있을 때 user.role == "deactivated"이면 403
+- `parent_id` 유효성 검사:
+  - 존재하지 않으면 404
+  - `post_id` 불일치 시 400
+  - 이미 답글(parent_id != null)이면 400 (1단 초과 차단)
+- 내용 길이: 최대 2000자
 
-- `DELETE /api/comments/<id>` 시 해당 댓글의 답글(`parent_id == comment_id`)을 먼저 삭제 후 부모 삭제
+#### 신규 엔드포인트: 댓글 수정
 
-**신규 엔드포인트:**
+```
+PUT /api/comments/<id>
+Body: { content: str, author_email?: str, author_password?: str }
+
+인증 로직:
+  - JWT 있음 → comment.author_id == 현재 user_id (또는 admin) 확인
+  - JWT 없음 → body의 author_email == comment.author_email AND hash 검증
+오류: 403 (본인 아님), 401 (비밀번호 불일치)
+수정 가능 필드: content만 (내용 2000자 제한 동일)
+```
+
+#### 기존 엔드포인트 변경: 댓글 삭제
+
+```
+DELETE /api/comments/<id>
+Body (optional): { author_email?: str, author_password?: str }
+
+인증 로직:
+  - admin 역할: 항상 허용
+  - JWT 있음 + editor: comment.author_id == 현재 user_id 확인
+  - JWT 없음 (게스트): body의 author_email == comment.author_email AND hash 검증
+cascade: 해당 댓글의 답글 먼저 삭제 후 부모 삭제
+```
+
+#### 신규 엔드포인트 (admin.py): 전체 댓글 목록
 
 ```
 GET /api/admin/comments
   - 권한: admin
   - 쿼리 파라미터: status (선택, 미지정 시 전체)
   - 응답: { success, data: [{ ...comment_fields, post_title: str }], error }
-  - Comment + Post JOIN으로 post_title 포함 (프론트엔드 추가 요청 불필요)
+  - Comment + Post JOIN으로 post_title 포함
 ```
 
-**기존 엔드포인트 처리 방침:**
+#### `PUT /api/comments/<id>/approve` (기존 유지)
 
-| 엔드포인트 | 처리 |
-|-----------|------|
-| `GET /api/comments/post/<post_id>` | 유지 (approved 목록) |
-| `PUT /api/comments/<id>/approve` | 유지 (코드 삭제 안 함), 이번 Admin UI 미노출. 향후 게스트 댓글 기능용 |
-| `DELETE /api/comments/<id>` | 유지 + cascade 삭제 로직 추가 |
+코드 삭제 안 함. 게스트 댓글 승인 시 사용. Admin UI에 노출.
 
-**`admin.py` 회원 삭제 수정:**
+#### `admin.py` 회원 삭제
 
-- 기존 `admin_delete_user`에서 `Post.author_id` NULL 처리와 동일 패턴으로 `Comment.author_id` NULL 처리 추가
+- `admin_delete_user`에서 `Comment.author_id` NULL 처리 추가 (Post orphan 처리와 동일 패턴)
 
 ---
 
 ## 프론트엔드 설계
 
-### 신규 파일
+### `frontend/src/api/comments.js` (신규)
 
-#### `frontend/src/api/comments.js`
+| 함수 | 설명 |
+|------|------|
+| `listComments(postId)` | `GET /api/comments/post/:id` |
+| `createComment(token\|null, postId, data)` | `POST /api/comments` — data: `{content, parent_id?, author_name?, author_email?, author_password?}` |
+| `updateComment(token\|null, commentId, data)` | `PUT /api/comments/:id` — data: `{content, author_email?, author_password?}` |
+| `deleteComment(token\|null, commentId, data?)` | `DELETE /api/comments/:id` — data: `{author_email?, author_password?}` |
+| `listAllComments(token, status?)` | `GET /api/admin/comments` |
 
-axios 기반 API 클라이언트. 4개 함수:
+### `frontend/src/components/CommentSection.jsx` (신규)
 
-- `listComments(postId)` — `GET /api/comments/post/:id` (인증 불필요)
-- `createComment(token, postId, content, parentId?)` — `POST /api/comments`
-- `deleteComment(token, commentId)` — `DELETE /api/comments/:id`
-- `listAllComments(token, status?)` — `GET /api/admin/comments`
+props: `postId`, `user`
 
-#### `frontend/src/components/CommentSection.jsx`
-
-`PostDetail`에 삽입되는 독립 컴포넌트. props: `postId`, `user`.
-
-**댓글 목록 계층 구조 구성:** 프론트엔드에서 `parent_id` 기준으로 그룹핑. `listComments` 응답(flat list)에서 `parent_id === null`인 루트 댓글 렌더링 후, 각 루트 댓글 아래 `parent_id === comment.id`인 답글을 들여쓰기로 표시.
+**댓글 목록 계층:** 프론트엔드에서 `parent_id` 기준 그룹핑 (flat list → 루트+답글)
 
 ```
 CommentSection
-├── 댓글 수 헤더 (예: "댓글 3개")
-├── 댓글 작성 폼 (로그인 시만 표시)
-│   ├── textarea (content)
-│   └── [등록] 버튼
-├── 비로그인 안내: "댓글을 작성하려면 로그인하세요"
-└── 댓글 목록
-    └── CommentItem
-        ├── 작성자명 + 날짜
-        ├── 내용
-        ├── [답글 달기] 버튼 (로그인 시, 최상위 댓글에만)
-        ├── 인라인 답글 폼 (토글, 로그인 시)
-        └── 들여쓰기된 답글 목록
+├── 댓글 수 헤더
+├── 댓글 작성 폼
+│   ├── [로그인 사용자] textarea만 표시
+│   └── [게스트] 이름 + 이메일 + 패스워드 + textarea
+│       └── "게스트 댓글은 관리자 승인 후 표시됩니다" 안내
+├── 댓글 목록
+│   └── CommentItem
+│       ├── 작성자명 + 날짜 + (게스트 배지)
+│       ├── 내용
+│       ├── [수정] [삭제] 버튼 (본인 댓글에만)
+│       │   - 로그인: author_id 일치 시 표시
+│       │   - 게스트: localStorage의 guest_email과 comment.author_email 일치 시 표시
+│       │     → 클릭 시 패스워드 입력 모달
+│       ├── [답글 달기] 버튼 (최상위 댓글에만, 로그인+게스트 모두)
+│       └── 들여쓰기된 답글 목록
 ```
 
-- 답글은 1단만 허용 (parent 댓글에만 [답글 달기] 표시)
-- 작성/답글 성공 시 목록 즉시 재조회
-- 스타일: 기존 CSS Variables + `.card`, `.form-input`, `.btn` 유틸리티 클래스 사용
+**게스트 식별 방법:**
+- 게스트가 댓글 작성 성공 시 `localStorage.setItem('guest_email', email)` 저장
+- `comment.author_email === localStorage.getItem('guest_email') && comment.author_id === null` 인 경우 수정/삭제 버튼 노출
+- 버튼 클릭 시 패스워드 입력 프롬프트(`window.prompt`) 또는 인라인 폼으로 인증
 
-#### `frontend/src/pages/admin/AdminComments.jsx`
+**인라인 수정:**
+- [수정] 클릭 → 해당 CommentItem이 textarea로 전환 (인라인 에디팅)
+- 로그인: 바로 `updateComment(token, id, {content})` 호출
+- 게스트: 패스워드 입력 필드도 함께 표시 후 `updateComment(null, id, {content, author_email, author_password})` 호출
 
-Admin 전용 댓글 관리 페이지.
+### `frontend/src/pages/admin/AdminComments.jsx` (신규)
 
 ```
 AdminComments
 ├── 헤더: "댓글 관리"
 ├── 댓글 테이블
-│   └── 포스트 제목 | 작성자 | 내용(앞 50자) | 작성일 | [삭제] 버튼
+│   └── 포스트 | 작성자 | 내용(60자) | 상태 | 작성일 | [삭제]
 └── 빈 상태: "등록된 댓글이 없습니다"
 ```
 
-- 삭제: `window.confirm` 후 `deleteComment()` 호출, 목록 즉시 갱신
-
-### 수정 파일
-
-#### `frontend/src/pages/PostDetail.jsx`
-
-본문(`ql-editor`) 아래, 이전/다음 글 내비게이션 위에 `<CommentSection>` 삽입.
-
-```jsx
-<CommentSection postId={post.id} user={user} />
-```
-
-#### `frontend/src/components/Nav.jsx`
-
-admin 로그인 시 "댓글 관리" 링크 추가 (`/admin/comments`).
-
-#### `frontend/src/App.jsx`
-
-`/admin/comments` 라우트 등록 (admin guard 적용).
+- 상태 컬럼 추가 (approved/pending 구분)
+- 삭제: admin JWT로 `deleteComment(token, id)` → 재조회
 
 ---
 
 ## 변경 파일 목록
 
-| 파일 | 유형 |
-|------|------|
-| `backend/api/comments.py` | 수정 |
-| `frontend/src/api/comments.js` | 신규 |
-| `frontend/src/components/CommentSection.jsx` | 신규 |
-| `frontend/src/pages/PostDetail.jsx` | 수정 |
-| `frontend/src/pages/admin/AdminComments.jsx` | 신규 |
-| `frontend/src/components/Nav.jsx` | 수정 |
-| `frontend/src/App.jsx` | 수정 |
+| 파일 | 유형 | 이유 |
+|------|------|------|
+| `backend/models/schema.py` | 수정 | Comment에 author_password_hash 추가 |
+| `backend/migrations/versions/` | 신규 | author_password_hash 마이그레이션 |
+| `backend/api/comments.py` | 수정 | 게스트 작성 + 수정/삭제 인증 + 신규 PUT 엔드포인트 |
+| `backend/api/admin.py` | 수정 | admin_list_comments + admin_delete_user orphan 처리 |
+| `frontend/src/api/comments.js` | 신규 | 5개 함수 axios 클라이언트 |
+| `frontend/src/components/CommentSection.jsx` | 신규 | 댓글 UI 전체 |
+| `frontend/src/pages/PostDetail.jsx` | 수정 | CommentSection 삽입 |
+| `frontend/src/pages/admin/AdminComments.jsx` | 신규 | Admin 댓글 관리 |
+| `frontend/src/components/Nav.jsx` | 수정 | 댓글 관리 링크 추가 |
+| `frontend/src/App.jsx` | 수정 | /admin/comments 라우트 |
 
 ---
 
 ## 범위 외 (이번 구현 제외)
 
-- 게스트 댓글 (비로그인 작성)
-- 댓글 수정 기능
+- 게스트 댓글 Admin 승인 UI (approve 버튼) — API는 존재, UI는 추후
 - 페이지네이션
 - 댓글 알림
 - 2단 이상 중첩 답글
