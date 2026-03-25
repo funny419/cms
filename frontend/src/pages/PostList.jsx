@@ -17,7 +17,8 @@ export default function PostList() {
   const user = getUser();
 
   useEffect(() => {
-    listPosts().then((res) => {
+    const token = localStorage.getItem('token');
+    listPosts(token).then((res) => {
       if (res.success) setPosts(res.data);
       else setError(res.error);
       setLoading(false);
@@ -63,12 +64,22 @@ export default function PostList() {
               {post.excerpt && (
                 <div className="post-excerpt">{post.excerpt}</div>
               )}
-              <div className="post-meta">
-                {post.created_at
-                  ? new Date(post.created_at).toLocaleDateString('ko-KR', {
+              <div className="post-meta" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                {post.author_username && <span>{post.author_username}</span>}
+                {post.author_username && <span>·</span>}
+                {post.created_at && (
+                  <span>
+                    {new Date(post.created_at).toLocaleDateString('ko-KR', {
                       year: 'numeric', month: 'long', day: 'numeric',
-                    })
-                  : ''}
+                    })}
+                  </span>
+                )}
+                <span>·</span>
+                <span>👁 {post.view_count ?? 0}</span>
+                <span>·</span>
+                <span>💬 {post.comment_count ?? 0}</span>
+                <span>·</span>
+                <span>♥ {post.like_count ?? 0}</span>
               </div>
             </li>
           ))}
