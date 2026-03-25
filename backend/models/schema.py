@@ -150,6 +150,7 @@ class Comment(Base):
     
     author_name: Mapped[str] = mapped_column(String(100)) # For guests
     author_email: Mapped[str] = mapped_column(String(120))
+    author_password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # 게스트 전용
     content: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default='approved') # approved, pending, spam
     
