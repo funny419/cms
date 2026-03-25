@@ -65,8 +65,8 @@ export default function PostList() {
                 <div className="post-excerpt">{post.excerpt}</div>
               )}
               <div className="post-meta" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                {post.author_username && <span>{post.author_username}</span>}
-                {post.author_username && <span>·</span>}
+                <span>{post.author_username || '알 수 없음'}</span>
+                <span>·</span>
                 {post.created_at && (
                   <span>
                     {new Date(post.created_at).toLocaleDateString('ko-KR', {
