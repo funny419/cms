@@ -39,14 +39,15 @@ class PostLike(Base):
     __tablename__ = 'post_likes'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    post_id: Mapped[int] = mapped_column(ForeignKey('posts.id'), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
+    post_id: Mapped[int] = mapped_column(ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (UniqueConstraint('post_id', 'user_id', name='uq_post_like'),)
 ```
 
 - `UniqueConstraint(post_id, user_id)` → DB 레벨 1인 1추천 강제
+- `ondelete='CASCADE'` → Post 또는 User 삭제 시 연관 PostLike 자동 삭제 (FK constraint 오류 방지)
 - 마이그레이션 1개로 `view_count` 추가 + `post_likes` 테이블 생성 동시 처리
 
 ---
@@ -84,16 +85,23 @@ class PostLike(Base):
 
 비로그인 시 `user_liked: false` 고정.
 
-#### `GET /api/posts/<id>` — view_count +1
+#### `GET /api/posts/<id>` — view_count +1 + 집계
 
-포스트 조회 시 `post.view_count += 1` 후 commit. 동일 응답 포맷(위 필드 포함)으로 반환.
+- JWT optional 처리 (비로그인도 조회 가능, `user_liked: false` 고정)
+- `view_count += 1` 업데이트와 집계 쿼리(`like_count`, `comment_count`, `user_liked`)를 단일 트랜잭션으로 처리:
+  1. `post.view_count += 1` + `db.session.flush()` (commit 전 반영)
+  2. 집계 서브쿼리 실행 (같은 트랜잭션)
+  3. `db.session.commit()`
+- 응답 포맷: `GET /api/posts`와 동일 필드 (`author_username`, `view_count`, `comment_count`, `like_count`, `user_liked` 포함)
 
 #### `POST /api/posts/<id>/like` — 추천 토글 (신규)
 
 - 권한: `@roles_required("editor", "admin")` (deactivated 자동 차단)
+- **본인 글 추천 불가**: `post.author_id == current_user_id`이면 400 반환 ("본인 글은 추천할 수 없습니다.")
 - 로직:
   - 기존 PostLike 존재 → 삭제(취소), `liked: false`
   - 미존재 → 생성(추천), `liked: true`
+- **경쟁 조건(race condition) 처리**: INSERT 시 `IntegrityError` 발생(UniqueConstraint 위반) → 이미 추천된 것으로 간주, rollback 후 `liked: true` 반환
 - 응답:
 ```json
 { "success": true, "data": { "liked": true, "like_count": 13 }, "error": "" }
@@ -136,12 +144,9 @@ funny · 2026년 3월 25일  [♥ 추천 12]
 
 ### `frontend/src/api/posts.js` 수정
 
-`likePost(token, postId)` 함수 추가:
-```js
-export const likePost = async (token, postId) => {
-  // POST /api/posts/:id/like
-}
-```
+- `listPosts(token?)` — JWT optional: 토큰이 있으면 Authorization 헤더 포함 (user_liked 반영), 없으면 헤더 없이 호출
+- `getPost(id, token?)` — 동일하게 token optional 처리
+- `likePost(token, postId)` — `POST /api/posts/:id/like`
 
 ---
 
