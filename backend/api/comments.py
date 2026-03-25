@@ -21,6 +21,11 @@ def create_comment() -> tuple:
     """댓글 작성 — 로그인 사용자(즉시 공개) 또는 게스트(이름+이메일+패스워드 필수, 승인 대기)."""
     data: dict = request.get_json() or {}
     post_id = data.get("post_id")
+    if post_id is not None:
+        try:
+            post_id = int(post_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "data": {}, "error": "post_id must be an integer"}), 400
     content: str = (data.get("content") or "").strip()
 
     if not post_id or not content:
@@ -56,7 +61,7 @@ def create_comment() -> tuple:
             author_id=user.id,
             parent_id=parent_id,
             author_name=user.username,
-            author_email="",
+            author_email=user.email,
             author_password_hash=None,
             content=content,
             status="approved",
