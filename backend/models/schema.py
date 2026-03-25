@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Any
-from sqlalchemy import Integer, String, Text, ForeignKey, DateTime, Boolean, JSON, Enum
+from sqlalchemy import Integer, String, Text, ForeignKey, DateTime, Boolean, JSON, Enum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -74,6 +74,7 @@ class Post(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
@@ -90,6 +91,7 @@ class Post(Base):
             "status": self.status,
             "post_type": self.post_type,
             "author_id": self.author_id,
+            "view_count": self.view_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -135,6 +137,24 @@ class Media(Base):
             "uploaded_by": self.uploaded_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PostLike(Base):
+    """포스트 추천 (1인 1추천, 토글)"""
+    __tablename__ = 'post_likes'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey('posts.id', ondelete='CASCADE'), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('users.id', ondelete='CASCADE'), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint('post_id', 'user_id', name='uq_post_like'),)
 
 
 class Comment(Base):
