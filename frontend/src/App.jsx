@@ -11,6 +11,7 @@ import PostEditor from './pages/PostEditor';
 import MyPosts from './pages/MyPosts';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminComments from './pages/admin/AdminComments';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/my-posts" element={<MyPosts />} />
           <Route path="/admin/posts" element={<AdminPosts />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/comments" element={<AdminComments />} />
           {/* /posts/new 는 /posts/:id 보다 반드시 먼저 */}
           <Route path="/posts/new" element={<PostEditor />} />
           <Route path="/posts/:id/edit" element={<PostEditor />} />

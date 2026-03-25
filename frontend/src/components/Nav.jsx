@@ -33,6 +33,7 @@ export default function Nav() {
             <>
               <Link to="/admin/posts" className="nav-link">포스트 관리</Link>
               <Link to="/admin/users" className="nav-link">회원 관리</Link>
+              <Link to="/admin/comments" className="nav-link">댓글 관리</Link>
               <button onClick={handleLogout} className="nav-link" style={{ border: 'none', cursor: 'pointer', background: 'none', color: 'var(--danger)' }}>
                 로그아웃
               </button>
