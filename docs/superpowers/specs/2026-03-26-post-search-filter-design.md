@@ -147,6 +147,7 @@ const fetchFn = useCallback(
     <option value="">전체</option>
     <option value="published">발행됨</option>
     <option value="draft">임시저장</option>
+    <option value="scheduled">예약됨</option>
   </select>
 </div>
 ```
