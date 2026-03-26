@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
+import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
 
 const getUser = () => {
@@ -174,14 +175,20 @@ export default function PostDetail() {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: 28 }} />
 
-      {/* 본문 — Quill 렌더링 */}
-      <div className="ql-snow">
-        <div
-          className="ql-editor"
-          style={{ padding: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-h)' }}
-          dangerouslySetInnerHTML={{ __html: post.content || '' }}
-        />
-      </div>
+      {/* 본문 */}
+      {post.content_format === 'markdown' ? (
+        <div data-color-mode="light" style={{ fontSize: 15, lineHeight: 1.8 }}>
+          <MDEditor.Markdown source={post.content || ''} />
+        </div>
+      ) : (
+        <div className="ql-snow">
+          <div
+            className="ql-editor"
+            style={{ padding: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-h)' }}
+            dangerouslySetInnerHTML={{ __html: post.content || '' }}
+          />
+        </div>
+      )}
 
       {/* 댓글 */}
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '40px 0 0' }} />
