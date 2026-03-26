@@ -87,17 +87,39 @@ def list_posts() -> tuple:
 @posts_bp.route("/mine", methods=["GET"])
 @jwt_required()
 def get_my_posts() -> tuple:
-    """로그인 유저의 모든 포스트 조회 (draft + published)."""
+    """로그인 유저의 모든 포스트 조회 (draft + published, 페이지네이션)."""
     current_user_id: int = int(get_jwt_identity())
     user: User | None = db.session.get(User, current_user_id)
     if user and user.role == 'deactivated':
         return jsonify({"success": False, "data": {}, "error": "비활성화된 계정입니다."}), 403
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    total: int = db.session.execute(
+        select(func.count(Post.id)).where(Post.author_id == current_user_id)
+    ).scalar() or 0
+
     posts = db.session.execute(
         select(Post)
         .where(Post.author_id == current_user_id)
         .order_by(Post.created_at.desc())
+        .offset(offset)
+        .limit(per_page)
     ).scalars().all()
-    return jsonify({"success": True, "data": [p.to_dict() for p in posts], "error": ""}), 200
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "items": [p.to_dict() for p in posts],
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "has_more": page * per_page < total,
+        },
+        "error": "",
+    }), 200
 
 
 @posts_bp.route("/<int:post_id>", methods=["GET"])
