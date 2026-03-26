@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import { getPost, createPost, updatePost } from '../api/posts';
+import { uploadMedia } from '../api/media';
 import { useTheme } from '../context/ThemeContext';
 
 const getUser = () => {
@@ -12,16 +13,6 @@ const getUser = () => {
 };
 const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
-
-const QUILL_MODULES = {
-  toolbar: [
-    ['bold', 'italic', 'underline'],
-    [{ header: 1 }, { header: 2 }],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link', 'image'],
-    ['clean'],
-  ],
-};
 
 const QUILL_FORMATS = [
   'bold', 'italic', 'underline',
@@ -37,6 +28,7 @@ export default function PostEditor() {
   const token = localStorage.getItem('token');
   const user = getUser();
   const { theme } = useTheme();
+  const quillRef = useRef(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -48,6 +40,7 @@ export default function PostEditor() {
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -55,7 +48,7 @@ export default function PostEditor() {
     if (!isEditorOrAdmin(user)) { navigate('/posts'); return; }
 
     if (isEdit) {
-      getPost(id, token, true).then((res) => {   // skipCount=true → view_count 미증가
+      getPost(id, token, true).then((res) => {
         if (res.success) {
           setForm({
             title: res.data.title || '',
@@ -70,6 +63,63 @@ export default function PostEditor() {
       });
     }
   }, [id]);
+
+  // WYSIWYG 이미지 핸들러: 파일 선택 → API 업로드 → Quill에 삽입
+  const quillImageHandler = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+      setImageUploading(true);
+      setError('');
+      const res = await uploadMedia(token, file);
+      setImageUploading(false);
+      if (res.success) {
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection(true);
+          quill.insertEmbed(range.index, 'image', res.data.url);
+          quill.setSelection(range.index + 1);
+        }
+      } else {
+        setError(res.error || '이미지 업로드에 실패했습니다.');
+      }
+    };
+    input.click();
+  }, [token]);
+
+  // QUILL_MODULES: quillImageHandler 의존성 때문에 useMemo로 컴포넌트 내부에 선언
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        ['bold', 'italic', 'underline'],
+        [{ header: 1 }, { header: 2 }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+      handlers: { image: quillImageHandler },
+    },
+  }), [quillImageHandler]);
+
+  // Markdown 이미지 삽입: 업로드 후 ![이미지](url) 커서 위치에 추가
+  const handleMarkdownImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = ''; // 같은 파일 재선택 허용
+    setImageUploading(true);
+    setError('');
+    const res = await uploadMedia(token, file);
+    setImageUploading(false);
+    if (res.success) {
+      const mdSyntax = `\n![이미지](${res.data.url})\n`;
+      setForm((prev) => ({ ...prev, content: prev.content + mdSyntax }));
+    } else {
+      setError(res.error || '이미지 업로드에 실패했습니다.');
+    }
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -113,16 +163,21 @@ export default function PostEditor() {
           ← 취소
         </button>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => handleSave('draft')} disabled={saving}>
+          <button className="btn btn-ghost" onClick={() => handleSave('draft')} disabled={saving || imageUploading}>
             임시저장
           </button>
-          <button className="btn btn-primary" onClick={() => handleSave('published')} disabled={saving}>
+          <button className="btn btn-primary" onClick={() => handleSave('published')} disabled={saving || imageUploading}>
             발행
           </button>
         </div>
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
+      {imageUploading && (
+        <div className="alert" style={{ marginBottom: 16, background: 'var(--accent-bg)', color: 'var(--accent-text)', border: '1px solid var(--accent)' }}>
+          이미지 업로드 중...
+        </div>
+      )}
 
       {/* 제목 */}
       <input
@@ -187,19 +242,47 @@ export default function PostEditor() {
 
       {/* 에디터 본문 */}
       {form.content_format === 'markdown' ? (
-        <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} style={{ marginBottom: 24 }}>
-          <MDEditor
-            value={form.content}
-            onChange={(val) => setForm({ ...form, content: val || '' })}
-            height={400}
-          />
+        <div style={{ marginBottom: 24 }}>
+          {/* Markdown 이미지 업로드 버튼 */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+            <label style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--border)',
+              fontSize: 13,
+              color: 'var(--text)',
+              cursor: imageUploading ? 'not-allowed' : 'pointer',
+              background: 'var(--bg)',
+              opacity: imageUploading ? 0.5 : 1,
+            }}>
+              🖼 이미지 삽입
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                disabled={imageUploading}
+                onChange={handleMarkdownImageUpload}
+              />
+            </label>
+          </div>
+          <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
+            <MDEditor
+              value={form.content}
+              onChange={(val) => setForm({ ...form, content: val || '' })}
+              height={400}
+            />
+          </div>
         </div>
       ) : (
         <ReactQuill
+          ref={quillRef}
           theme="snow"
           value={form.content}
           onChange={(val) => setForm({ ...form, content: val })}
-          modules={QUILL_MODULES}
+          modules={quillModules}
           formats={QUILL_FORMATS}
           style={{ marginBottom: 24 }}
         />
