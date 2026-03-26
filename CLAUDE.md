@@ -155,6 +155,85 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ---
 
+## 파일 스토리지 시스템
+
+> **설치형 CMS 방침:** 스토리지 백엔드는 `STORAGE_BACKEND` 환경변수로 선택. 기본값 `local`.
+
+### 현재 구현: Local (A방식)
+
+- **파일 저장:** Docker named volume `uploads_data` → `/app/uploads/`
+- **URL 형식:** `/uploads/{uuid}_{filename}` (공개 URL로 DB에 저장)
+- **개발 환경:** Flask `send_from_directory`로 서빙 (`FLASK_ENV=development`시 활성화)
+- **프로덕션:** Nginx `location /uploads/` → `alias /app/uploads/` (볼륨 공유)
+- **썸네일:** `/uploads/thumb_{uuid}_{filename}` (Pillow, 300×300)
+- **추상화 파일:** `backend/storage.py` — `StorageBackend`, `LocalStorage`, `get_storage()`
+
+```
+docker-compose.prod.yml 볼륨 구조:
+  backend: uploads_data:/app/uploads  (write)
+  nginx:   uploads_data:/app/uploads  (read → /uploads/ 서빙)
+```
+
+### 추후 구현 예정: Cloudflare R2 (B방식)
+
+설치형 CMS에서 서버와 무관한 CDN 서빙이 필요한 경우 R2로 전환.
+
+**구현 방법:**
+
+1. `backend/storage.py`에 `R2Storage(StorageBackend)` 클래스 추가:
+   ```python
+   import boto3
+   class R2Storage(StorageBackend):
+       def __init__(self):
+           self.client = boto3.client('s3',
+               endpoint_url=f'https://{os.environ["R2_ACCOUNT_ID"]}.r2.cloudflarestorage.com',
+               aws_access_key_id=os.environ["R2_ACCESS_KEY"],
+               aws_secret_access_key=os.environ["R2_SECRET_KEY"],
+           )
+           self.bucket = os.environ["R2_BUCKET_NAME"]
+           self.public_url = os.environ["R2_PUBLIC_URL"]  # e.g. https://cdn.example.com
+
+       def save(self, file_obj, unique_filename: str) -> str:
+           self.client.upload_fileobj(file_obj, self.bucket, unique_filename,
+               ExtraArgs={"ContentType": file_obj.mimetype})
+           return f"{self.public_url}/{unique_filename}"
+
+       def delete(self, url: str) -> None:
+           filename = url.split("/")[-1]
+           self.client.delete_object(Bucket=self.bucket, Key=filename)
+   ```
+
+2. `get_storage()`에 분기 추가:
+   ```python
+   elif backend == "r2":
+       return R2Storage()
+   ```
+
+3. 환경변수 추가 (`.env` / GitHub Secrets):
+   ```
+   STORAGE_BACKEND=r2
+   R2_ACCOUNT_ID=...
+   R2_ACCESS_KEY=...
+   R2_SECRET_KEY=...
+   R2_BUCKET_NAME=...
+   R2_PUBLIC_URL=https://cdn.example.com
+   ```
+
+4. 썸네일: R2에서는 PIL이 로컬 파일을 직접 읽을 수 없으므로 `BytesIO` 방식 필요:
+   ```python
+   # media.py에서 R2일 때 썸네일 처리
+   from io import BytesIO
+   buf = BytesIO()
+   img.thumbnail((300, 300))
+   img.save(buf, format=img.format or 'JPEG')
+   buf.seek(0)
+   thumb_url = storage.save(buf, f"thumb_{unique_filename}")
+   ```
+
+**A↔B 전환 시 기존 데이터 마이그레이션 필요** — DB의 `media.filepath`에 저장된 URL이 다르므로 마이그레이션 스크립트 작성할 것.
+
+---
+
 ## 트러블슈팅
 
 **Docker 빌드:**
@@ -200,7 +279,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 | 포스트 통계 | 조회수(view_count) + 댓글수 + 추천수 — PostList/PostDetail에 표시 |
 | 포스트 추천 | 로그인 사용자 추천/취소 토글, 본인 글 추천 불가, 1인 1추천(DB UniqueConstraint) |
 | 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
-| 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 + path traversal 방어 |
+| 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 + path traversal 방어 + StorageBackend 추상화 (local/R2 전환 가능) |
 | 댓글 | 계층형(1단 답글) + 로그인/게스트 분기 + 수정/삭제 소유권 인증 + 스팸 필터링 |
 | 댓글 UI | PostDetail 댓글 섹션 — 로그인(즉시공개), 게스트(이름+이메일+패스워드, 승인대기) |
 | 댓글 수정/삭제 | 로그인: author_id 일치, 게스트: 이메일+패스워드 인증 |

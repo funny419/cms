@@ -34,7 +34,10 @@ services:
       DATABASE_URL: mysql+pymysql://${CMS_DB_USER:-funnycms}:${CMS_DB_APP_PASSWORD}@db:3306/${CMS_DB_NAME:-cmsdb}
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      STORAGE_BACKEND: local
     command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]
+    volumes:
+      - uploads_data:/app/uploads  # 배포 재빌드 후에도 업로드 파일 유지
 
   # Nginx reverse proxy and frontend server
   nginx:
@@ -47,6 +50,9 @@ services:
       - "80:80" # Expose web server on port 80
     depends_on:
       - backend
+    volumes:
+      - uploads_data:/app/uploads  # backend와 동일 볼륨 마운트 → /uploads/ 직접 서빙
 
 volumes:
   db_data_prod:
+  uploads_data:  # 업로드 파일 영구 보존 볼륨

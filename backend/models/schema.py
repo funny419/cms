@@ -130,10 +130,13 @@ class Media(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self) -> dict:
+        meta = self.meta_data or {}
         return {
             "id": self.id,
             "filename": self.filename,
-            "filepath": self.filepath,
+            "url": self.filepath,            # 공개 접근 URL (/uploads/... 또는 CDN URL)
+            "filepath": self.filepath,       # 하위 호환 유지
+            "thumbnail_url": meta.get("thumbnail_url"),
             "mimetype": self.mimetype,
             "size": self.size,
             "uploaded_by": self.uploaded_by,

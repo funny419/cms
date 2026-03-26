@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_migrate import upgrade as db_upgrade
 from config import DevelopmentConfig, ProductionConfig
@@ -35,6 +35,15 @@ def create_app(config_class=None):
     @app.route('/health')
     def health_check():
         return jsonify({"status": "ok", "service": "cms-backend"})
+
+    # 개발 환경 전용: 업로드 파일 정적 서빙
+    # 프로덕션에서는 Nginx가 /uploads/ 를 직접 서빙 (app.py 불필요)
+    if os.getenv('FLASK_ENV', 'development') == 'development':
+        from storage import UPLOAD_FOLDER
+
+        @app.route('/uploads/<path:filename>')
+        def serve_upload(filename: str):
+            return send_from_directory(UPLOAD_FOLDER, filename)
 
     # Blueprint 등록
     from api.auth import auth_bp

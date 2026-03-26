@@ -39,9 +39,11 @@ services:
       DATABASE_URL: mysql+pymysql://${CMS_DB_USER:-funnycms}:${CMS_DB_APP_PASSWORD}@db:3306/${CMS_DB_NAME:-cmsdb}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-jwt-secret-key}
+      STORAGE_BACKEND: local
     command: ["flask", "run", "--host=0.0.0.0", "--port=5000"]
     volumes:
       - ./backend:/app
+      # uploads/는 호스트 ./backend/uploads/ 에 그대로 유지 (dev는 별도 볼륨 불필요)
     develop:
       watch:
         # Python 소스 변경 → 컨테이너에 즉시 동기화 (Flask debug auto-reload 트리거)
