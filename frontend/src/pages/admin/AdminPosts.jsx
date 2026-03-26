@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminListPosts } from '../../api/admin';
 import { deletePost } from '../../api/posts';
@@ -15,6 +15,15 @@ export default function AdminPosts() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const [deletedIds, setDeletedIds] = useState(new Set());
+  const [inputQ, setInputQ] = useState('');
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('');
+
+  // 300ms 디바운스
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(inputQ.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [inputQ]);
 
   const fetchFn = useCallback(
     (page) => {
@@ -23,11 +32,11 @@ export default function AdminPosts() {
         const user = JSON.parse(localStorage.getItem('user'));
         if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      return adminListPosts(token, page);
+      return adminListPosts(token, page, 20, q, status);
     },
-    [token]
+    [token, q, status]
   );
-  const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
+  const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q, status]);
   const posts = items.filter((p) => !deletedIds.has(p.id));
 
   const handleDelete = async (id) => {
@@ -39,12 +48,36 @@ export default function AdminPosts() {
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
-      <h1 className="page-heading" style={{ marginBottom: 24 }}>포스트 관리</h1>
+      <h1 className="page-heading" style={{ marginBottom: 16 }}>포스트 관리</h1>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="제목으로 검색..."
+          value={inputQ}
+          onChange={(e) => setInputQ(e.target.value)}
+          style={{ flex: 1, maxWidth: 300 }}
+        />
+        <select
+          className="form-input"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          style={{ width: 120 }}
+        >
+          <option value="">전체</option>
+          <option value="published">발행됨</option>
+          <option value="draft">임시저장</option>
+          <option value="scheduled">예약됨</option>
+        </select>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {posts.length === 0 && !loading && !error ? (
-        <div className="empty-state"><p>포스트가 없습니다.</p></div>
+        <div className="empty-state">
+          <p>{q || status ? '검색 결과가 없습니다.' : '포스트가 없습니다.'}</p>
+        </div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
