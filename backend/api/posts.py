@@ -153,6 +153,11 @@ def create_post() -> tuple:
     if not data.get("title"):
         return jsonify({"success": False, "data": {}, "error": "title is required"}), 400
     author_id: int = int(get_jwt_identity())
+
+    # 유효성 검사
+    raw_format = data.get("content_format", "html")
+    content_format = raw_format if raw_format in ("html", "markdown") else "html"
+
     post = Post(
         title=data["title"],
         slug=data.get("slug", ""),
@@ -160,6 +165,7 @@ def create_post() -> tuple:
         excerpt=data.get("excerpt", ""),
         status=data.get("status", "draft"),
         post_type=data.get("post_type", "post"),
+        content_format=content_format,
         author_id=author_id,
     )
     db.session.add(post)
@@ -182,8 +188,10 @@ def update_post(post_id: int) -> tuple:
     if user and user.role != 'admin' and post.author_id != current_user_id:
         return jsonify({"success": False, "data": {}, "error": "본인 글만 수정할 수 있습니다."}), 403
     data: dict = request.get_json() or {}
-    for field in ("title", "slug", "content", "excerpt", "status", "post_type"):
+    for field in ("title", "slug", "content", "excerpt", "status", "post_type", "content_format"):
         if field in data:
+            if field == "content_format" and data[field] not in ("html", "markdown"):
+                continue  # 유효하지 않은 값 무시
             setattr(post, field, data[field])
     try:
         db.session.commit()
