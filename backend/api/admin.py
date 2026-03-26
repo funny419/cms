@@ -11,15 +11,27 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 @admin_bp.route("/posts", methods=["GET"])
 @roles_required("admin")
 def admin_list_posts() -> tuple:
-    """전체 포스트 목록 (모든 유저, 모든 상태, 페이지네이션)."""
+    """전체 포스트 목록 (모든 유저, 검색/필터/페이지네이션)."""
     page = max(1, request.args.get("page", 1, type=int) or 1)
     per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
     offset = (page - 1) * per_page
+    q = request.args.get("q", "").strip()
+    status = request.args.get("status", "").strip()
 
-    total: int = db.session.execute(select(func.count(Post.id))).scalar() or 0
+    count_query = select(func.count(Post.id))
+    data_query = select(Post).order_by(Post.created_at.desc())
+
+    if q:
+        count_query = count_query.where(Post.title.ilike(f"%{q}%"))
+        data_query = data_query.where(Post.title.ilike(f"%{q}%"))
+    if status in ("published", "draft", "scheduled"):
+        count_query = count_query.where(Post.status == status)
+        data_query = data_query.where(Post.status == status)
+
+    total: int = db.session.execute(count_query).scalar() or 0
 
     posts = db.session.execute(
-        select(Post).order_by(Post.created_at.desc()).offset(offset).limit(per_page)
+        data_query.offset(offset).limit(per_page)
     ).scalars().all()
 
     items = [{
