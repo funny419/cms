@@ -94,7 +94,7 @@ return jsonify({
 
 ```js
 // 인터페이스
-const { items, loading, hasMore, sentinelRef, reset } = useInfiniteScroll(fetchFn, deps);
+const { items, loading, hasMore, sentinelRef } = useInfiniteScroll(fetchFn, deps);
 ```
 
 **파라미터:**
@@ -132,6 +132,16 @@ listPosts(token, page = 1, perPage = 20)
 // 반환: { success, data: { items, page, per_page, total, has_more }, error }
 ```
 
+**파일별 변경 대상:**
+
+| 파일 | 함수 | 비고 |
+|------|------|------|
+| `frontend/src/api/posts.js` | `listPosts`, `getMyPosts` | page, perPage 파라미터 추가 |
+| `frontend/src/api/admin.js` | `adminListPosts` | page, perPage 파라미터 추가 |
+| `frontend/src/api/comments.js` | `listAllComments` | page, perPage 파라미터 추가 (기존 status 유지) |
+
+`listAllComments`는 `/api/admin/comments`를 호출하는 기존 함수로, 시그니처를 `listAllComments(token, status, page, perPage)`로 확장한다.
+
 ### 3.3 각 페이지 변경
 
 **`PostList.jsx`:**
@@ -148,7 +158,7 @@ listPosts(token, page = 1, perPage = 20)
 - 동일 패턴
 
 **`AdminComments.jsx`:**
-- `useInfiniteScroll((page) => adminListComments(token, page, statusFilter))` 사용
+- `useInfiniteScroll((page) => listAllComments(token, statusFilter, page))` 사용
 - `statusFilter` 변경 시 `deps`에 포함 → 자동 reset
 
 ### 3.4 UI 상태 표시
@@ -173,6 +183,7 @@ listPosts(token, page = 1, perPage = 20)
 
 - 네트워크 에러 시 추가 로드 중단, 기존 항목 유지
 - 잘못된 `page` 값(0, 음수, 문자열) → 백엔드에서 `max(1, int(page))` 처리
+- 과도한 `per_page` 값 방지 → 백엔드에서 `min(per_page, 100)` 상한선 적용
 
 ---
 
@@ -185,7 +196,8 @@ listPosts(token, page = 1, perPage = 20)
 **Frontend:**
 - `frontend/src/hooks/useInfiniteScroll.js` — 신규 생성
 - `frontend/src/api/posts.js` — `listPosts`, `getMyPosts` 파라미터 추가
-- `frontend/src/api/admin.js` — `adminListPosts`, `adminListComments` 파라미터 추가
+- `frontend/src/api/admin.js` — `adminListPosts` 파라미터 추가
+- `frontend/src/api/comments.js` — `listAllComments` 파라미터 추가 (status 유지, page/perPage 추가)
 - `frontend/src/pages/PostList.jsx` — 훅 적용
 - `frontend/src/pages/MyPosts.jsx` — 훅 적용
 - `frontend/src/pages/admin/AdminPosts.jsx` — 훅 적용
