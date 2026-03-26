@@ -19,8 +19,8 @@ def list_posts() -> tuple:
     except Exception:
         current_user_id = None
 
-    page = max(1, int(request.args.get("page", 1)))
-    per_page = min(max(1, int(request.args.get("per_page", 20))), 100)
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
     offset = (page - 1) * per_page
 
     # 댓글수 서브쿼리 (approved 댓글만)
