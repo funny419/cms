@@ -166,7 +166,7 @@ export default function PostEditor() {
         </button>
         <button
           type="button"
-          onClick={() => !isEdit && setForm({ ...form, content_format: 'markdown' })}
+          onClick={() => setForm({ ...form, content_format: 'markdown' })}
           disabled={isEdit && form.content_format === 'html'}
           style={{
             padding: '4px 14px',
