@@ -76,6 +76,72 @@
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* ── 스킨: Forest (녹색) ── */
+[data-skin="forest"]:root {
+  --accent: #2d6a4f;
+  --accent-hover: #1b4332;
+  --accent-bg: rgba(45, 106, 79, 0.08);
+  --accent-text: #1b4332;
+}
+[data-skin="forest"][data-theme="dark"]:root {
+  --accent: #52b788;
+  --accent-hover: #40916c;
+  --accent-bg: rgba(82, 183, 136, 0.12);
+  --accent-text: #74c69d;
+}
+@media (prefers-color-scheme: dark) {
+  [data-skin="forest"]:root {
+    --accent: #52b788;
+    --accent-hover: #40916c;
+    --accent-bg: rgba(82, 183, 136, 0.12);
+    --accent-text: #74c69d;
+  }
+}
+
+/* ── 스킨: Ocean (파랑) ── */
+[data-skin="ocean"]:root {
+  --accent: #0369a1;
+  --accent-hover: #075985;
+  --accent-bg: rgba(3, 105, 161, 0.08);
+  --accent-text: #075985;
+}
+[data-skin="ocean"][data-theme="dark"]:root {
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --accent-bg: rgba(56, 189, 248, 0.12);
+  --accent-text: #7dd3fc;
+}
+@media (prefers-color-scheme: dark) {
+  [data-skin="ocean"]:root {
+    --accent: #38bdf8;
+    --accent-hover: #0ea5e9;
+    --accent-bg: rgba(56, 189, 248, 0.12);
+    --accent-text: #7dd3fc;
+  }
+}
+
+/* ── 스킨: Rose (분홍) ── */
+[data-skin="rose"]:root {
+  --accent: #be185d;
+  --accent-hover: #9d174d;
+  --accent-bg: rgba(190, 24, 93, 0.08);
+  --accent-text: #9d174d;
+}
+[data-skin="rose"][data-theme="dark"]:root {
+  --accent: #f472b6;
+  --accent-hover: #ec4899;
+  --accent-bg: rgba(244, 114, 182, 0.12);
+  --accent-text: #f9a8d4;
+}
+@media (prefers-color-scheme: dark) {
+  [data-skin="rose"]:root {
+    --accent: #f472b6;
+    --accent-hover: #ec4899;
+    --accent-bg: rgba(244, 114, 182, 0.12);
+    --accent-text: #f9a8d4;
+  }
+}
+
 /* ── 리셋 ── */
 *, *::before, *::after { box-sizing: border-box; }
 

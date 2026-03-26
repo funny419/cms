@@ -7,9 +7,9 @@ from database import db
 settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 
 # 공개 허용 키 목록
-PUBLIC_KEYS = ["site_title", "tagline", "site_url"]
+PUBLIC_KEYS = ["site_title", "tagline", "site_url", "site_skin"]
 
-ADMIN_ALLOWED_KEYS = {"site_title", "tagline", "site_url", "admin_email", "posts_per_page"}
+ADMIN_ALLOWED_KEYS = {"site_title", "tagline", "site_url", "admin_email", "posts_per_page", "site_skin"}
 
 
 @settings_bp.route("", methods=["GET"])
