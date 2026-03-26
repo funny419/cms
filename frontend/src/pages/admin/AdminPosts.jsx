@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminListPosts } from '../../api/admin';
 import { deletePost } from '../../api/posts';
+import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 
 const STATUS_LABEL = { published: '발행됨', draft: '임시저장', scheduled: '예약됨' };
 const STATUS_COLOR = {
@@ -11,34 +12,30 @@ const STATUS_COLOR = {
 };
 
 export default function AdminPosts() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const [deletedIds, setDeletedIds] = useState(new Set());
 
-  useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user?.role !== 'admin') { navigate('/my-posts'); return; }
-    } catch { navigate('/login'); return; }
-
-    adminListPosts(token).then((res) => {
-      if (res.success) setPosts(res.data);
-      else setError(res.error);
-      setLoading(false);
-    });
-  }, []);
+  const fetchFn = useCallback(
+    (page) => {
+      if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      return adminListPosts(token, page);
+    },
+    [token]
+  );
+  const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
+  const posts = items.filter((p) => !deletedIds.has(p.id));
 
   const handleDelete = async (id) => {
     if (!window.confirm('이 포스트를 삭제할까요?')) return;
     const res = await deletePost(token, id);
-    if (res.success) setPosts((prev) => prev.filter((p) => p.id !== id));
+    if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
     else alert(res.error);
   };
-
-  if (loading) return <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>;
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
@@ -46,7 +43,7 @@ export default function AdminPosts() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {posts.length === 0 ? (
+      {posts.length === 0 && !loading && !error ? (
         <div className="empty-state"><p>포스트가 없습니다.</p></div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
@@ -93,6 +90,16 @@ export default function AdminPosts() {
             ))}
           </tbody>
         </table>
+      )}
+
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      {loading && (
+        <div className="empty-state" style={{ marginTop: 24 }}>불러오는 중...</div>
+      )}
+      {!hasMore && posts.length > 0 && (
+        <div style={{ textAlign: 'center', color: 'var(--text-light)', fontSize: 13, padding: '24px 0' }}>
+          더 이상 포스트가 없습니다.
+        </div>
       )}
     </div>
   );
