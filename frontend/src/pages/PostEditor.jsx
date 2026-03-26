@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import MDEditor from '@uiw/react-md-editor';
 import { getPost, createPost, updatePost } from '../api/posts';
 
 const getUser = () => {
@@ -41,6 +42,7 @@ export default function PostEditor() {
     excerpt: '',
     slug: '',
     post_type: 'post',
+    content_format: 'html',
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -59,6 +61,7 @@ export default function PostEditor() {
             excerpt: res.data.excerpt || '',
             slug: res.data.slug || '',
             post_type: res.data.post_type || 'post',
+            content_format: res.data.content_format || 'html',
           });
         }
         setLoading(false);
@@ -142,15 +145,63 @@ export default function PostEditor() {
         }}
       />
 
-      {/* WYSIWYG 에디터 */}
-      <ReactQuill
-        theme="snow"
-        value={form.content}
-        onChange={(val) => setForm({ ...form, content: val })}
-        modules={QUILL_MODULES}
-        formats={QUILL_FORMATS}
-        style={{ marginBottom: 24 }}
-      />
+      {/* 에디터 탭 */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => setForm({ ...form, content_format: 'html' })}
+          disabled={form.content_format === 'markdown'}
+          style={{
+            padding: '4px 14px',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: form.content_format === 'html' ? 'var(--accent-bg)' : 'transparent',
+            color: form.content_format === 'markdown' ? 'var(--text-light)' : 'var(--text)',
+            cursor: form.content_format === 'markdown' ? 'not-allowed' : 'pointer',
+            fontSize: 13,
+            fontWeight: form.content_format === 'html' ? 600 : 400,
+          }}
+        >
+          WYSIWYG
+        </button>
+        <button
+          type="button"
+          onClick={() => !isEdit && setForm({ ...form, content_format: 'markdown' })}
+          disabled={isEdit && form.content_format === 'html'}
+          style={{
+            padding: '4px 14px',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: form.content_format === 'markdown' ? 'var(--accent-bg)' : 'transparent',
+            color: (isEdit && form.content_format === 'html') ? 'var(--text-light)' : 'var(--text)',
+            cursor: (isEdit && form.content_format === 'html') ? 'not-allowed' : 'pointer',
+            fontSize: 13,
+            fontWeight: form.content_format === 'markdown' ? 600 : 400,
+          }}
+        >
+          Markdown
+        </button>
+      </div>
+
+      {/* 에디터 본문 */}
+      {form.content_format === 'markdown' ? (
+        <div data-color-mode="light" style={{ marginBottom: 24 }}>
+          <MDEditor
+            value={form.content}
+            onChange={(val) => setForm({ ...form, content: val || '' })}
+            height={400}
+          />
+        </div>
+      ) : (
+        <ReactQuill
+          theme="snow"
+          value={form.content}
+          onChange={(val) => setForm({ ...form, content: val })}
+          modules={QUILL_MODULES}
+          formats={QUILL_FORMATS}
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
       {/* 하단 옵션 */}
       <div style={{
