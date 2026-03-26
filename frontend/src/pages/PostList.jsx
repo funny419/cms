@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listPosts } from '../api/posts';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
@@ -15,15 +15,24 @@ export default function PostList() {
   const user = getUser();
   const token = localStorage.getItem('token');
 
+  const [inputQ, setInputQ] = useState('');
+  const [q, setQ] = useState('');
+
+  // 300ms 디바운스
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(inputQ.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [inputQ]);
+
   const fetchFn = useCallback(
-    (page) => listPosts(token, page),
-    [token]
+    (page) => listPosts(token, page, 20, q),
+    [token, q]
   );
-  const { items: posts, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
+  const { items: posts, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q]);
 
   return (
     <div className="page-content">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 className="page-heading" style={{ margin: 0 }}>포스트</h1>
         {isEditorOrAdmin(user) && (
           <button className="btn btn-primary" onClick={() => navigate('/posts/new')}>
@@ -32,12 +41,23 @@ export default function PostList() {
         )}
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="제목으로 검색..."
+          value={inputQ}
+          onChange={(e) => setInputQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 400 }}
+        />
+      </div>
+
       {error && <div className="alert alert-error">{error}</div>}
 
       {posts.length === 0 && !loading && !error ? (
         <div className="empty-state">
           <p style={{ fontSize: 32, marginBottom: 12 }}>📄</p>
-          <p>게시된 포스트가 없습니다.</p>
+          <p>{q ? `"${q}"에 대한 검색 결과가 없습니다.` : '게시된 포스트가 없습니다.'}</p>
         </div>
       ) : (
         <ul className="post-list">
