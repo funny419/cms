@@ -142,8 +142,17 @@ def admin_user_posts(user_id: int) -> tuple:
 @admin_bp.route("/comments", methods=["GET"])
 @roles_required("admin")
 def admin_list_comments() -> tuple:
-    """관리자 전용 — 전체 댓글 목록 (post_title 포함)."""
+    """관리자 전용 — 전체 댓글 목록 (post_title 포함, 페이지네이션)."""
     status_filter = request.args.get("status")
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    count_query = select(func.count(Comment.id)).join(Post, Comment.post_id == Post.id)
+    if status_filter:
+        count_query = count_query.where(Comment.status == status_filter)
+    total: int = db.session.execute(count_query).scalar() or 0
+
     query = (
         select(Comment, Post.title.label("post_title"))
         .join(Post, Comment.post_id == Post.id)
@@ -151,10 +160,22 @@ def admin_list_comments() -> tuple:
     )
     if status_filter:
         query = query.where(Comment.status == status_filter)
-    rows = db.session.execute(query).all()
-    data = []
+
+    rows = db.session.execute(query.offset(offset).limit(per_page)).all()
+    items = []
     for comment, post_title in rows:
         d = comment.to_dict()
         d["post_title"] = post_title
-        data.append(d)
-    return jsonify({"success": True, "data": data, "error": ""}), 200
+        items.append(d)
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "items": items,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "has_more": page * per_page < total,
+        },
+        "error": "",
+    }), 200
