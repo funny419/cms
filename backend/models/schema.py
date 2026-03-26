@@ -75,6 +75,7 @@ class Post(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    content_format: Mapped[str] = mapped_column(String(10), default='html', nullable=False)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
@@ -90,6 +91,7 @@ class Post(Base):
             "excerpt": self.excerpt,
             "status": self.status,
             "post_type": self.post_type,
+            "content_format": self.content_format,
             "author_id": self.author_id,
             "view_count": self.view_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
