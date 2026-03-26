@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from api.decorators import roles_required
 from models.schema import User, Post, Comment
 from database import db
@@ -11,11 +11,18 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 @admin_bp.route("/posts", methods=["GET"])
 @roles_required("admin")
 def admin_list_posts() -> tuple:
-    """전체 포스트 목록 (모든 유저, 모든 상태)."""
+    """전체 포스트 목록 (모든 유저, 모든 상태, 페이지네이션)."""
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    total: int = db.session.execute(select(func.count(Post.id))).scalar() or 0
+
     posts = db.session.execute(
-        select(Post).order_by(Post.created_at.desc())
+        select(Post).order_by(Post.created_at.desc()).offset(offset).limit(per_page)
     ).scalars().all()
-    data = [{
+
+    items = [{
         "id": p.id,
         "title": p.title,
         "status": p.status,
@@ -23,7 +30,18 @@ def admin_list_posts() -> tuple:
         "author_id": p.author_id,
         "created_at": p.created_at.isoformat() if p.created_at else None,
     } for p in posts]
-    return jsonify({"success": True, "data": data, "error": ""}), 200
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "items": items,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "has_more": page * per_page < total,
+        },
+        "error": "",
+    }), 200
 
 
 @admin_bp.route("/users", methods=["GET"])
