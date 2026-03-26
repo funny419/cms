@@ -11,14 +11,17 @@ posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
 @posts_bp.route("", methods=["GET"])
 def list_posts() -> tuple:
-    """공개된 포스트 목록 조회 (작성자·조회수·댓글수·추천수 포함)."""
-    # JWT optional — 로그인 시 user_liked 계산
+    """공개된 포스트 목록 조회 (페이지네이션 포함)."""
     try:
         verify_jwt_in_request(optional=True)
         raw_id = get_jwt_identity()
         current_user_id = int(raw_id) if raw_id else None
     except Exception:
         current_user_id = None
+
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = min(max(1, int(request.args.get("per_page", 20))), 100)
+    offset = (page - 1) * per_page
 
     # 댓글수 서브쿼리 (approved 댓글만)
     comment_sq = (
@@ -37,14 +40,20 @@ def list_posts() -> tuple:
         .scalar_subquery()
     )
 
-    rows = db.session.execute(
+    base_query = (
         select(Post, User.username.label("author_username"), comment_sq.label("comment_count"), like_sq.label("like_count"))
         .outerjoin(User, Post.author_id == User.id)
         .where(Post.status == "published")
-        .order_by(Post.created_at.desc())
+    )
+
+    total: int = db.session.execute(
+        select(func.count(Post.id)).where(Post.status == "published")
+    ).scalar() or 0
+
+    rows = db.session.execute(
+        base_query.order_by(Post.created_at.desc()).offset(offset).limit(per_page)
     ).all()
 
-    # 로그인 사용자의 추천 포스트 ID 집합 (쿼리 1회로 처리)
     liked_post_ids: set = set()
     if current_user_id:
         liked_post_ids = set(
@@ -53,16 +62,26 @@ def list_posts() -> tuple:
             ).scalars().all()
         )
 
-    data = []
+    items = []
     for post, author_username, comment_count, like_count in rows:
         d = post.to_dict()
         d["author_username"] = author_username or "알 수 없음"
         d["comment_count"] = comment_count or 0
         d["like_count"] = like_count or 0
         d["user_liked"] = post.id in liked_post_ids
-        data.append(d)
+        items.append(d)
 
-    return jsonify({"success": True, "data": data, "error": ""}), 200
+    return jsonify({
+        "success": True,
+        "data": {
+            "items": items,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "has_more": page * per_page < total,
+        },
+        "error": "",
+    }), 200
 
 
 @posts_bp.route("/mine", methods=["GET"])
