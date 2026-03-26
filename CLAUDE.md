@@ -188,7 +188,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-26 (Markdown 에디터 지원 추가)
+> 마지막 업데이트: 2026-03-26 (페이지네이션 + 인피니트 스크롤 추가)
 
 ### 완료
 
@@ -206,6 +206,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 | 댓글 수정/삭제 | 로그인: author_id 일치, 게스트: 이메일+패스워드 인증 |
 | 메뉴 | 동적 메뉴 관리 API |
 | 사이트 설정 | GET/PUT `/api/settings` (Option 모델) |
+| 페이지네이션 | Offset 기반 + 인피니트 스크롤 — PostList/MyPosts/AdminPosts/AdminComments 4개 페이지, `useInfiniteScroll` 공통 훅 |
 | Admin 대시보드 | 포스트 관리 + 회원 관리 + 댓글 관리(`/admin/comments`) |
 | Admin 회원 관리 | 권한변경·비활성화·활성화·삭제·글 보기(인라인 토글) |
 | Admin 댓글 관리 | 전체 댓글 목록(상태 뱃지)·삭제 |
@@ -219,7 +220,6 @@ docker compose -f docker-compose.prod.yml up -d --build
 | DB 연결 마법사 (Setup Wizard) | |
 | Post Meta API | DB 스키마만 존재 |
 | 포스트 검색/필터 | |
-| 페이지네이션 | 현재 전체 반환 |
 | Admin 댓글 승인 UI | approve 엔드포인트 존재, UI 미구현 (게스트 댓글 승인용) |
 
 ---
