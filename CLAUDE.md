@@ -23,13 +23,16 @@ Docker 컨테이너로 관리. main 브랜치 push → GitHub Actions → Window
 
 ### dev 브랜치 (로컬 Mac Docker)
 ```bash
-docker compose up -d --build   # 최초 시작
+docker compose up -d --build   # 최초 시작 또는 패키지 변경 후 재빌드
+docker compose up -d            # 일반 재시작 (컨테이너 시작 시 npm install 자동 실행)
 docker compose watch            # 파일 변경 자동 반영 (권장)
 docker compose down             # 중지
 docker compose restart backend  # 백엔드만 재시작
 docker compose logs -f          # 로그
 docker compose exec db mariadb -u funnycms -p  # DB 접속
 ```
+
+> **프론트엔드 패키지 관련:** `docker compose up -d`만으로도 `npm install`이 자동 실행되어 새 패키지가 반영됨. 이미지 재빌드(`--build`) 불필요.
 
 **DB 마이그레이션 (schema.py 수정 후):**
 ```bash
@@ -65,8 +68,17 @@ docker compose -f docker-compose.prod.yml up -d --build
 | Database | MariaDB 10.11 |
 | 로컬 개발 포트 | FE: 5173, BE: 5000, DB: 4807 |
 
+**Docker 서비스 구성 (개발):**
+
+| 컨테이너 | 역할 | 포트 |
+|---------|------|------|
+| `cms_backend` | Flask API | 5000 |
+| `cms_db` | MariaDB | 4807 |
+| `cms_frontend` | Vite 개발 서버 | 5173 |
+| `cms_nginx_files` | 업로드 파일 전용 Nginx | 내부전용 (외부 미노출) |
+
 **권한 체계 (Role):**
-- `admin` — 전체 포스트/회원 관리, Admin 대시보드 (`/admin/*`) 접근
+- `admin` — 전체 포스트/회원 관리, Admin 대시보드 (`/admin/*`) 접근, 사이트 스킨 설정
 - `editor` — 본인 글만 작성/수정/삭제, 내 블로그 (`/my-posts`) 접근 (회원가입 시 기본)
 - `deactivated` — 로그인 차단 (기존 JWT도 roles_required에서 자동 차단)
 
@@ -95,9 +107,13 @@ docker compose -f docker-compose.prod.yml up -d --build
 - **스타일**: CSS Variables (`var(--text)`, `var(--bg)`) + 유틸리티 클래스. **Tailwind 사용 불가**
 - **디자인 시스템**: Notion/Bear 테마 (`index.css`). 유틸리티 클래스: `.btn`, `.card`, `.form-input`, `.alert`, `.badge` 등
 - **HTTP**: **axios 사용** (fetch 금지). API 클라이언트는 `frontend/src/api/`에 위치
-- **테마**: `useTheme()` 훅. `data-theme="dark"` 속성이 `document.documentElement`에 토글
-- **Vite proxy**: `/api` → `BACKEND_URL` 환경변수 분기 (`vite.config.js`)
-  - Docker 실행: `http://backend:5000` / 로컬 직접: `http://localhost:5000`
+- **테마/스킨**:
+  - `useTheme()` 훅 → `data-theme="dark"` 라이트/다크 토글
+  - `useSkin()` 훅 → `data-skin="forest"` 스킨 적용 (`SkinContext.jsx`)
+  - 스킨 프리셋 4종: `notion`(보라, 기본) / `forest`(초록) / `ocean`(파랑) / `rose`(분홍)
+- **Vite proxy**: `vite.config.js`에서 환경변수로 분기
+  - `/api` → `BACKEND_URL` (Docker: `http://backend:5000`, 로컬: `http://localhost:5000`)
+  - `/uploads` → `FILES_URL` (Docker: `http://nginx-files:80`, 로컬: `http://localhost:5000`)
 - **권한 확인 패턴** (각 페이지에서 사용):
   ```js
   const getUser = () => {
@@ -112,26 +128,26 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `GET /api/posts` | 공개 | published 포스트 목록 (author_username·view_count·comment_count·like_count·user_liked 포함) |
-| `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가, 편집 페이지용) — `content_format` 포함 |
+| `GET /api/posts` | 공개 | published 포스트 목록. 파라미터: `?page=1&per_page=20&q=검색어` (페이지네이션+검색) |
+| `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가) — `content_format` 포함 |
 | `POST /api/posts/:id/like` | editor/admin | 추천 토글 (본인 글 불가, 1인 1추천) |
-| `GET /api/posts/mine` | 로그인 | 내 글 전체 (draft+published) |
+| `GET /api/posts/mine` | 로그인 | 내 글 전체. 파라미터: `?page=1&per_page=20` |
 | `POST /api/posts` | editor/admin | 글 작성 (`content_format`: 'html'|'markdown', 기본 'html') |
 | `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사, `content_format` 변경 가능) |
 | `DELETE /api/posts/:id` | 소유자/admin | 삭제 (소유권 검사) |
 | `GET /api/auth/me` | 로그인 | 현재 사용자 조회 |
 | `PUT /api/auth/me` | 로그인 | 프로필 수정 |
-| `GET /api/settings` | 공개 | 사이트 설정 조회 |
-| `PUT /api/settings` | admin | 사이트 설정 수정 |
-| `GET /api/media` | editor/admin | 미디어 목록 |
-| `POST /api/media` | editor/admin | 파일 업로드 + 썸네일 |
+| `GET /api/settings` | 공개 | 사이트 설정 조회 (`site_title`, `site_skin` 등) |
+| `PUT /api/settings` | admin | 사이트 설정 수정 (`site_skin` 포함) |
+| `GET /api/media` | editor/admin | 미디어 목록 (응답: `url`, `thumbnail_url` 포함) |
+| `POST /api/media` | editor/admin | 파일 업로드. 응답: `{ url: "/uploads/...", thumbnail_url: "/uploads/thumb_..." }` |
 | `GET /api/comments/post/:id` | 공개 | 포스트별 승인된 댓글 목록 |
 | `POST /api/comments` | 공개 | 댓글 작성 (로그인=즉시공개, 게스트=이름+이메일+패스워드 필수+승인대기) |
 | `PUT /api/comments/:id` | 소유자/게스트인증 | 댓글 수정 (로그인=author_id 일치, 게스트=이메일+패스워드 인증) |
 | `DELETE /api/comments/:id` | admin/소유자/게스트인증 | 댓글 삭제 (cascade 답글 포함) |
-| `GET /api/admin/posts` | admin | 전체 포스트 관리 |
+| `GET /api/admin/posts` | admin | 전체 포스트 관리. 파라미터: `?page=1&per_page=20&q=검색어&status=published` |
 | `GET /api/admin/users` | admin | 전체 회원 목록 |
-| `GET /api/admin/comments` | admin | 전체 댓글 목록 (post_title 포함) |
+| `GET /api/admin/comments` | admin | 전체 댓글 목록 (post_title 포함). 파라미터: `?page=1&per_page=20` |
 | `PUT /api/admin/users/:id/role` | admin | 권한 변경 |
 | `PUT /api/admin/users/:id/deactivate` | admin | 비활성화 |
 | `DELETE /api/admin/users/:id` | admin | 회원 삭제 (포스트·댓글 orphan 처리) |
@@ -161,17 +177,19 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### 현재 구현: Local (A방식)
 
-- **파일 저장:** Docker named volume `uploads_data` → `/app/uploads/`
-- **URL 형식:** `/uploads/{uuid}_{filename}` (공개 URL로 DB에 저장)
-- **개발 환경:** Flask `send_from_directory`로 서빙 (`FLASK_ENV=development`시 활성화)
-- **프로덕션:** Nginx `location /uploads/` → `alias /app/uploads/` (볼륨 공유)
-- **썸네일:** `/uploads/thumb_{uuid}_{filename}` (Pillow, 300×300)
-- **추상화 파일:** `backend/storage.py` — `StorageBackend`, `LocalStorage`, `get_storage()`
+- **파일 저장:** `/app/uploads/` (개발: `./backend/uploads/` 호스트 마운트, 프로덕션: `uploads_data` named volume)
+- **URL 형식:** `/uploads/{uuid}_{filename}` (공개 URL로 DB `media.filepath`에 저장)
+- **개발 환경:** `nginx-files` 컨테이너(nginx:alpine)가 `./backend/uploads/`를 읽기 전용 마운트 → `/uploads/` 서빙. Vite가 `/uploads/` 요청을 `nginx-files`로 프록시.
+- **프로덕션:** Nginx가 `uploads_data` 볼륨을 `/uploads/` 경로로 직접 서빙 (Flask 불필요)
+- **썸네일:** `/uploads/thumb_{uuid}_{filename}` (Pillow, 300×300). `Media.to_dict()`의 `thumbnail_url` 필드로 반환.
+- **추상화 파일:** `backend/storage.py` — `StorageBackend` 추상 클래스, `LocalStorage`, `get_storage()` 팩토리
 
 ```
-docker-compose.prod.yml 볼륨 구조:
-  backend: uploads_data:/app/uploads  (write)
-  nginx:   uploads_data:/app/uploads  (read → /uploads/ 서빙)
+개발 파일 서빙 흐름:
+  브라우저 → Vite(5173) → /uploads/* → nginx-files(내부80) → ./backend/uploads/
+
+프로덕션 파일 서빙 흐름:
+  브라우저 → Nginx(80) → /uploads/* → uploads_data 볼륨 직접 서빙
 ```
 
 ### 추후 구현 예정: Cloudflare R2 (B방식)
@@ -221,7 +239,6 @@ docker-compose.prod.yml 볼륨 구조:
 
 4. 썸네일: R2에서는 PIL이 로컬 파일을 직접 읽을 수 없으므로 `BytesIO` 방식 필요:
    ```python
-   # media.py에서 R2일 때 썸네일 처리
    from io import BytesIO
    buf = BytesIO()
    img.thumbnail((300, 300))
@@ -240,9 +257,11 @@ docker-compose.prod.yml 볼륨 구조:
 - `SELF_SIGNED_CERT_IN_CHAIN`: 개발용 `frontend/Dockerfile`에 `npm config set strict-ssl false` 적용됨
 - `npm ci` 실패(lock 불일치): 개발용은 `npm install` 사용, `Dockerfile.prod`만 `npm ci` 사용
 - Gunicorn 500: `app:create_app()` 팩토리 문법 확인 → `docker exec cms_backend_prod python app.py`로 ImportError 확인
+- 프론트엔드 패키지 누락(`Failed to resolve import`): `docker compose build frontend && docker compose up -d frontend` — 이미지 재빌드로 해결. 이후에는 `docker compose up -d`만으로 자동 설치됨 (command에 `npm install` 포함)
 
 **API 연결:**
 - Docker 내부 API 호출 실패: `vite.config.js`의 `BACKEND_URL` 환경변수 확인
+- 업로드 이미지 로드 실패: `vite.config.js`의 `FILES_URL` 환경변수 확인 (`http://nginx-files:80`), `nginx-files` 컨테이너 실행 여부 확인
 - 테이블 없음 오류: `docker exec cms_backend_prod flask db upgrade` 실행
 - JWT "Subject must be a string": `create_access_token(identity=str(user.id))` 확인
 
@@ -260,6 +279,10 @@ docker-compose.prod.yml 볼륨 구조:
 - Markdown 포스트 뷰어: `MDEditor.Markdown` 컴포넌트 사용 (`rehype-sanitize` XSS 방어 내장)
 - 포맷 잠금 정책: 한 번 Markdown으로 저장된 포스트는 UI에서 WYSIWYG 탭 비활성화 (DB `content_format` 컬럼 기준)
 
+**스킨 관련:**
+- 스킨 적용 안됨: `GET /api/settings` 응답에 `site_skin` 포함 여부 확인. `PUBLIC_KEYS`에 `site_skin` 있어야 함.
+- 스킨 CSS 미적용: `index.css`의 `[data-skin="forest"]:root` 선택자가 `html` 엘리먼트의 `data-skin` 속성과 매칭되는지 확인 (`SkinContext`가 `document.documentElement`에 속성 설정)
+
 **권한 관련:**
 - User 모델 DB 기본값(`default='subscriber'`)과 register API(`role='editor'`)가 다름 — 회원가입 API로 생성된 계정은 항상 editor. DB에 직접 삽입한 계정은 subscriber가 될 수 있어 PostEditor 접근 시 전체 글 페이지로 리다이렉트될 수 있음 → `UPDATE users SET role='editor' WHERE username='...'` 로 수정
 
@@ -267,7 +290,7 @@ docker-compose.prod.yml 볼륨 구조:
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-26 (스킨 기능 추가)
+> 마지막 업데이트: 2026-03-26
 
 ### 완료
 
@@ -275,32 +298,38 @@ docker-compose.prod.yml 볼륨 구조:
 |------|------|
 | 인증 | 로그인/회원가입/프로필 수정/JWT/RBAC/deactivated 차단 |
 | 포스트 | CRUD API + WYSIWYG 에디터(react-quill-new) + 소유권 검사 |
-| 포스트 에디터 | 포스트별 WYSIWYG/Markdown 선택 (`content_format` 컬럼) — Markdown 선택 후 WYSIWYG 전환 불가(잠금), 다크모드 대응 |
+| 포스트 에디터 | WYSIWYG/Markdown 탭 전환 (`content_format` 컬럼), Markdown 후 WYSIWYG 전환 불가(잠금), 다크모드 대응 |
+| 포스트 에디터 이미지 | WYSIWYG: 툴바 이미지 버튼 → 파일 업로드 → Quill에 삽입. Markdown: "🖼 이미지 삽입" 버튼 → `![이미지](url)` 추가 |
 | 포스트 통계 | 조회수(view_count) + 댓글수 + 추천수 — PostList/PostDetail에 표시 |
 | 포스트 추천 | 로그인 사용자 추천/취소 토글, 본인 글 추천 불가, 1인 1추천(DB UniqueConstraint) |
+| 페이지네이션 | Offset 기반 + 인피니트 스크롤 — PostList/MyPosts/AdminPosts/AdminComments 4개 페이지, `useInfiniteScroll` 공통 훅 (`frontend/src/hooks/useInfiniteScroll.js`) |
+| 포스트 검색/필터 | PostList — 제목 키워드 검색(`?q=`, 300ms 디바운스), AdminPosts — 제목 검색 + 상태 필터(`?status=published\|draft\|scheduled`) |
 | 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
-| 미디어 | 업로드 + Pillow 썸네일 + uuid 파일명 + path traversal 방어 + StorageBackend 추상화 (local/R2 전환 가능) |
+| 미디어 | 파일 업로드 + Pillow 썸네일(300×300) + uuid 파일명 + path traversal 방어. 응답: `url`, `thumbnail_url`. `StorageBackend` 추상화로 local/R2 전환 가능 |
+| 파일 서버 | 개발: `nginx-files` 컨테이너(nginx:alpine)가 `/uploads/` 서빙. 프로덕션: Nginx + `uploads_data` named volume |
 | 댓글 | 계층형(1단 답글) + 로그인/게스트 분기 + 수정/삭제 소유권 인증 + 스팸 필터링 |
 | 댓글 UI | PostDetail 댓글 섹션 — 로그인(즉시공개), 게스트(이름+이메일+패스워드, 승인대기) |
 | 댓글 수정/삭제 | 로그인: author_id 일치, 게스트: 이메일+패스워드 인증 |
 | 메뉴 | 동적 메뉴 관리 API |
-| 사이트 설정 | GET/PUT `/api/settings` (Option 모델) |
-| 페이지네이션 | Offset 기반 + 인피니트 스크롤 — PostList/MyPosts/AdminPosts/AdminComments 4개 페이지, `useInfiniteScroll` 공통 훅 |
-| 포스트 검색/필터 | PostList — 제목 키워드 검색(q, 300ms 디바운스), AdminPosts — 제목 검색 + 상태 필터(published/draft/scheduled) |
-| 스킨 | 프리셋 4종(Notion/Forest/Ocean/Rose), Admin `/admin/settings`에서 선택, 즉시 미리보기 + 저장, 다크모드 연동 |
-| Admin 대시보드 | 포스트 관리 + 회원 관리 + 댓글 관리(`/admin/comments`) |
+| 사이트 설정 | GET/PUT `/api/settings` (Option 모델, `site_skin` 포함) |
+| 사이트 스킨 | 프리셋 4종(Notion/Forest/Ocean/Rose), Admin `/admin/settings`에서 선택, 즉시 미리보기 + 저장, 다크모드 연동. `SkinContext` + `useSkin()` 훅 |
+| Admin 대시보드 | 포스트 관리(검색/필터/페이지네이션) + 회원 관리 + 댓글 관리 + 사이트 설정(스킨) |
 | Admin 회원 관리 | 권한변경·비활성화·활성화·삭제·글 보기(인라인 토글) |
-| Admin 댓글 관리 | 전체 댓글 목록(상태 뱃지)·삭제 |
-| UI/UX | Notion/Bear 테마 + 라이트/다크 모드 + role별 Nav |
-| 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
+| Admin 댓글 관리 | 전체 댓글 목록(상태 뱃지)·삭제·페이지네이션 |
+| UI/UX | Notion/Bear 테마 + 라이트/다크 모드 + 스킨 4종 + role별 Nav |
+| 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD + 컨테이너 시작 시 npm install 자동 실행 |
 
 ### 미구현
 
 | 기능 | 비고 |
 |------|------|
+| 유저별 블로그 스킨 | 계획서 작성 완료. `User.skin` 컬럼 추가, `/blog/:username` 페이지, `GET /api/users/:username` API, `GET /api/posts?author=` 파라미터 필요 |
 | DB 연결 마법사 (Setup Wizard) | |
 | Post Meta API | DB 스키마만 존재 |
+| 포스트 검색 — 작성자 필터 | `GET /api/posts?author=username` (유저별 블로그 페이지와 함께 구현 예정) |
 | Admin 댓글 승인 UI | approve 엔드포인트 존재, UI 미구현 (게스트 댓글 승인용) |
+| 페이지네이션 | ~~현재 전체 반환~~ → 완료 |
+| 포스트 검색/필터 | ~~미구현~~ → 완료 |
 
 ---
 
@@ -308,35 +337,56 @@ docker-compose.prod.yml 볼륨 구조:
 
 ```
 cms/
+├── nginx/
+│   └── nginx-files.conf         # 개발용 파일 서버 Nginx 설정 (/uploads/ 전용)
 ├── backend/
 │   ├── api/
-│   │   ├── admin.py         # Admin 대시보드 API
-│   │   ├── auth.py          # 인증
-│   │   ├── comments.py      # 댓글 + 스팸 필터
-│   │   ├── decorators.py    # roles_required 데코레이터
-│   │   ├── media.py         # 파일 업로드 + 썸네일
-│   │   ├── menus.py         # 동적 메뉴
-│   │   ├── posts.py         # 포스트 CRUD + 소유권
-│   │   └── settings.py      # 사이트 설정
-│   ├── migrations/          # Flask-Migrate (반드시 git 커밋)
-│   ├── models/schema.py     # SQLAlchemy ORM 모델
-│   ├── app.py               # Flask 팩토리 + 자동 마이그레이션
-│   ├── config.py            # Dev/Prod 설정
-│   ├── database.py          # db = SQLAlchemy(model_class=Base)
+│   │   ├── admin.py             # Admin 대시보드 API (검색/필터/페이지네이션 포함)
+│   │   ├── auth.py              # 인증
+│   │   ├── comments.py          # 댓글 + 스팸 필터
+│   │   ├── decorators.py        # roles_required 데코레이터
+│   │   ├── media.py             # 파일 업로드 + 썸네일 (storage.py 통해 저장)
+│   │   ├── menus.py             # 동적 메뉴
+│   │   ├── posts.py             # 포스트 CRUD + 소유권 + 검색(q) + 페이지네이션
+│   │   └── settings.py          # 사이트 설정 (site_skin 포함)
+│   ├── migrations/              # Flask-Migrate (반드시 git 커밋)
+│   ├── models/schema.py         # SQLAlchemy ORM 모델
+│   ├── app.py                   # Flask 팩토리 + 자동 마이그레이션
+│   ├── config.py                # Dev/Prod 설정
+│   ├── database.py              # db = SQLAlchemy(model_class=Base)
+│   ├── storage.py               # StorageBackend 추상화 (LocalStorage / R2Storage 예정)
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── api/             # axios 클라이언트 (auth, posts, admin, comments)
-│       ├── components/      # Nav, CommentSection, widgets
-│       ├── context/         # ThemeContext
+│       ├── api/
+│       │   ├── auth.js          # 인증 API
+│       │   ├── posts.js         # 포스트 API (page/per_page/q 파라미터 포함)
+│       │   ├── admin.js         # Admin API (page/per_page/q/status 파라미터 포함)
+│       │   ├── comments.js      # 댓글 API (listAllComments page/per_page 포함)
+│       │   ├── media.js         # 미디어 업로드 API (uploadMedia)
+│       │   └── settings.js      # 사이트 설정 API (getSettings, updateSettings)
+│       ├── components/
+│       │   ├── Nav.jsx          # role별 네비게이션 (Admin: 사이트 설정 링크 포함)
+│       │   ├── CommentSection.jsx
+│       │   └── widgets/
+│       │       └── RecentPosts.jsx
+│       ├── context/
+│       │   ├── ThemeContext.jsx  # 라이트/다크 모드 (useTheme)
+│       │   └── SkinContext.jsx   # 스킨 4종 관리 (useSkin, SKINS 목록)
+│       ├── hooks/
+│       │   └── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
 │       └── pages/
-│           ├── admin/       # AdminPosts, AdminUsers, AdminComments
-│           ├── MyPosts.jsx  # 내 블로그 (editor 로그인 후)
-│           ├── PostList.jsx # 전체 공개 글 (작성자·조회수·댓글수·추천수)
-│           ├── PostDetail.jsx  # 추천 버튼 + 댓글 섹션 + Markdown/HTML 렌더링 분기
-│           └── PostEditor.jsx  # WYSIWYG(Quill) + Markdown(@uiw/react-md-editor) 탭 전환
-├── docs/superpowers/        # 설계 스펙 및 구현 계획서
+│           ├── admin/
+│           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+필터+무한스크롤)
+│           │   ├── AdminUsers.jsx     # 회원 관리
+│           │   ├── AdminComments.jsx  # 댓글 관리 (무한스크롤)
+│           │   └── AdminSettings.jsx  # 사이트 설정 (스킨 선택)
+│           ├── MyPosts.jsx       # 내 블로그 (editor 로그인 후, 무한스크롤)
+│           ├── PostList.jsx      # 전체 공개 글 (검색+무한스크롤)
+│           ├── PostDetail.jsx    # 추천 버튼 + 댓글 섹션 + Markdown/HTML 렌더링 분기
+│           └── PostEditor.jsx    # WYSIWYG(Quill+이미지업로드) + Markdown(이미지삽입버튼) 탭 전환
+├── docs/superpowers/            # 설계 스펙 및 구현 계획서
 ├── .github/workflows/deploy.yml
-├── docker-compose.yml       # 로컬 개발 (Watch 모드)
-└── docker-compose.prod.yml  # 프로덕션 (Gunicorn 4 workers + Nginx)
+├── docker-compose.yml           # 로컬 개발 (nginx-files 포함, 컨테이너 시작 시 npm install)
+└── docker-compose.prod.yml      # 프로덕션 (Gunicorn 4 workers + Nginx + uploads_data 볼륨)
 ```
