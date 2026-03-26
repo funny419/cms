@@ -113,11 +113,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `GET /api/posts` | 공개 | published 포스트 목록 (author_username·view_count·comment_count·like_count·user_liked 포함) |
-| `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가, 편집 페이지용) |
+| `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가, 편집 페이지용) — `content_format` 포함 |
 | `POST /api/posts/:id/like` | editor/admin | 추천 토글 (본인 글 불가, 1인 1추천) |
 | `GET /api/posts/mine` | 로그인 | 내 글 전체 (draft+published) |
-| `POST /api/posts` | editor/admin | 글 작성 |
-| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사) |
+| `POST /api/posts` | editor/admin | 글 작성 (`content_format`: 'html'|'markdown', 기본 'html') |
+| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사, `content_format` 변경 가능) |
 | `DELETE /api/posts/:id` | 소유자/admin | 삭제 (소유권 검사) |
 | `GET /api/auth/me` | 로그인 | 현재 사용자 조회 |
 | `PUT /api/auth/me` | 로그인 | 프로필 수정 |
@@ -176,6 +176,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 **포스트 통계:**
 - 개발 환경(`<StrictMode>`)에서 포스트 상세 진입 시 view_count가 +2로 보이는 것은 정상 — React StrictMode가 useEffect를 2번 실행하는 개발 전용 동작. 프로덕션 빌드에서는 +1.
 
+**Markdown 에디터:**
+- `@uiw/react-md-editor` 다크모드: `data-color-mode={theme === 'dark' ? 'dark' : 'light'}` — `useTheme()` 훅으로 분기
+- Markdown 포스트 뷰어: `MDEditor.Markdown` 컴포넌트 사용 (`rehype-sanitize` XSS 방어 내장)
+- 포맷 잠금 정책: 한 번 Markdown으로 저장된 포스트는 UI에서 WYSIWYG 탭 비활성화 (DB `content_format` 컬럼 기준)
+
 **권한 관련:**
 - User 모델 DB 기본값(`default='subscriber'`)과 register API(`role='editor'`)가 다름 — 회원가입 API로 생성된 계정은 항상 editor. DB에 직접 삽입한 계정은 subscriber가 될 수 있어 PostEditor 접근 시 전체 글 페이지로 리다이렉트될 수 있음 → `UPDATE users SET role='editor' WHERE username='...'` 로 수정
 
@@ -183,7 +188,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-25 (댓글 UI + 포스트 통계/추천 구현)
+> 마지막 업데이트: 2026-03-26 (Markdown 에디터 지원 추가)
 
 ### 완료
 
@@ -191,6 +196,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 |------|------|
 | 인증 | 로그인/회원가입/프로필 수정/JWT/RBAC/deactivated 차단 |
 | 포스트 | CRUD API + WYSIWYG 에디터(react-quill-new) + 소유권 검사 |
+| 포스트 에디터 | 포스트별 WYSIWYG/Markdown 선택 (`content_format` 컬럼) — Markdown 선택 후 WYSIWYG 전환 불가(잠금), 다크모드 대응 |
 | 포스트 통계 | 조회수(view_count) + 댓글수 + 추천수 — PostList/PostDetail에 표시 |
 | 포스트 추천 | 로그인 사용자 추천/취소 토글, 본인 글 추천 불가, 1인 1추천(DB UniqueConstraint) |
 | 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
@@ -247,8 +253,8 @@ cms/
 │           ├── admin/       # AdminPosts, AdminUsers, AdminComments
 │           ├── MyPosts.jsx  # 내 블로그 (editor 로그인 후)
 │           ├── PostList.jsx # 전체 공개 글 (작성자·조회수·댓글수·추천수)
-│           ├── PostDetail.jsx  # 추천 버튼 + 댓글 섹션
-│           └── PostEditor.jsx  # Quill WYSIWYG
+│           ├── PostDetail.jsx  # 추천 버튼 + 댓글 섹션 + Markdown/HTML 렌더링 분기
+│           └── PostEditor.jsx  # WYSIWYG(Quill) + Markdown(@uiw/react-md-editor) 탭 전환
 ├── docs/superpowers/        # 설계 스펙 및 구현 계획서
 ├── .github/workflows/deploy.yml
 ├── docker-compose.yml       # 로컬 개발 (Watch 모드)
