@@ -4,6 +4,7 @@ import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
+import { useTheme } from '../context/ThemeContext';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
@@ -33,6 +34,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const user = getUser();
+  const { theme } = useTheme();
   const token = localStorage.getItem('token');
   const [likeCount, setLikeCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
@@ -177,7 +179,7 @@ export default function PostDetail() {
 
       {/* 본문 */}
       {post.content_format === 'markdown' ? (
-        <div data-color-mode="light" style={{ fontSize: 15, lineHeight: 1.8 }}>
+        <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} style={{ fontSize: 15, lineHeight: 1.8 }}>
           <MDEditor.Markdown source={post.content || ''} />
         </div>
       ) : (

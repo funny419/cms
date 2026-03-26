@@ -4,6 +4,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import { getPost, createPost, updatePost } from '../api/posts';
+import { useTheme } from '../context/ThemeContext';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
@@ -35,6 +36,7 @@ export default function PostEditor() {
   const isEdit = Boolean(id);
   const token = localStorage.getItem('token');
   const user = getUser();
+  const { theme } = useTheme();
 
   const [form, setForm] = useState({
     title: '',
@@ -185,7 +187,7 @@ export default function PostEditor() {
 
       {/* 에디터 본문 */}
       {form.content_format === 'markdown' ? (
-        <div data-color-mode="light" style={{ marginBottom: 24 }}>
+        <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} style={{ marginBottom: 24 }}>
           <MDEditor
             value={form.content}
             onChange={(val) => setForm({ ...form, content: val || '' })}
