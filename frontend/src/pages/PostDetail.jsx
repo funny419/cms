@@ -60,7 +60,7 @@ export default function PostDetail() {
 
         if (listRes.success) {
           // created_at 내림차순 (최신 글이 앞)
-          const sorted = [...listRes.data].sort(
+          const sorted = [...listRes.data.items].sort(
             (a, b) => new Date(b.created_at) - new Date(a.created_at)
           );
           const idx = sorted.findIndex((p) => p.id === postRes.data.id);

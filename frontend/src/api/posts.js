@@ -4,10 +4,10 @@ const BASE_URL = '/api/posts';
 const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 // listPosts: token이 있으면 Authorization 헤더 포함 (user_liked 반영)
-export const listPosts = async (token) => {
+export const listPosts = async (token, page = 1, perPage = 20) => {
   try {
     const headers = token ? authHeader(token) : {};
-    const response = await axios.get(BASE_URL, { headers });
+    const response = await axios.get(BASE_URL, { headers, params: { page, per_page: perPage } });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch posts.' };
@@ -53,9 +53,12 @@ export const deletePost = async (token, id) => {
   }
 };
 
-export const getMyPosts = async (token) => {
+export const getMyPosts = async (token, page = 1, perPage = 20) => {
   try {
-    const response = await axios.get(`${BASE_URL}/mine`, { headers: authHeader(token) });
+    const response = await axios.get(`${BASE_URL}/mine`, {
+      headers: authHeader(token),
+      params: { page, per_page: perPage },
+    });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch my posts.' };

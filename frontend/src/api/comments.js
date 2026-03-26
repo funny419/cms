@@ -46,9 +46,10 @@ export const deleteComment = async (token, commentId, data = {}) => {
   }
 };
 
-export const listAllComments = async (token, status = '') => {
+export const listAllComments = async (token, status = '', page = 1, perPage = 20) => {
   try {
-    const params = status ? { status } : {};
+    const params = { page, per_page: perPage };
+    if (status) params.status = status;
     const response = await axios.get('/api/admin/comments', { headers: authHeader(token), params });
     return response.data;
   } catch (error) {
