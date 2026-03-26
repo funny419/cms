@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listPosts } from '../api/posts';
+import useInfiniteScroll from '../hooks/useInfiniteScroll';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
@@ -10,30 +11,15 @@ const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
 
 export default function PostList() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const user = getUser();
+  const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    listPosts(token).then((res) => {
-      if (res.success) setPosts(res.data);
-      else setError(res.error);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return (
-    <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
+  const fetchFn = useCallback(
+    (page) => listPosts(token, page),
+    [token]
   );
-
-  if (error) return (
-    <div className="page-content">
-      <div className="alert alert-error">{error}</div>
-    </div>
-  );
+  const { items: posts, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
 
   return (
     <div className="page-content">
@@ -46,7 +32,9 @@ export default function PostList() {
         )}
       </div>
 
-      {posts.length === 0 ? (
+      {error && <div className="alert alert-error">{error}</div>}
+
+      {posts.length === 0 && !loading && !error ? (
         <div className="empty-state">
           <p style={{ fontSize: 32, marginBottom: 12 }}>📄</p>
           <p>게시된 포스트가 없습니다.</p>
@@ -84,6 +72,16 @@ export default function PostList() {
             </li>
           ))}
         </ul>
+      )}
+
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      {loading && (
+        <div className="empty-state" style={{ marginTop: 24 }}>불러오는 중...</div>
+      )}
+      {!hasMore && posts.length > 0 && (
+        <div style={{ textAlign: 'center', color: 'var(--text-light)', fontSize: 13, padding: '24px 0' }}>
+          더 이상 글이 없습니다.
+        </div>
       )}
     </div>
   );
