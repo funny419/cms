@@ -288,6 +288,21 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ---
 
+## 프로젝트 관리
+
+**GitHub Projects:** https://github.com/users/funny419/projects/1
+- Done (24개): 완료된 기능
+- Todo (18개): Phase 1~3 미구현 기능 + 기존 기능 개선
+- 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
+
+**관련 분석 보고서** (`docs/` 폴더):
+- `BACKEND_ARCHITECTURE_ANALYSIS.md` — BE API 아키텍처 확장 분석
+- `FE_Architecture_Analysis_2026-03-26.md` — FE 아키텍처 확장 분석
+- `INFRA_ANALYSIS_REPORT.md` — 인프라 아키텍처 확장 분석
+- `멀티유저블로그_UX기획_분석보고서.md` — UX/기능 기획 로드맵 (Phase 1~3 상세)
+
+---
+
 ## 구현 현황
 
 > 마지막 업데이트: 2026-03-26
@@ -321,15 +336,103 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### 미구현
 
+> Phase별 우선순위 기준 (2026-03-26 기획 분석 기반)
+
+#### Phase 1 — 기본 블로그 구조 (2-3개월, 최우선)
+
 | 기능 | 비고 |
 |------|------|
-| 유저별 블로그 스킨 | 계획서 작성 완료. `User.skin` 컬럼 추가, `/blog/:username` 페이지, `GET /api/users/:username` API, `GET /api/posts?author=` 파라미터 필요 |
-| DB 연결 마법사 (Setup Wizard) | |
-| Post Meta API | DB 스키마만 존재 |
-| 포스트 검색 — 작성자 필터 | `GET /api/posts?author=username` (유저별 블로그 페이지와 함께 구현 예정) |
+| 유저별 블로그 (`/blog/:username`) | `Category`, `Tag`, `PostTag` 테이블 추가. `GET /api/users/:username`, `GET /api/posts?author=` API. `/blog/:username` + `/blog/:username/category/:id` + `/blog/:username/tag/:id` FE 페이지 |
+| 카테고리 시스템 | `categories` 테이블 (계층형, `parent_id`). `Post.category_id` 컬럼 추가. `POST/PUT/DELETE /api/categories`, `GET /api/users/:username/categories` API. FE 에디터 드롭다운 + 사이드바 |
+| 태그 시스템 | `tags`, `post_tags` 테이블. `POST/DELETE /api/posts/:id/tags` API. FE 에디터 태그 입력 + 태그 클라우드 |
+| 프로필 커스터마이징 | `User` 모델에 `bio`, `avatar_url` 컬럼 추가. `GET /api/users/:username` API. 프로필 카드 FE 컴포넌트 |
+| 검색 고도화 | DB Fulltext 인덱스 (`title`, `content`). `GET /api/posts/search?q=&author=&category=&tags=` API. `/search` FE 페이지 (작성자/카테고리/태그 필터) |
+
+#### Phase 2 — 공개 제어 및 예약 발행 (1.5-2개월)
+
+| 기능 | 비고 |
+|------|------|
+| 포스트 공개 범위 | `posts.visibility` 컬럼 추가 (public/members_only/private). API 조회 시 visibility 필터 적용. PostEditor에 라디오 버튼 UI |
+| 포스트 예약 발행 | `posts.published_at` 컬럼 활용. APScheduler로 1분 간격 체크 후 자동 발행. PostEditor에 날짜/시간 선택 UI |
+| 임시저장 (자동) | PostEditor에서 주기적 자동 저장 (기존 `status='draft'` 활용, localStorage 또는 API) |
+
+#### Phase 3 — 상호작용 및 분석 (2-3개월)
+
+| 기능 | 비고 |
+|------|------|
+| 구독/이웃 | `follows` 테이블. `POST/DELETE /api/users/:id/follow`. `GET /api/feed` (구독자 새 글). `/feed` FE 피드 페이지 |
+| 알림 시스템 | `notifications` 테이블. `GET /api/notifications`, `PUT /api/notifications/read-all`. `WS /ws/notifications` (Socket.IO) |
+| 블로그 통계 | `visit_logs` 테이블 (월별 파티셔닝) + `visit_daily_stats` 집계. `GET /api/blog/:username/stats/daily?days=30`. `/my-blog/statistics` FE 대시보드(recharts) |
+| 포스트 시리즈 | `series` 테이블. `POST /api/series`, `PUT /api/posts/:id/series` API. 시리즈 네비게이션 FE 컴포넌트 |
+| 게스트북 | `guestbook` 테이블. `/blog/:username/guestbook` 페이지 |
+| RSS/Atom 피드 | `GET /blog/:username/feed.xml` (python-feedgen 라이브러리) |
+| 소셜 공유 버튼 | PostDetail 하단에 카카오톡/트위터/페이스북 공유 버튼 |
+| 유저별 블로그 스킨 | `/my-blog/settings` 스킨 선택 UI (기존 사이트 스킨 시스템 활용) |
+
+#### 기존 기능 개선
+
+| 기능 | 비고 |
+|------|------|
 | Admin 댓글 승인 UI | approve 엔드포인트 존재, UI 미구현 (게스트 댓글 승인용) |
-| 페이지네이션 | ~~현재 전체 반환~~ → 완료 |
-| 포스트 검색/필터 | ~~미구현~~ → 완료 |
+| DB 연결 마법사 (Setup Wizard) | |
+
+---
+
+## 멀티 유저 블로그 플랫폼 확장 로드맵
+
+> 단일 설치형 CMS → 멀티 유저 블로그 플랫폼으로 확장 계획 (2026-03-26 전문가팀 분석)
+> **핵심 전제:** 모든 확장은 `blogs` 테이블(유저별 블로그 분리) 생성이 선행되어야 함
+
+### Phase 1 (1-2개월): 기반 구조
+
+| 영역 | 작업 |
+|------|------|
+| DB | `blogs`, `categories`, `tags`, `series`, `visit_logs` 테이블 추가. `posts`에 `blog_id`, `visibility`, `published_at` 컬럼 추가 |
+| BE | `GET /api/blog/:username` + 카테고리/태그 API. Redis 캐싱 도입(`flask-caching`). 복합 인덱스 추가(`status, created_at` 등) |
+| FE | `/blog/:username` 블로그 홈. Zustand 상태관리 도입. Route-based 코드 스플리팅(번들 50%↓) |
+| INFRA | Redis Cluster, Prometheus+Grafana, TLS+Cloudflare WAF |
+| 완료 기준 | 유저 고유 블로그 URL 접근 가능, API 응답 <100ms |
+
+### Phase 2 (2-3개월): 커뮤니티 기능
+
+| 영역 | 작업 |
+|------|------|
+| DB | `follows`, `guestbook`, `notifications`, `post_tags`, `visit_daily_stats` 테이블 추가 |
+| BE | `POST /api/users/:id/follow`, `GET /api/feed`, `WS /ws/notifications` (Socket.IO) |
+| FE | `/feed` 이웃 피드, `/notifications` 알림 센터, `/my-blog/settings` |
+| INFRA | DB Read Replica, Cloudflare R2 마이그레이션 |
+
+### Phase 3 (3-6개월): 고도화
+
+| 영역 | 작업 |
+|------|------|
+| DB | `post_stats`, `series_posts`, `post_categories`. `visit_logs` 월별 파티셔닝 |
+| BE | RSS 피드(`GET /blog/:username/feed.xml`), Elasticsearch 전문 검색, 통계 API |
+| FE | `/my-blog/statistics` 대시보드(recharts), 블로그 스킨 커스터마이저 |
+| INFRA | Kubernetes 전환, 멀티리전 확장 |
+
+### 신규 API 계획 요약
+
+| 도메인 | 주요 엔드포인트 |
+|--------|--------------|
+| 블로그 | `GET /api/blog/:username`, `GET /api/blog/:username/posts?category=&tag=` |
+| 카테고리/태그 | `POST /api/categories`, `GET /api/tags/:name/posts` |
+| 구독/피드 | `POST /api/users/:id/follow`, `DELETE /api/users/:id/follow`, `GET /api/feed` |
+| 알림 | `GET /api/notifications`, `PUT /api/notifications/read-all`, `WS /ws/notifications` |
+| 통계 | `GET /api/blog/:username/stats/daily?days=30` |
+| RSS | `GET /blog/:username/feed.xml` |
+| 검색 | `GET /api/posts/search?q=&author=&category=&tags=&sort=recent\|popular` |
+
+### 신규 FE 페이지 계획
+
+| 우선순위 | 경로 | 설명 |
+|---------|------|------|
+| P0 | `/blog/:username` | 유저별 블로그 홈 (프로필, 최근 글, 카테고리) |
+| P0 | `/feed` | 이웃 새 글 피드 |
+| P1 | `/search` | 통합 검색 결과 |
+| P1 | `/my-blog/settings` | 블로그 설정 (스킨, 소개글) |
+| P1 | `/notifications` | 알림 센터 |
+| P2 | `/my-blog/statistics` | 블로그 통계 대시보드 |
 
 ---
 
@@ -385,7 +488,12 @@ cms/
 │           ├── PostList.jsx      # 전체 공개 글 (검색+무한스크롤)
 │           ├── PostDetail.jsx    # 추천 버튼 + 댓글 섹션 + Markdown/HTML 렌더링 분기
 │           └── PostEditor.jsx    # WYSIWYG(Quill+이미지업로드) + Markdown(이미지삽입버튼) 탭 전환
-├── docs/superpowers/            # 설계 스펙 및 구현 계획서
+├── docs/
+│   ├── superpowers/             # 설계 스펙 및 구현 계획서
+│   ├── BACKEND_ARCHITECTURE_ANALYSIS.md      # BE API 아키텍처 확장 분석
+│   ├── FE_Architecture_Analysis_2026-03-26.md # FE 아키텍처 확장 분석
+│   ├── INFRA_ANALYSIS_REPORT.md              # 인프라 아키텍처 확장 분석
+│   └── 멀티유저블로그_UX기획_분석보고서.md      # UX/기능 기획 로드맵 (Phase 1~3)
 ├── .github/workflows/deploy.yml
 ├── docker-compose.yml           # 로컬 개발 (nginx-files 포함, 컨테이너 시작 시 npm install)
 └── docker-compose.prod.yml      # 프로덕션 (Gunicorn 4 workers + Nginx + uploads_data 볼륨)
