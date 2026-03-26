@@ -4,10 +4,12 @@ const BASE_URL = '/api/posts';
 const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 // listPosts: token이 있으면 Authorization 헤더 포함 (user_liked 반영)
-export const listPosts = async (token, page = 1, perPage = 20) => {
+export const listPosts = async (token, page = 1, perPage = 20, q = '') => {
   try {
     const headers = token ? authHeader(token) : {};
-    const response = await axios.get(BASE_URL, { headers, params: { page, per_page: perPage } });
+    const params = { page, per_page: perPage };
+    if (q) params.q = q;
+    const response = await axios.get(BASE_URL, { headers, params });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch posts.' };

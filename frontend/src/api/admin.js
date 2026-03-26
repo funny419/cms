@@ -3,11 +3,14 @@ import axios from 'axios';
 const BASE_URL = '/api/admin';
 const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
-export const adminListPosts = async (token, page = 1, perPage = 20) => {
+export const adminListPosts = async (token, page = 1, perPage = 20, q = '', status = '') => {
   try {
+    const params = { page, per_page: perPage };
+    if (q) params.q = q;
+    if (status) params.status = status;
     const response = await axios.get(`${BASE_URL}/posts`, {
       headers: authHeader(token),
-      params: { page, per_page: perPage },
+      params,
     });
     return response.data;
   } catch (error) {
