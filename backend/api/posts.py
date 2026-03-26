@@ -11,7 +11,7 @@ posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
 @posts_bp.route("", methods=["GET"])
 def list_posts() -> tuple:
-    """공개된 포스트 목록 조회 (페이지네이션 포함)."""
+    """공개된 포스트 목록 조회 (페이지네이션 + 검색 포함)."""
     try:
         verify_jwt_in_request(optional=True)
         raw_id = get_jwt_identity()
@@ -22,6 +22,7 @@ def list_posts() -> tuple:
     page = max(1, request.args.get("page", 1, type=int) or 1)
     per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
     offset = (page - 1) * per_page
+    q = request.args.get("q", "").strip()
 
     # 댓글수 서브쿼리 (approved 댓글만)
     comment_sq = (
@@ -45,10 +46,13 @@ def list_posts() -> tuple:
         .outerjoin(User, Post.author_id == User.id)
         .where(Post.status == "published")
     )
+    if q:
+        base_query = base_query.where(Post.title.ilike(f"%{q}%"))
 
-    total: int = db.session.execute(
-        select(func.count(Post.id)).where(Post.status == "published")
-    ).scalar() or 0
+    total_query = select(func.count(Post.id)).where(Post.status == "published")
+    if q:
+        total_query = total_query.where(Post.title.ilike(f"%{q}%"))
+    total: int = db.session.execute(total_query).scalar() or 0
 
     rows = db.session.execute(
         base_query.order_by(Post.created_at.desc()).offset(offset).limit(per_page)
