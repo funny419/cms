@@ -34,6 +34,28 @@ docker compose exec backend flask db migrate -m "변경 내용"
 # 마이그레이션 파일은 반드시 git 커밋할 것
 ```
 
+### pre-commit 훅 (코드 품질 자동 검증)
+
+**최초 설치 (클론 후 1회):**
+```bash
+bash scripts/setup-hooks.sh
+```
+
+**검증 파이프라인 (git commit 시 자동 실행):**
+```
+① ruff lint + auto-fix  →  ② mypy type check  →  ③ pytest  →  ④ eslint (JS 변경 시)
+```
+
+- `.py` 파일이 스테이징되면 ruff → mypy → pytest 순서로 실행
+- `.js/.jsx` 파일이 스테이징되면 eslint 실행
+- ruff는 자동 수정 후 변경 파일을 자동 재스테이징
+- Docker 컨테이너가 꺼져 있으면 해당 검사를 건너뜀
+
+**수동 실행:**
+```bash
+bash scripts/pre-commit.sh
+```
+
 ### main 브랜치 (리모트 Windows Docker)
 ```powershell
 # 프로덕션 컨테이너에서 실행

@@ -15,7 +15,7 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-26
+> 마지막 업데이트: 2026-03-27
 
 ### 완료
 
@@ -36,6 +36,8 @@
 | 사이트 스킨 | 프리셋 4종(Notion/Forest/Ocean/Rose), Admin에서 선택, 즉시 미리보기, 다크모드 연동 |
 | Admin 대시보드 | 포스트/회원/댓글 관리 + 사이트 설정(스킨) |
 | 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
+| **개발 도구** | **pre-commit 피드백 루프** — ruff(lint+autofix) → mypy → pytest → eslint. 실패 시 Claude 자가수정 트리거 (`scripts/pre-commit.sh`, `scripts/setup-hooks.sh`) |
+| **Claude Code 스킬** | **12개 프로젝트 특화 스킬** — `new-api-endpoint`, `db-migration`, `new-page`, `code-review`, `test-generation`, `dba-query`, `db-erd`, `api-docs`, `infra`, `debug`, `deploy`, `service-planning` |
 
 ### 미구현
 

@@ -32,3 +32,10 @@
 
 **권한 관련:**
 - User 모델 DB 기본값(`default='subscriber'`)과 register API(`role='editor'`)가 다름 — 회원가입 API로 생성된 계정은 항상 editor. DB에 직접 삽입한 계정은 subscriber가 될 수 있어 PostEditor 접근 시 전체 글 페이지로 리다이렉트될 수 있음 → `UPDATE users SET role='editor' WHERE username='...'` 로 수정
+
+**pre-commit 훅:**
+- `pytest exit 5`: 테스트 파일 없음 — 정상 (pass로 처리됨)
+- Docker 컨테이너 미실행 시: 해당 언어 검사를 건너뜀 (오류 아님)
+- ruff 경로 오류(`No such file or directory: backend`): Docker 내부에서 경로는 `backend/`가 아닌 `.` (`/app` 루트) — `scripts/pre-commit.sh` 확인
+- 훅 미설치: `bash scripts/setup-hooks.sh` 실행 (새 클론 후 1회 필요)
+- ruff auto-fix 후 diff가 생김: 정상 — 수정된 파일이 자동 재스테이징되어 같이 커밋됨

@@ -40,6 +40,9 @@
   - 조회 시: `int(get_jwt_identity())`
 - **requirements.txt**: 새 패키지 추가 시 즉시 반영 후 `--no-cache` 재빌드
 - **Gunicorn Entry**: `app.py`에 `app = create_app()` 최하단 선언 필요
+- **린팅/타입체크**: `ruff`(lint+format), `mypy`(type check), `pytest` — requirements.txt에 포함, Docker 내부에서 실행
+  - ruff 설정: `backend/pyproject.toml` (`migrations/` 제외, line-length=100)
+  - Docker 내부 경로: `ruff check .` (`.`이 `/app` 루트 — `backend/` 아님)
 
 ### Frontend (React/Vite)
 
@@ -121,6 +124,26 @@ cms/
 │   ├── FE_Architecture_Analysis_2026-03-26.md
 │   ├── INFRA_ANALYSIS_REPORT.md
 │   └── 멀티유저블로그_UX기획_분석보고서.md
+├── scripts/
+│   ├── pre-commit.sh            # 코드 품질 검증 (ruff→mypy→pytest→eslint)
+│   └── setup-hooks.sh           # pre-commit 훅 설치 (클론 후 1회 실행)
+├── .claude/
+│   ├── hooks/
+│   │   └── check-commit.sh      # PostToolUse 훅: 커밋 실패 시 Claude 자가수정 지시
+│   ├── rules/                   # CLAUDE.md에서 @ import하는 규칙 파일들
+│   └── skills/                  # 프로젝트 특화 스킬 12개
+│       ├── new-api-endpoint.md  # Flask API 추가 워크플로
+│       ├── db-migration.md      # DB 마이그레이션 워크플로
+│       ├── new-page.md          # React 페이지 추가 워크플로
+│       ├── code-review.md       # BE/FE 코드 리뷰 체크리스트
+│       ├── test-generation.md   # pytest/vitest 테스트 작성 패턴
+│       ├── dba-query.md         # MariaDB 쿼리/인덱스 가이드
+│       ├── db-erd.md            # schema.py → Mermaid ERD 생성
+│       ├── api-docs.md          # api.md 업데이트 워크플로
+│       ├── infra.md             # Docker/GitHub Actions/Nginx 변경 체크리스트
+│       ├── debug.md             # 브랜치별 환경 분기 + 오류 진단 흐름
+│       ├── deploy.md            # dev→main PR + CI/CD + 프로덕션 마이그레이션
+│       └── service-planning.md  # 기획 → 스펙 → task 분해 워크플로
 ├── .github/workflows/deploy.yml
 ├── docker-compose.yml           # 로컬 개발 (nginx-files 포함, 컨테이너 시작 시 npm install)
 └── docker-compose.prod.yml      # 프로덕션 (Gunicorn 4 workers + Nginx + uploads_data 볼륨)
