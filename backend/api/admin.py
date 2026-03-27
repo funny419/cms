@@ -1,9 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
+
 from api.decorators import roles_required
-from models.schema import User, Post, Comment
 from database import db
+from models.schema import Comment, Post, User
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -30,30 +31,33 @@ def admin_list_posts() -> tuple:
 
     total: int = db.session.execute(count_query).scalar() or 0
 
-    posts = db.session.execute(
-        data_query.offset(offset).limit(per_page)
-    ).scalars().all()
+    posts = db.session.execute(data_query.offset(offset).limit(per_page)).scalars().all()
 
-    items = [{
-        "id": p.id,
-        "title": p.title,
-        "status": p.status,
-        "post_type": p.post_type,
-        "author_id": p.author_id,
-        "created_at": p.created_at.isoformat() if p.created_at else None,
-    } for p in posts]
+    items = [
+        {
+            "id": p.id,
+            "title": p.title,
+            "status": p.status,
+            "post_type": p.post_type,
+            "author_id": p.author_id,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        }
+        for p in posts
+    ]
 
-    return jsonify({
-        "success": True,
-        "data": {
-            "items": items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "has_more": page * per_page < total,
-        },
-        "error": "",
-    }), 200
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": items,
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200
 
 
 @admin_bp.route("/users", methods=["GET"])
@@ -70,14 +74,18 @@ def admin_change_role(user_id: int) -> tuple:
     """회원 권한 변경 (editor ↔ admin, deactivated → editor 재활성화 포함)."""
     current_user_id: int = int(get_jwt_identity())
     if current_user_id == user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인의 권한은 변경할 수 없습니다."}), 403
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인의 권한은 변경할 수 없습니다."}
+        ), 403
     user: User | None = db.session.get(User, user_id)
     if not user:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
     data: dict = request.get_json() or {}
     role = data.get("role")
     if role not in ("editor", "admin"):
-        return jsonify({"success": False, "data": {}, "error": "유효하지 않은 권한입니다. (editor 또는 admin)"}), 400
+        return jsonify(
+            {"success": False, "data": {}, "error": "유효하지 않은 권한입니다. (editor 또는 admin)"}
+        ), 400
     user.role = role
     try:
         db.session.commit()
@@ -93,7 +101,9 @@ def admin_deactivate_user(user_id: int) -> tuple:
     """회원 비활성화."""
     current_user_id: int = int(get_jwt_identity())
     if current_user_id == user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인을 비활성화할 수 없습니다."}), 403
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인을 비활성화할 수 없습니다."}
+        ), 403
     user: User | None = db.session.get(User, user_id)
     if not user:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
@@ -103,7 +113,9 @@ def admin_deactivate_user(user_id: int) -> tuple:
     except Exception:
         db.session.rollback()
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
-    return jsonify({"success": True, "data": {"id": user.id, "role": "deactivated"}, "error": ""}), 200
+    return jsonify(
+        {"success": True, "data": {"id": user.id, "role": "deactivated"}, "error": ""}
+    ), 200
 
 
 @admin_bp.route("/users/<int:user_id>", methods=["DELETE"])
@@ -112,16 +124,14 @@ def admin_delete_user(user_id: int) -> tuple:
     """회원 삭제. 해당 회원의 포스트 author_id는 NULL 처리."""
     current_user_id: int = int(get_jwt_identity())
     if current_user_id == user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인 계정은 삭제할 수 없습니다."}), 403
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인 계정은 삭제할 수 없습니다."}
+        ), 403
     user: User | None = db.session.get(User, user_id)
     if not user:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
-    db.session.execute(
-        update(Post).where(Post.author_id == user_id).values(author_id=None)
-    )
-    db.session.execute(
-        update(Comment).where(Comment.author_id == user_id).values(author_id=None)
-    )
+    db.session.execute(update(Post).where(Post.author_id == user_id).values(author_id=None))
+    db.session.execute(update(Comment).where(Comment.author_id == user_id).values(author_id=None))
     db.session.delete(user)
     try:
         db.session.commit()
@@ -138,16 +148,23 @@ def admin_user_posts(user_id: int) -> tuple:
     user: User | None = db.session.get(User, user_id)
     if not user:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
-    posts = db.session.execute(
-        select(Post).where(Post.author_id == user_id).order_by(Post.created_at.desc())
-    ).scalars().all()
-    data = [{
-        "id": p.id,
-        "title": p.title,
-        "status": p.status,
-        "created_at": p.created_at.isoformat() if p.created_at else None,
-        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-    } for p in posts]
+    posts = (
+        db.session.execute(
+            select(Post).where(Post.author_id == user_id).order_by(Post.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    data = [
+        {
+            "id": p.id,
+            "title": p.title,
+            "status": p.status,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+        }
+        for p in posts
+    ]
     return jsonify({"success": True, "data": data, "error": ""}), 200
 
 
@@ -180,14 +197,16 @@ def admin_list_comments() -> tuple:
         d["post_title"] = post_title
         items.append(d)
 
-    return jsonify({
-        "success": True,
-        "data": {
-            "items": items,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "has_more": page * per_page < total,
-        },
-        "error": "",
-    }), 200
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": items,
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200

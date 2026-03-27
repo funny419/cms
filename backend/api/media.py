@@ -1,14 +1,16 @@
 import os
 import uuid
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
-from sqlalchemy import select
 from PIL import Image
+from sqlalchemy import select
 from werkzeug.utils import secure_filename
+
 from api.decorators import roles_required
-from models.schema import Media
 from database import db
-from storage import get_storage, UPLOAD_FOLDER
+from models.schema import Media
+from storage import UPLOAD_FOLDER, get_storage
 
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")
 

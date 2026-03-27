@@ -1,18 +1,21 @@
+import os
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import upgrade as db_upgrade
+
 from config import DevelopmentConfig, ProductionConfig
 from database import db
-from extensions import migrate, jwt
-import os
+from extensions import jwt, migrate
+
 
 def create_app(config_class=None):
     app = Flask(__name__)
 
     # 환경 설정 로드
     if config_class is None:
-        env = os.getenv('FLASK_ENV', 'development')
-        config_class = ProductionConfig if env == 'production' else DevelopmentConfig
+        env = os.getenv("FLASK_ENV", "development")
+        config_class = ProductionConfig if env == "production" else DevelopmentConfig
 
     app.config.from_object(config_class)
 
@@ -32,34 +35,42 @@ def create_app(config_class=None):
             print("[WARNING] Run 'flask db stamp head' on the server to fix this.")
 
     # 기본 라우트 (Health Check)
-    @app.route('/health')
+    @app.route("/health")
     def health_check():
         return jsonify({"status": "ok", "service": "cms-backend"})
 
     # Blueprint 등록
     from api.auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     from api.settings import settings_bp
+
     app.register_blueprint(settings_bp)
 
     from api.posts import posts_bp
+
     app.register_blueprint(posts_bp)
 
     from api.media import media_bp
+
     app.register_blueprint(media_bp)
 
     from api.comments import comments_bp
+
     app.register_blueprint(comments_bp)
 
     from api.menus import menus_bp
+
     app.register_blueprint(menus_bp)
 
     from api.admin import admin_bp
+
     app.register_blueprint(admin_bp)
 
     return app
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = create_app()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host="0.0.0.0", port=5000)

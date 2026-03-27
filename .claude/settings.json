@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | { read -r f; [ -z \"$f\" ] && exit 0; echo \"$f\" | grep -q 'CLAUDE\\.md$' || exit 0; count=$(wc -l < \"$f\" 2>/dev/null | tr -d ' '); if [ \"${count:-0}\" -gt 200 ]; then printf '{\"systemMessage\":\"CLAUDE.md가 %s줄입니다 (한도: 200줄). .claude/rules/ 파일로 분리하세요.\",\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"CLAUDE.md가 %s줄. 200줄 초과 — 내용을 .claude/rules/ 파일로 분리해야 합니다.\"}}' \"$count\" \"$count\"; fi; } 2>/dev/null || true",
+            "statusMessage": "CLAUDE.md 줄 수 확인 중..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/check-commit.sh",
+            "statusMessage": "커밋 결과 확인 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

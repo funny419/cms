@@ -1,0 +1,51 @@
+## ⚠️ 브랜치별 작업 환경 규칙
+
+**반드시 현재 브랜치를 확인하고 올바른 환경에 접속할 것.**
+
+| 브랜치 | Docker 환경 | 설명 |
+|--------|------------|------|
+| `dev` | **로컬 Mac Docker** | `docker compose exec ...` 사용 |
+| `main` | **리모트 Windows Docker** | 서버에서 직접 실행하거나 SSH 접속 |
+
+- `main` 브랜치에서 `docker compose exec backend ...` 실행 → **로컬 dev 환경에 접속하는 것** → 잘못된 접근
+- `main` 브랜치 관련 DB/마이그레이션 작업 → **Windows 서버에서 `docker exec cms_backend_prod ...` 실행**
+
+---
+
+## 개발 환경 명령어
+
+### dev 브랜치 (로컬 Mac Docker)
+```bash
+docker compose up -d --build   # 최초 시작 또는 패키지 변경 후 재빌드
+docker compose up -d            # 일반 재시작 (컨테이너 시작 시 npm install 자동 실행)
+docker compose watch            # 파일 변경 자동 반영 (권장)
+docker compose down             # 중지
+docker compose restart backend  # 백엔드만 재시작
+docker compose logs -f          # 로그
+docker compose exec db mariadb -u funnycms -p  # DB 접속
+```
+
+> **프론트엔드 패키지 관련:** `docker compose up -d`만으로도 `npm install`이 자동 실행되어 새 패키지가 반영됨. 이미지 재빌드(`--build`) 불필요.
+
+**DB 마이그레이션 (schema.py 수정 후):**
+```bash
+docker compose exec backend flask db migrate -m "변경 내용"
+# 앱 재시작 시 flask db upgrade 자동 실행됨 (app.py에 설정)
+# 마이그레이션 파일은 반드시 git 커밋할 것
+```
+
+### main 브랜치 (리모트 Windows Docker)
+```powershell
+# 프로덕션 컨테이너에서 실행
+docker exec cms_backend_prod flask db upgrade
+docker exec cms_backend_prod flask db stamp head
+docker exec cms_db_prod mariadb -u funnycms -p<PASSWORD> cmsdb -e "SQL"
+docker logs cms_backend_prod --tail=30
+docker restart cms_backend_prod
+```
+
+**프로덕션 재배포:**
+```bash
+docker compose -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.prod.yml up -d --build
+```
