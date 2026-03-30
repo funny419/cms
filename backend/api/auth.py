@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models import User
+from models.schema import Post, User
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -106,3 +106,29 @@ def update_me() -> tuple:
 def list_users() -> tuple:
     users = db.session.execute(select(User)).scalars().all()
     return jsonify({"success": True, "data": [u.to_dict() for u in users], "error": ""}), 200
+
+
+@auth_bp.route("/users/<username>", methods=["GET"])
+def get_user_profile(username: str) -> tuple:
+    """유저 블로그 프로필 조회 — 비로그인도 접근 가능."""
+    user: User | None = db.session.execute(
+        select(User).where(User.username == username)
+    ).scalar_one_or_none()
+
+    if not user or user.role == "deactivated":
+        return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
+
+    post_count: int = (
+        db.session.execute(
+            select(func.count(Post.id)).where(
+                (Post.author_id == user.id)
+                & (Post.status == "published")
+                & (Post.visibility.in_(["public", "members_only"]))
+            )
+        ).scalar()
+        or 0
+    )
+
+    d = user.to_dict()
+    d["post_count"] = post_count
+    return jsonify({"success": True, "data": d, "error": ""}), 200
