@@ -92,6 +92,19 @@ def update_me() -> tuple:
         user.bio = data["bio"]
     if "avatar_url" in data:
         user.avatar_url = data["avatar_url"]
+    if "blog_title" in data:
+        user.blog_title = data["blog_title"] or None
+    if "blog_color" in data:
+        color = data["blog_color"]
+        if color and (len(color) != 7 or not color.startswith("#")):
+            return jsonify(
+                {"success": False, "data": {}, "error": "blog_color는 #rrggbb 형식이어야 합니다."}
+            ), 400
+        user.blog_color = color or None
+    if "website_url" in data:
+        user.website_url = data["website_url"] or None
+    if "social_links" in data:
+        user.social_links = data["social_links"] or None
     try:
         db.session.commit()
         return jsonify({"success": True, "data": user.to_dict(), "error": ""}), 200

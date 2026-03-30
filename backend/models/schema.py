@@ -51,6 +51,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    blog_title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    blog_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    website_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    social_links: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Relationships
     posts: Mapped[List["Post"]] = relationship(back_populates="author")
@@ -71,6 +75,10 @@ class User(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "bio": self.bio,
             "avatar_url": self.avatar_url,
+            "blog_title": self.blog_title,
+            "blog_color": self.blog_color,
+            "website_url": self.website_url,
+            "social_links": self.social_links,
         }
 
 
