@@ -69,6 +69,10 @@ def create_app(config_class=None):
 
     app.register_blueprint(admin_bp)
 
+    from api.tags import tags_bp
+
+    app.register_blueprint(tags_bp)
+
     return app
 
 
