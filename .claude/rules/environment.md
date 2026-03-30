@@ -53,11 +53,17 @@ bash scripts/setup-hooks.sh
 - Docker 컨테이너가 꺼져 있으면 해당 검사를 건너뜀
 
 **pytest 테스트 환경:**
-- `backend/tests/` 디렉토리에 모든 테스트 파일 위치 (14개 테스트)
-- `backend/conftest.py`: pytest 플러그인 설정 (TestConfig, _db fixture)
-- `TestConfig`: SQLite in-memory DB, `TESTING=True` (마이그레이션 스킵)
-- 테스트 DB 초기화: `_db.create_all()` 사용 (Flask-Migrate 대신)
+- `backend/tests/` 디렉토리에 모든 테스트 파일 위치
 - 실행: `docker compose exec backend pytest -v`
+
+> ⛔ **테스트 DB 정책 — 절대 규칙:**
+> **SQLite in-memory DB는 어떤 경우에도 사용 금지.**
+> 테스트는 반드시 **로컬 Docker MariaDB** (`cms_db` 컨테이너)를 사용해야 한다.
+> - 이유: SQLite는 MariaDB 고유 기능(Fulltext Index, MATCH...AGAINST 등)을 지원하지 않아 프로덕션과 테스트 환경 불일치 발생
+> - `TestConfig.SQLALCHEMY_DATABASE_URI`는 MariaDB 테스트 DB를 가리켜야 함
+> - 예시: `"mysql+pymysql://funnycms:funnycms@db:3306/cmsdb_test"`
+> - 테스트 DB(`cmsdb_test`)는 `docker compose exec db mariadb -u root -p -e "CREATE DATABASE IF NOT EXISTS cmsdb_test;"` 로 생성
+> - `clean_db` fixture는 각 테스트 후 테이블 데이터 DELETE (FK 순서 역순)
 
 **수동 실행:**
 ```bash
