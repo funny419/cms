@@ -77,6 +77,20 @@ def list_posts() -> tuple:
     if category_id:
         base_query = base_query.where(Post.category_id == category_id)
         total_query = total_query.where(Post.category_id == category_id)
+
+    author_username = request.args.get("author", "").strip()
+    if author_username:
+        author_user = db.session.execute(
+            select(User).where(User.username == author_username)
+        ).scalar_one_or_none()
+        if author_user:
+            base_query = base_query.where(Post.author_id == author_user.id)
+            total_query = total_query.where(Post.author_id == author_user.id)
+        else:
+            # 없는 사용자 → 빈 결과
+            base_query = base_query.where(Post.author_id == -1)
+            total_query = total_query.where(Post.author_id == -1)
+
     total: int = db.session.execute(total_query).scalar() or 0
 
     rows = db.session.execute(

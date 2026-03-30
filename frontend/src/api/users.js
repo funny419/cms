@@ -16,7 +16,7 @@ export const getUserPosts = async (username, token, page = 1, perPage = 20) => {
     const headers = token ? authHeader(token) : {};
     const response = await axios.get('/api/posts', {
       headers,
-      params: { page, per_page: perPage },
+      params: { page, per_page: perPage, author: username },
     });
     return response.data;
   } catch (error) {
