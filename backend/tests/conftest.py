@@ -22,6 +22,13 @@ def app():
     app = create_app(TestConfig)
     with app.app_context():
         _db.create_all()
+        # create_all()은 마이그레이션을 실행하지 않으므로 FULLTEXT 인덱스를 수동 생성
+        _db.session.execute(
+            _db.text(
+                "ALTER TABLE posts ADD FULLTEXT INDEX ft_posts_search (title, content, excerpt)"
+            )
+        )
+        _db.session.commit()
         yield app
         _db.drop_all()
 

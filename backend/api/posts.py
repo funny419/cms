@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
-from sqlalchemy import func, or_, select
+from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import distinct as sa_distinct
 from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, PostLike, Tag, User
+from models.schema import Comment, Post, PostLike, PostTag, Tag, User
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
@@ -54,24 +55,29 @@ def list_posts() -> tuple:
     )
     total_query = select(func.count(Post.id)).where(Post.status == "published")
 
-    # visibility 필터
+    # visibility 조건 한 번 계산 (재사용)
+    _user = db.session.get(User, current_user_id) if current_user_id else None
     if current_user_id is None:
-        base_query = base_query.where(Post.visibility == "public")
-        total_query = total_query.where(Post.visibility == "public")
+        _vis_cond = Post.visibility == "public"
+    elif _user and _user.role != "admin":
+        _vis_cond = or_(
+            Post.visibility == "public",
+            Post.visibility == "members_only",
+            (Post.visibility == "private") & (Post.author_id == current_user_id),
+        )
     else:
-        _user = db.session.get(User, current_user_id)
-        if not (_user and _user.role == "admin"):
-            _vis_filter = or_(
-                Post.visibility == "public",
-                Post.visibility == "members_only",
-                (Post.visibility == "private") & (Post.author_id == current_user_id),
-            )
-            base_query = base_query.where(_vis_filter)
-            total_query = total_query.where(_vis_filter)
+        _vis_cond = None  # admin: 전체 조회
+
+    if _vis_cond is not None:
+        base_query = base_query.where(_vis_cond)
+        total_query = total_query.where(_vis_cond)
 
     if q:
-        base_query = base_query.where(Post.title.ilike(f"%{q}%"))
-        total_query = total_query.where(Post.title.ilike(f"%{q}%"))
+        ft_filter = text(
+            "MATCH(posts.title, posts.content, posts.excerpt) AGAINST(:q IN BOOLEAN MODE)"
+        ).bindparams(q=q)
+        base_query = base_query.where(ft_filter)
+        total_query = total_query.where(ft_filter)
 
     category_id = request.args.get("category_id", type=int)
     if category_id:
@@ -91,11 +97,37 @@ def list_posts() -> tuple:
             base_query = base_query.where(Post.author_id == -1)
             total_query = total_query.where(Post.author_id == -1)
 
+    # tags 필터: ?tags=1,2,3 (OR 방식)
+    tags_param = request.args.get("tags", "").strip()
+    if tags_param:
+        tag_ids = [int(t) for t in tags_param.split(",") if t.isdigit()]
+        if tag_ids:
+            base_query = (
+                base_query.join(PostTag, PostTag.post_id == Post.id)
+                .where(PostTag.tag_id.in_(tag_ids))
+                .distinct()
+            )
+            # total_query 재구성 (tags JOIN 포함)
+            total_query = (
+                select(func.count(sa_distinct(Post.id)))
+                .where(Post.status == "published")
+                .join(PostTag, PostTag.post_id == Post.id)
+                .where(PostTag.tag_id.in_(tag_ids))
+            )
+            if _vis_cond is not None:
+                total_query = total_query.where(_vis_cond)
+
     total: int = db.session.execute(total_query).scalar() or 0
 
-    rows = db.session.execute(
-        base_query.order_by(Post.created_at.desc()).offset(offset).limit(per_page)
-    ).all()
+    if q:
+        score_col = text(
+            "MATCH(posts.title, posts.content, posts.excerpt) AGAINST(:q_sort IN BOOLEAN MODE)"
+        ).bindparams(q_sort=q)
+        ordered_query = base_query.order_by(desc(score_col), Post.created_at.desc())
+    else:
+        ordered_query = base_query.order_by(Post.created_at.desc())
+
+    rows = db.session.execute(ordered_query.offset(offset).limit(per_page)).all()
 
     liked_post_ids: set = set()
     if current_user_id:
