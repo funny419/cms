@@ -31,7 +31,7 @@ export default function AdminComments() {
       } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return listAllComments(token, '', page);
     },
-    [token]
+    [token, navigate]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
   const comments = items.filter((c) => !deletedIds.has(c.id));

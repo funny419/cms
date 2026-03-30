@@ -65,8 +65,10 @@ if [ -n "$STAGED_JS" ]; then
   if ! docker compose ps --quiet frontend 2>/dev/null | grep -q .; then
     echo -e "${YELLOW}⚠  프론트엔드 컨테이너 미실행. JS 검사 건너뜀.${NC}"
   else
-    echo "▶ eslint..."
-    if docker compose exec -T frontend npx eslint src/ 2>&1; then
+    echo "▶ eslint (staged files only)..."
+    # 컨테이너 내부 경로로 변환: frontend/src/foo.js → src/foo.js
+    STAGED_JS_CONTAINER=$(echo "$STAGED_JS" | sed 's|^frontend/||')
+    if echo "$STAGED_JS_CONTAINER" | tr '\n' '\0' | xargs -0 docker compose exec -T frontend npx eslint 2>&1; then
       echo -e "${GREEN}  ✓ eslint${NC}"
     else
       echo -e "${RED}  ✗ eslint 실패 — 위 오류를 수정하세요.${NC}"
