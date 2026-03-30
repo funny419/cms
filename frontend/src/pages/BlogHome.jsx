@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getUserProfile, getUserPosts } from '../api/users';
+import { getUserProfile, getUserPosts, followUser, unfollowUser } from '../api/users';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import ProfileCard from '../components/ProfileCard';
 import CategorySidebar from '../components/widgets/CategorySidebar';
@@ -13,6 +13,7 @@ export default function BlogHome() {
   const token = localStorage.getItem('token');
 
   const [profile, setProfile] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [categories, setCategories] = useState([]);
@@ -28,6 +29,7 @@ export default function BlogHome() {
       if (cancelled) return;
       if (profileRes.success) {
         setProfile(profileRes.data);
+        setIsFollowing(profileRes.data.is_following || false);
       } else {
         setProfileError(profileRes.error || '사용자를 찾을 수 없습니다.');
       }
@@ -37,6 +39,26 @@ export default function BlogHome() {
     load();
     return () => { cancelled = true; };
   }, [username]);
+
+  const getUser = () => {
+    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+  };
+  const currentUser = getUser();
+  const isOwnBlog = currentUser?.username === username;
+
+  const handleFollow = async () => {
+    if (!token) { navigate('/login'); return; }
+    const res = isFollowing
+      ? await unfollowUser(token, username)
+      : await followUser(token, username);
+    if (res.success) {
+      setIsFollowing(res.data.following);
+      setProfile((prev) => ({
+        ...prev,
+        follower_count: (prev.follower_count || 0) + (res.data.following ? 1 : -1),
+      }));
+    }
+  };
 
   const fetchFn = useCallback(
     (page) => getUserPosts(username, token, page, 20),
@@ -64,7 +86,13 @@ export default function BlogHome() {
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
-      <ProfileCard user={profile} blogColor={profile?.blog_color} />
+      <ProfileCard
+        user={profile}
+        blogColor={profile?.blog_color}
+        onFollow={handleFollow}
+        isFollowing={isFollowing}
+        isOwnBlog={isOwnBlog}
+      />
 
       <div style={{ display: 'flex', gap: 32 }}>
         {/* 사이드바 */}

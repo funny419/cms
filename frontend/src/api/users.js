@@ -32,3 +32,40 @@ export const searchUsers = async (q) => {
     return { success: false, error: '사용자 검색에 실패했습니다.' };
   }
 };
+
+export const followUser = async (token, username) => {
+  try {
+    const response = await axios.post(
+      `/api/users/${username}/follow`,
+      {},
+      { headers: authHeader(token) }
+    );
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '팔로우에 실패했습니다.' };
+  }
+};
+
+export const unfollowUser = async (token, username) => {
+  try {
+    const response = await axios.delete(
+      `/api/users/${username}/follow`,
+      { headers: authHeader(token) }
+    );
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '언팔로우에 실패했습니다.' };
+  }
+};
+
+export const getFeed = async (token, page = 1, perPage = 20) => {
+  try {
+    const response = await axios.get('/api/feed', {
+      headers: authHeader(token),
+      params: { page, per_page: perPage },
+    });
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '피드를 불러오지 못했습니다.' };
+  }
+};

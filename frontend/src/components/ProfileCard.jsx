@@ -4,7 +4,7 @@ const SOCIAL_ICONS = {
   linkedin: '💼',
 };
 
-export default function ProfileCard({ user, blogColor }) {
+export default function ProfileCard({ user, blogColor, onFollow, isFollowing, isOwnBlog }) {
   if (!user) return null;
 
   const displayTitle = user.blog_title || `${user.username}의 블로그`;
@@ -67,6 +67,23 @@ export default function ProfileCard({ user, blogColor }) {
             </a>
           )}
         </div>
+
+        {/* 팔로워/팔로잉 수 */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 13 }}>
+          <span>팔로워 <strong>{user.follower_count ?? 0}</strong></span>
+          <span>팔로잉 <strong>{user.following_count ?? 0}</strong></span>
+        </div>
+
+        {/* 팔로우 버튼 */}
+        {!isOwnBlog && onFollow && (
+          <button
+            className={isFollowing ? 'btn btn-ghost' : 'btn btn-primary'}
+            style={{ marginTop: 10, fontSize: 13 }}
+            onClick={onFollow}
+          >
+            {isFollowing ? '팔로잉 ✓' : '팔로우'}
+          </button>
+        )}
 
         {/* SNS 링크 */}
         {hasSocial && (
