@@ -1,15 +1,15 @@
 ## 프로젝트 관리
 
 **GitHub Projects:** https://github.com/users/funny419/projects/1
-- Done (24개): 완료된 기능
-- Todo (18개): Phase 1~3 미구현 기능 + 기존 기능 개선
+- Done (31개): 완료된 기능
+- Todo (11개): Phase 1~3 미구현 기능 + 기존 기능 개선
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
 **관련 분석 문서** (`.claude/rules/` 폴더):
-- `sprint-planning.md` — **Sprint 2 기획 분석 + 블로그 커스터마이제이션 전략** (2026-03-30)
-  - Sprint 2 구현 순서: 블로그 홈 → 태그 → 카테고리 → 블로그 홈 완성 (6주)
-  - Phase 2.5: 프로필 커스터마이제이션 (사진, bio, SNS) + 배너 색상 (1.5주)
-  - Phase 3.1: 고급 레이아웃 선택 + 폰트 설정 (2주)
+- `sprint-planning.md` — **UX 기획 전략 · 미래 로드맵 상세** (2026-03-30 Sprint 2 완료 반영)
+  - Sprint 2 완료 요약 / 카테고리-태그 UX 설계 원칙
+  - Phase 2.5: 블로그 설정 (SNS, 대표색상) / Phase 3.1: 고급 레이아웃
+  - 멀티유저 플랫폼 확장 로드맵 (Phase 1~3) / 성공 지표(KPI)
 
 ---
 
@@ -81,34 +81,5 @@
 
 ---
 
-## 멀티 유저 블로그 플랫폼 확장 로드맵
-
-> 단일 설치형 CMS → 멀티 유저 블로그 플랫폼으로 확장 계획 (2026-03-26 전문가팀 분석)
-> **핵심 전제:** 모든 확장은 `blogs` 테이블(유저별 블로그 분리) 생성이 선행되어야 함
-
-### Phase 1 (1-2개월): 기반 구조
-
-| 영역 | 작업 |
-|------|------|
-| DB | `blogs`, `categories`, `tags`, `series`, `visit_logs` 테이블. `posts`에 `blog_id`, `visibility`, `published_at` 추가 |
-| BE | `GET /api/blog/:username` + 카테고리/태그 API. Redis 캐싱(`flask-caching`). 복합 인덱스 추가 |
-| FE | `/blog/:username` 블로그 홈. Zustand 상태관리. Route-based 코드 스플리팅 |
-| INFRA | Redis Cluster, Prometheus+Grafana, TLS+Cloudflare WAF |
-
-### Phase 2 (2-3개월): 커뮤니티 기능
-
-| 영역 | 작업 |
-|------|------|
-| DB | `follows`, `guestbook`, `notifications`, `post_tags`, `visit_daily_stats` 테이블 |
-| BE | `POST /api/users/:id/follow`, `GET /api/feed`, `WS /ws/notifications` (Socket.IO) |
-| FE | `/feed` 이웃 피드, `/notifications` 알림 센터, `/my-blog/settings` |
-| INFRA | DB Read Replica, Cloudflare R2 마이그레이션 |
-
-### Phase 3 (3-6개월): 고도화
-
-| 영역 | 작업 |
-|------|------|
-| DB | `post_stats`, `series_posts`. `visit_logs` 월별 파티셔닝 |
-| BE | RSS 피드, Elasticsearch 전문 검색, 통계 API |
-| FE | `/my-blog/statistics` 대시보드(recharts), 블로그 스킨 커스터마이저 |
-| INFRA | Kubernetes 전환, 멀티리전 확장 |
+> **플랫폼 확장 로드맵** (멀티유저 블로그 플랫폼 전환 전략, 성공 지표 KPI):
+> `sprint-planning.md` 참조 — "멀티 유저 블로그 플랫폼 확장 로드맵" 및 "성공 지표(KPI)" 섹션

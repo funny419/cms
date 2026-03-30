@@ -110,6 +110,7 @@ cms/
 │       │   │   └── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
 │       │   └── widgets/
 │       │       ├── RecentPosts.jsx
+│       │       ├── Sidebar.jsx
 │       │       ├── CategorySidebar.jsx  # 카테고리 계층형 필터 (PostList + BlogHome) — Sprint 2
 │       │       └── TagCloud.jsx        # 태그 클라우드 위젯 (PostDetail) — Sprint 2
 │       ├── context/
@@ -131,12 +132,9 @@ cms/
 │           ├── PostEditor.jsx         # WYSIWYG/Markdown탭 + visibility선택 + category선택 + 태그입력 + localStorage자동저장 (Sprint 1/2)
 │           ├── Profile.jsx            # 프로필 수정 (bio/avatar_url 편집 — Sprint 1)
 │           ├── Login.jsx
-│           ├── Register.jsx
-│           └── Sidebar.jsx            # (삭제: widgets/Sidebar.jsx로 이동)
+│           └── Register.jsx
 ├── docs/
 │   ├── superpowers/             # 설계 스펙 및 구현 계획서
-│   ├── BACKEND_ARCHITECTURE_ANALYSIS.md
-│   ├── FE_Architecture_Analysis_2026-03-26.md
 │   ├── INFRA_ANALYSIS_REPORT.md
 │   └── 멀티유저블로그_UX기획_분석보고서.md
 ├── scripts/
@@ -203,7 +201,7 @@ created_at: DateTime server_default=now()
 #### `posts` (포스트)
 ```
 id: int (PK)
-author_id: int FK NOT NULL
+author_id: int FK nullable (마이그레이션 d56f01212789에서 nullable 변경)
 title: str(255) NOT NULL
 slug: str(255) INDEX NOT NULL
 content: Text nullable
@@ -227,7 +225,6 @@ description: Text nullable
 parent_id: int FK nullable, ondelete=SET NULL (자기참조)
 order: int default=0
 created_at: DateTime server_default=now()
-UNIQUE constraint: (name, parent_id)
 MAX_DEPTH: 3 (API 검증)
 ```
 
@@ -241,6 +238,7 @@ created_at: DateTime server_default=now()
 
 #### `post_tags` (Post-Tag 조인, Sprint 2 완료)
 ```
+id: int (PK)
 post_id: int FK (CASCADE delete)
 tag_id: int FK (CASCADE delete)
 created_at: DateTime server_default=now()
@@ -252,6 +250,7 @@ UNIQUE constraint: (post_id, tag_id)
 id: int (PK)
 post_id: int FK NOT NULL
 author_id: int FK nullable (로그인 사용자) / author_name, author_email (게스트)
+author_password_hash: str(255) nullable (게스트 전용, 댓글 수정/삭제 인증용)
 parent_id: int FK nullable (자기참조, 1단 계층만 지원)
 content: Text NOT NULL
 status: str(20) default='approved' [approved, pending, spam]
@@ -306,7 +305,7 @@ created_at: DateTime server_default=now()
 | `c254032213d8_add_user_bio_avatar_url.py` | bio, avatar_url 추가 (Sprint 1) | ✅ |
 | `2f45cb66c55f_add_post_visibility.py` | visibility 컬럼 추가 (Sprint 1) | ✅ |
 | `e141b01590f2_create_tags_and_post_tags.py` | Tag + PostTag 테이블 생성 (Sprint 2) | ✅ |
-| `761ee81e777c_create_categories_add_category_id.py` | Category 테이블 생성 + Post.category_id FK (Sprint 2) | ✅ |
+| `761ee81e777c_create_categories_add_category_id_to_.py` | Category 테이블 생성 + Post.category_id FK (Sprint 2) | ✅ |
 
 ### 주의사항
 

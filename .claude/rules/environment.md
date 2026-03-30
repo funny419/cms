@@ -64,7 +64,7 @@ bash scripts/setup-hooks.sh
 bash scripts/pre-commit.sh
 ```
 
-**백엔드 패키지 추가 (Sprint 2):**
+**백엔드 주요 패키지:**
 - `python-slugify`: 카테고리/태그 이름 → URL-safe slug 자동 생성
   - 사용 예: `Category(name='Django 튜토리얼')` → `slug='django-tutorial'`
   - 한글 지원: `from slugify import slugify; slug = slugify('한글', language='ko')`
