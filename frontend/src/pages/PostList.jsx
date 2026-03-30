@@ -5,6 +5,17 @@ import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import { useCategories } from '../context/CategoryContext';
 import CategorySidebar from '../components/widgets/CategorySidebar';
 
+function highlightText(text, q) {
+  if (!q || !text) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} style={{ background: 'var(--accent-bg)', color: 'var(--accent-text)', borderRadius: 2 }}>{part}</mark>
+      : part
+  );
+}
+
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
   catch { return null; }
@@ -12,7 +23,7 @@ const getUser = () => {
 const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
 
-export default function PostList() {
+export default function PostList({ externalFilters = null, highlightQ = '' }) {
   const navigate = useNavigate();
   const user = getUser();
   const token = localStorage.getItem('token');
@@ -29,10 +40,22 @@ export default function PostList() {
   }, [inputQ]);
 
   const fetchFn = useCallback(
-    (page) => listPosts(token, page, 20, q, categoryId),
-    [token, q, categoryId]
+    (page) => {
+      if (externalFilters) {
+        return listPosts(
+          token, page, 20,
+          externalFilters.q || '',
+          externalFilters.categoryId || null,
+          externalFilters.tagIds || [],
+          externalFilters.author || ''
+        );
+      }
+      return listPosts(token, page, 20, q, categoryId);
+    },
+    [token, q, categoryId, externalFilters]
   );
-  const { items: posts, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q, categoryId]);
+  const depsKey = externalFilters ? JSON.stringify(externalFilters) : `${token}-${q}-${categoryId}`;
+  const { items: posts, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [depsKey]);
 
   return (
     <div className="page-content">
@@ -58,7 +81,7 @@ export default function PostList() {
             <input
               type="text"
               className="form-input"
-              placeholder="제목으로 검색..."
+              placeholder="포스트 검색..."
               value={inputQ}
               onChange={(e) => setInputQ(e.target.value)}
               style={{ width: '100%', maxWidth: 400 }}
@@ -81,9 +104,13 @@ export default function PostList() {
                   onClick={() => navigate(`/posts/${post.id}`)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="post-title">{post.title}</div>
+                  <div className="post-title">
+                    {highlightQ ? highlightText(post.title, highlightQ) : post.title}
+                  </div>
                   {post.excerpt && (
-                    <div className="post-excerpt">{post.excerpt}</div>
+                    <div className="post-excerpt">
+                      {highlightQ ? highlightText(post.excerpt, highlightQ) : post.excerpt}
+                    </div>
                   )}
                   <div className="post-meta" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span>{post.author_username || '알 수 없음'}</span>

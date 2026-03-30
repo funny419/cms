@@ -23,3 +23,12 @@ export const getUserPosts = async (username, token, page = 1, perPage = 20) => {
     return { success: false, error: error.response?.data?.error || '포스트를 불러오지 못했습니다.' };
   }
 };
+
+export const searchUsers = async (q) => {
+  try {
+    const response = await axios.get('/api/auth/users/search', { params: { q } });
+    return response.data;
+  } catch {
+    return { success: false, error: '사용자 검색에 실패했습니다.' };
+  }
+};

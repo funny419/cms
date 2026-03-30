@@ -12,6 +12,7 @@ import PostDetail from './pages/PostDetail';
 import PostEditor from './pages/PostEditor';
 import MyPosts from './pages/MyPosts';
 import BlogHome from './pages/BlogHome';
+import Search from './pages/Search';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminComments from './pages/admin/AdminComments';
@@ -45,6 +46,7 @@ function AppContent() {
         <Route path="/admin/comments" element={<AdminComments />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/blog/:username" element={<BlogHome />} />
+        <Route path="/search" element={<Search />} />
         {/* /posts/new 는 /posts/:id 보다 반드시 먼저 */}
         <Route path="/posts/new" element={<PostEditor />} />
         <Route path="/posts/:id/edit" element={<PostEditor />} />
