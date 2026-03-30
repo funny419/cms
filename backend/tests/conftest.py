@@ -6,7 +6,8 @@ from database import db as _db  # noqa: E402
 
 class TestConfig:
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI = "mysql+pymysql://funnycms:dev_app_password@db:3306/cmsdb_test"
+    SQLALCHEMY_ENGINE_OPTIONS = {"execution_options": {"isolation_level": "READ COMMITTED"}}
     JWT_SECRET_KEY = "test-secret-key"
     JWT_ACCESS_TOKEN_EXPIRES = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False

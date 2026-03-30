@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from slugify import slugify
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
@@ -39,7 +39,9 @@ def list_categories() -> tuple:
     )
     cats = db.session.execute(
         select(Category, count_sq.label("post_count")).order_by(
-            Category.parent_id.asc().nulls_first(), Category.order.asc()
+            case((Category.parent_id.is_(None), 0), else_=1).asc(),
+            Category.parent_id.asc(),
+            Category.order.asc(),
         )
     ).all()
 
