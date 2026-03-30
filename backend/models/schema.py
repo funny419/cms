@@ -99,6 +99,11 @@ class Post(Base):
     )
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     content_format: Mapped[str] = mapped_column(String(10), default="html", nullable=False)
+    # visibility: 접근 권한 차원 (status=발행상태와 독립)
+    # public: 비로그인도 조회 가능
+    # members_only: 로그인 사용자만 조회 가능
+    # private: 작성자 + admin만 조회 가능
+    visibility: Mapped[str] = mapped_column(String(20), default="public", nullable=False)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
@@ -117,6 +122,7 @@ class Post(Base):
             "status": self.status,
             "post_type": self.post_type,
             "content_format": self.content_format,
+            "visibility": self.visibility,
             "author_id": self.author_id,
             "view_count": self.view_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,

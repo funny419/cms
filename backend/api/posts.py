@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
@@ -52,10 +52,25 @@ def list_posts() -> tuple:
         .outerjoin(User, Post.author_id == User.id)
         .where(Post.status == "published")
     )
+    total_query = select(func.count(Post.id)).where(Post.status == "published")
+
+    # visibility 필터
+    if current_user_id is None:
+        base_query = base_query.where(Post.visibility == "public")
+        total_query = total_query.where(Post.visibility == "public")
+    else:
+        _user = db.session.get(User, current_user_id)
+        if not (_user and _user.role == "admin"):
+            _vis_filter = or_(
+                Post.visibility == "public",
+                Post.visibility == "members_only",
+                (Post.visibility == "private") & (Post.author_id == current_user_id),
+            )
+            base_query = base_query.where(_vis_filter)
+            total_query = total_query.where(_vis_filter)
+
     if q:
         base_query = base_query.where(Post.title.ilike(f"%{q}%"))
-
-    total_query = select(func.count(Post.id)).where(Post.status == "published")
     if q:
         total_query = total_query.where(Post.title.ilike(f"%{q}%"))
     total: int = db.session.execute(total_query).scalar() or 0
@@ -163,6 +178,16 @@ def get_post(post_id: int) -> tuple:
     if not post:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
 
+    # visibility 접근 제어 (URL 직접 접근 보호)
+    if post.visibility == "members_only" and current_user_id is None:
+        return jsonify({"success": False, "data": {}, "error": "로그인이 필요합니다."}), 403
+    elif post.visibility == "private":
+        if current_user_id is None:
+            return jsonify({"success": False, "data": {}, "error": "접근 권한이 없습니다."}), 403
+        _viewer: User | None = db.session.get(User, current_user_id)
+        if _viewer and _viewer.role != "admin" and post.author_id != current_user_id:
+            return jsonify({"success": False, "data": {}, "error": "접근 권한이 없습니다."}), 403
+
     # view_count +1 (편집 페이지는 제외)
     if not skip_count:
         post.view_count += 1
@@ -234,6 +259,7 @@ def create_post() -> tuple:
         status=data.get("status", "draft"),
         post_type=data.get("post_type", "post"),
         content_format=content_format,
+        visibility=data.get("visibility", "public"),
         author_id=author_id,
     )
     db.session.add(post)
@@ -258,9 +284,20 @@ def update_post(post_id: int) -> tuple:
             {"success": False, "data": {}, "error": "본인 글만 수정할 수 있습니다."}
         ), 403
     data: dict = request.get_json() or {}
-    for field in ("title", "slug", "content", "excerpt", "status", "post_type", "content_format"):
+    for field in (
+        "title",
+        "slug",
+        "content",
+        "excerpt",
+        "status",
+        "post_type",
+        "content_format",
+        "visibility",
+    ):
         if field in data:
             if field == "content_format" and data[field] not in ("html", "markdown"):
+                continue  # 유효하지 않은 값 무시
+            if field == "visibility" and data[field] not in ("public", "members_only", "private"):
                 continue  # 유효하지 않은 값 무시
             setattr(post, field, data[field])
     try:
