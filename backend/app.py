@@ -77,6 +77,11 @@ def create_app(config_class=None):
 
     app.register_blueprint(categories_bp)
 
+    from api.follows import feed_bp, follows_bp
+
+    app.register_blueprint(follows_bp)
+    app.register_blueprint(feed_bp)
+
     return app
 
 
