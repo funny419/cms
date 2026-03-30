@@ -49,6 +49,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="subscriber")  # admin, editor, subscriber
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     # Relationships
     posts: Mapped[List["Post"]] = relationship(back_populates="author")
@@ -67,6 +69,8 @@ class User(Base):
             "email": self.email,
             "role": self.role,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "bio": self.bio,
+            "avatar_url": self.avatar_url,
         }
 
 

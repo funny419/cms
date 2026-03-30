@@ -88,6 +88,10 @@ def update_me() -> tuple:
         if existing and existing.id != current_user_id:
             return jsonify({"success": False, "data": {}, "error": "Email already exists"}), 400
         user.email = data["email"]
+    if "bio" in data:
+        user.bio = data["bio"]
+    if "avatar_url" in data:
+        user.avatar_url = data["avatar_url"]
     try:
         db.session.commit()
         return jsonify({"success": True, "data": user.to_dict(), "error": ""}), 200
