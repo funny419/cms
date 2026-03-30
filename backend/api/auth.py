@@ -1,10 +1,15 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    verify_jwt_in_request,
+)
 from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Post, User
+from models.schema import Follow, Post, User
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -165,6 +170,41 @@ def get_user_profile(username: str) -> tuple:
         or 0
     )
 
+    # 팔로워/팔로잉 수
+    follower_count: int = (
+        db.session.execute(
+            select(func.count(Follow.id)).where(Follow.following_id == user.id)
+        ).scalar()
+        or 0
+    )
+    following_count: int = (
+        db.session.execute(
+            select(func.count(Follow.id)).where(Follow.follower_id == user.id)
+        ).scalar()
+        or 0
+    )
+
+    # 현재 로그인 유저의 팔로우 여부 (optional JWT)
+    is_following: bool = False
+    try:
+        verify_jwt_in_request(optional=True)
+        raw_id = get_jwt_identity()
+        viewer_id = int(raw_id) if raw_id else None
+    except Exception:
+        viewer_id = None
+
+    if viewer_id and viewer_id != user.id:
+        is_following = bool(
+            db.session.execute(
+                select(Follow)
+                .where(Follow.follower_id == viewer_id)
+                .where(Follow.following_id == user.id)
+            ).scalar_one_or_none()
+        )
+
     d = user.to_dict()
     d["post_count"] = post_count
+    d["follower_count"] = follower_count
+    d["following_count"] = following_count
+    d["is_following"] = is_following
     return jsonify({"success": True, "data": d, "error": ""}), 200
