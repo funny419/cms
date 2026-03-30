@@ -43,18 +43,32 @@ bash scripts/setup-hooks.sh
 
 **검증 파이프라인 (git commit 시 자동 실행):**
 ```
-① ruff lint + auto-fix  →  ② mypy type check  →  ③ pytest  →  ④ eslint (JS 변경 시)
+① ruff lint + auto-fix  →  ② mypy type check  →  ③ pytest  →  ④ eslint (JS 변경 시, staged files only)
 ```
 
 - `.py` 파일이 스테이징되면 ruff → mypy → pytest 순서로 실행
-- `.js/.jsx` 파일이 스테이징되면 eslint 실행
+- `.js/.jsx` 파일이 스테이징되면 eslint 실행 (staged files만, 컨테이너 내부 경로 `/app` 기준)
+  - 경로 변환: `frontend/src/foo.js` → `src/foo.js` (sed로 처리)
 - ruff는 자동 수정 후 변경 파일을 자동 재스테이징
 - Docker 컨테이너가 꺼져 있으면 해당 검사를 건너뜀
+
+**pytest 테스트 환경:**
+- `backend/tests/` 디렉토리에 모든 테스트 파일 위치 (14개 테스트)
+- `backend/conftest.py`: pytest 플러그인 설정 (TestConfig, _db fixture)
+- `TestConfig`: SQLite in-memory DB, `TESTING=True` (마이그레이션 스킵)
+- 테스트 DB 초기화: `_db.create_all()` 사용 (Flask-Migrate 대신)
+- 실행: `docker compose exec backend pytest -v`
 
 **수동 실행:**
 ```bash
 bash scripts/pre-commit.sh
 ```
+
+**백엔드 패키지 추가 (Sprint 2):**
+- `python-slugify`: 카테고리/태그 이름 → URL-safe slug 자동 생성
+  - 사용 예: `Category(name='Django 튜토리얼')` → `slug='django-tutorial'`
+  - 한글 지원: `from slugify import slugify; slug = slugify('한글', language='ko')`
+  - requirements.txt에 이미 추가됨
 
 ### main 브랜치 (리모트 Windows Docker)
 ```powershell

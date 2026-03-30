@@ -8,6 +8,7 @@ STORAGE_BACKEND 환경변수로 선택:
 추가 백엔드 구현 시 StorageBackend를 상속하고
 get_storage() 팩토리에 분기를 추가한다.
 """
+
 import abc
 import os
 
@@ -59,7 +60,4 @@ def get_storage() -> StorageBackend:
     backend = os.environ.get("STORAGE_BACKEND", "local")
     if backend == "local":
         return LocalStorage()
-    raise ValueError(
-        f"지원하지 않는 STORAGE_BACKEND: '{backend}'. "
-        "지원 값: local"
-    )
+    raise ValueError(f"지원하지 않는 STORAGE_BACKEND: '{backend}'. 지원 값: local")

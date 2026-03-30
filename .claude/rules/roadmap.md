@@ -5,17 +5,18 @@
 - Todo (18개): Phase 1~3 미구현 기능 + 기존 기능 개선
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
-**관련 분석 보고서** (`docs/` 폴더):
-- `BACKEND_ARCHITECTURE_ANALYSIS.md` — BE API 아키텍처 확장 분석
-- `FE_Architecture_Analysis_2026-03-26.md` — FE 아키텍처 확장 분석
-- `INFRA_ANALYSIS_REPORT.md` — 인프라 아키텍처 확장 분석
-- `멀티유저블로그_UX기획_분석보고서.md` — UX/기능 기획 로드맵 (Phase 1~3 상세)
+**관련 분석 문서** (`.claude/rules/` 폴더):
+- `sprint-planning.md` — **Sprint 2 기획 분석 + 블로그 커스터마이제이션 전략** (2026-03-30)
+  - Sprint 2 구현 순서: 블로그 홈 → 태그 → 카테고리 → 블로그 홈 완성 (6주)
+  - Phase 2.5: 프로필 커스터마이제이션 (사진, bio, SNS) + 배너 색상 (1.5주)
+  - Phase 3.1: 고급 레이아웃 선택 + 폰트 설정 (2주)
 
 ---
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-27
+> 마지막 업데이트: 2026-03-31
+> 최근 완료: Sprint 1 + Sprint 2 (기획 분석 참고: `.claude/rules/sprint-planning.md`)
 
 ### 완료
 
@@ -33,31 +34,33 @@
 | 미디어 | 파일 업로드 + Pillow 썸네일(300×300) + uuid 파일명 + path traversal 방어. `StorageBackend` 추상화 |
 | 파일 서버 | 개발: `nginx-files` 컨테이너. 프로덕션: Nginx + `uploads_data` named volume |
 | 댓글 | 계층형(1단 답글) + 로그인/게스트 분기 + 수정/삭제 소유권 인증 + 스팸 필터링 |
+| 댓글 승인/거절 | Admin UI — 게스트 댓글 승인/거절 버튼 (BE API + FE) |
 | 사이트 스킨 | 프리셋 4종(Notion/Forest/Ocean/Rose), Admin에서 선택, 즉시 미리보기, 다크모드 연동 |
 | Admin 대시보드 | 포스트/회원/댓글 관리 + 사이트 설정(스킨) |
+| 포스트 임시저장 | localStorage 자동 저장 (10초 간격) |
+| 포스트 공개범위 | `visibility` 컬럼 (public/members_only/private) + API 필터 + FE 셀렉트 |
+| **프로필 커스터마이징** | **`bio`, `avatar_url` 컬럼 + FE 편집 UI + DB 마이그레이션** |
+| **유저별 블로그** | **`/blog/:username` 페이지 + ProfileCard + CategorySidebar + TagCloud 통합** |
+| **카테고리 시스템** | **`categories` 테이블(계층형 3단) + CRUD API 6개 + CategoryDropdown + CategorySidebar FE + PostEditor/PostList 통합** |
+| **태그 시스템** | **`tags`, `post_tags` 테이블 + CRUD API 5개 + TagInput + TagCloud FE + PostEditor/PostDetail 통합** |
+| **사용자 조회 API** | **`GET /api/users/:username` + `python-slugify` 추가** |
 | 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
-| **개발 도구** | **pre-commit 피드백 루프** — ruff(lint+autofix) → mypy → pytest → eslint. 실패 시 Claude 자가수정 트리거 (`scripts/pre-commit.sh`, `scripts/setup-hooks.sh`) |
+| **개발 도구** | **pre-commit 피드백 루프** — ruff(lint+autofix) → mypy → pytest → eslint. 실패 시 Claude 자가수정 트리거 (`scripts/pre-commit.sh`, `scripts/setup-hooks.sh`). ESLint staged files 버그 수정 완료. pytest 환경 구축 (conftest.py + TestConfig + 14개 테스트) |
 | **Claude Code 스킬** | **12개 프로젝트 특화 스킬** — `new-api-endpoint`, `db-migration`, `new-page`, `code-review`, `test-generation`, `dba-query`, `db-erd`, `api-docs`, `infra`, `debug`, `deploy`, `service-planning` |
 
 ### 미구현
 
-#### Phase 1 — 기본 블로그 구조 (최우선)
+#### Phase 1 — 기본 블로그 구조 (진행 중)
 
-| 기능 | 비고 |
-|------|------|
-| 유저별 블로그 (`/blog/:username`) | `Category`, `Tag`, `PostTag` 테이블. `GET /api/users/:username` API. FE 페이지 |
-| 카테고리 시스템 | `categories` 테이블 (계층형, `parent_id`). 에디터 드롭다운 + 사이드바 |
-| 태그 시스템 | `tags`, `post_tags` 테이블. 에디터 태그 입력 + 태그 클라우드 |
-| 프로필 커스터마이징 | `User` 모델에 `bio`, `avatar_url` 컬럼. 프로필 카드 FE |
-| 검색 고도화 | DB Fulltext 인덱스. `/search` FE 페이지 (작성자/카테고리/태그 필터) |
+| 기능 | 비고 | 상태 |
+|------|------|------|
+| 검색 고도화 | DB Fulltext 인덱스. `/search` FE 페이지 (작성자/카테고리/태그 필터) | 미구현 |
 
-#### Phase 2 — 공개 제어 및 예약 발행
+#### Phase 2 — 공개 제어 및 예약 발행 (진행 중)
 
-| 기능 | 비고 |
-|------|------|
-| 포스트 공개 범위 | `posts.visibility` 컬럼 (public/members_only/private) |
-| 포스트 예약 발행 | `posts.published_at` + APScheduler 1분 간격 자동 발행 |
-| 임시저장 (자동) | PostEditor 주기적 자동 저장 (localStorage 또는 API) |
+| 기능 | 비고 | 상태 |
+|------|------|------|
+| 포스트 예약 발행 | `posts.published_at` + APScheduler 1분 간격 자동 발행 | 미구현 |
 
 #### Phase 3 — 상호작용 및 분석
 
@@ -72,10 +75,9 @@
 
 #### 기존 기능 개선
 
-| 기능 | 비고 |
-|------|------|
-| Admin 댓글 승인 UI | approve 엔드포인트 존재, UI 미구현 (게스트 댓글 승인용) |
-| DB 연결 마법사 (Setup Wizard) | |
+| 기능 | 비고 | 상태 |
+|------|------|------|
+| DB 연결 마법사 (Setup Wizard) | | 미구현 |
 
 ---
 

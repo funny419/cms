@@ -39,3 +39,6 @@
 - ruff 경로 오류(`No such file or directory: backend`): Docker 내부에서 경로는 `backend/`가 아닌 `.` (`/app` 루트) — `scripts/pre-commit.sh` 확인
 - 훅 미설치: `bash scripts/setup-hooks.sh` 실행 (새 클론 후 1회 필요)
 - ruff auto-fix 후 diff가 생김: 정상 — 수정된 파일이 자동 재스테이징되어 같이 커밋됨
+- **ESLint staged files 경로 오류 (커밋 0a034a10 수정)**: `No such file or directory: frontend/src/` — `scripts/pre-commit.sh` line 70에서 `sed 's|^frontend/||'`로 컨테이너 내부 경로(`/app`)로 변환하도록 수정. staged files만 lint하는 방식 적용.
+- **pytest + Flask-Migrate 충돌 (TestConfig)**: SQLite in-memory DB에서 `db_upgrade()` 실행 오류 — `app.py`의 `create_app()` 팩토리에서 `TESTING=True`일 때 `db.upgrade()` 스킵. `conftest.py`에서 `_db.create_all()`로 테이블 생성 (마이그레이션 파일 불필요). Flask-Migrate와 in-memory 테스트 DB 양립 불가.
+- **react-hooks/rules-of-hooks ESLint 에러 (useEffect + setState)**: 비동기 작업 중 unmount 시 setState 호출 제한 — `async/cancelled` 패턴으로 수정: `useEffect(() => { let cancelled = false; const fetchData = async () => { /*...*/ if (!cancelled) setState(...) }; return () => { cancelled = true } })`. BlogHome.jsx 등 비동기 페칭 컴포넌트에 적용.

@@ -92,32 +92,47 @@ cms/
 ├── frontend/
 │   └── src/
 │       ├── api/
-│       │   ├── auth.js          # 인증 API
-│       │   ├── posts.js         # 포스트 API (page/per_page/q 파라미터 포함)
-│       │   ├── admin.js         # Admin API (page/per_page/q/status 파라미터 포함)
-│       │   ├── comments.js      # 댓글 API (listAllComments page/per_page 포함)
+│       │   ├── auth.js          # 인증 API (getCurrentUser, updateUser)
+│       │   ├── posts.js         # 포스트 API (page/per_page/q/category/tags 파라미터 포함)
+│       │   ├── admin.js         # Admin API (page/per_page/q/status/category 파라미터 포함)
+│       │   ├── comments.js      # 댓글 API (listAllComments page/per_page 포함) + approveComment, rejectComment
 │       │   ├── media.js         # 미디어 업로드 API (uploadMedia)
-│       │   └── settings.js      # 사이트 설정 API (getSettings, updateSettings)
+│       │   ├── settings.js      # 사이트 설정 API (getSettings, updateSettings)
+│       │   ├── categories.js    # 카테고리 API (getCategories) — Sprint 2
+│       │   ├── tags.js          # 태그 API (getTags, getTagPosts) — Sprint 2
+│       │   └── users.js         # 사용자 API (getUserProfile, getUserPosts) — Sprint 2
 │       ├── components/
-│       │   ├── Nav.jsx          # role별 네비게이션 (Admin: 사이트 설정 링크 포함)
+│       │   ├── Nav.jsx          # role별 네비게이션 (editor: 내 블로그 링크 추가 — Sprint 2)
 │       │   ├── CommentSection.jsx
+│       │   ├── ProfileCard.jsx  # 사용자 프로필 카드 (아바타, bio) — Sprint 2
+│       │   ├── inputs/          # 입력 컴포넌트
+│       │   │   ├── CategoryDropdown.jsx  # 카테고리 단일 선택 셀렉트 (PostEditor + AdminPosts) — Sprint 2
+│       │   │   └── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
 │       │   └── widgets/
-│       │       └── RecentPosts.jsx
+│       │       ├── RecentPosts.jsx
+│       │       ├── CategorySidebar.jsx  # 카테고리 계층형 필터 (PostList + BlogHome) — Sprint 2
+│       │       └── TagCloud.jsx        # 태그 클라우드 위젯 (PostDetail) — Sprint 2
 │       ├── context/
-│       │   ├── ThemeContext.jsx  # 라이트/다크 모드 (useTheme)
-│       │   └── SkinContext.jsx   # 스킨 4종 관리 (useSkin, SKINS 목록)
+│       │   ├── ThemeContext.jsx     # 라이트/다크 모드 (useTheme)
+│       │   ├── SkinContext.jsx      # 스킨 4종 관리 (useSkin, SKINS 목록)
+│       │   └── CategoryContext.jsx  # 전역 카테고리 목록 — Sprint 2
 │       ├── hooks/
 │       │   └── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
 │       └── pages/
 │           ├── admin/
-│           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+필터+무한스크롤)
+│           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+status필터+category필터+무한스크롤 — Sprint 2)
 │           │   ├── AdminUsers.jsx     # 회원 관리
-│           │   ├── AdminComments.jsx  # 댓글 관리 (무한스크롤)
+│           │   ├── AdminComments.jsx  # 댓글 관리 (승인/스팸 버튼 추가 — Sprint 1)
 │           │   └── AdminSettings.jsx  # 사이트 설정 (스킨 선택)
-│           ├── MyPosts.jsx       # 내 블로그 (editor 로그인 후, 무한스크롤)
-│           ├── PostList.jsx      # 전체 공개 글 (검색+무한스크롤)
-│           ├── PostDetail.jsx    # 추천 버튼 + 댓글 섹션 + Markdown/HTML 렌더링 분기
-│           └── PostEditor.jsx    # WYSIWYG(Quill+이미지업로드) + Markdown(이미지삽입버튼) 탭 전환
+│           ├── BlogHome.jsx           # 유저별 블로그 페이지 (`/blog/:username`) — Sprint 2
+│           ├── MyPosts.jsx            # 내 글 목록 (editor 로그인 후, 무한스크롤)
+│           ├── PostList.jsx           # 전체 공개 글 (검색+category필터+CategorySidebar — Sprint 2)
+│           ├── PostDetail.jsx         # 추천 + 댓글 + TagCloud — Sprint 2
+│           ├── PostEditor.jsx         # WYSIWYG/Markdown탭 + visibility선택 + category선택 + 태그입력 + localStorage자동저장 (Sprint 1/2)
+│           ├── Profile.jsx            # 프로필 수정 (bio/avatar_url 편집 — Sprint 1)
+│           ├── Login.jsx
+│           ├── Register.jsx
+│           └── Sidebar.jsx            # (삭제: widgets/Sidebar.jsx로 이동)
 ├── docs/
 │   ├── superpowers/             # 설계 스펙 및 구현 계획서
 │   ├── BACKEND_ARCHITECTURE_ANALYSIS.md
@@ -148,3 +163,163 @@ cms/
 ├── docker-compose.yml           # 로컬 개발 (nginx-files 포함, 컨테이너 시작 시 npm install)
 └── docker-compose.prod.yml      # 프로덕션 (Gunicorn 4 workers + Nginx + uploads_data 볼륨)
 ```
+
+---
+
+## 현재 DB 테이블 목록 (스키마)
+
+> 마지막 업데이트: 2026-03-30 (Sprint 1 + Sprint 2 완료 반영)
+
+### 테이블 요약
+
+| 테이블 | 역할 | 주요 컬럼 | 관계 |
+|--------|------|---------|------|
+| `users` | 사용자 | id(PK), username, email, role, bio, avatar_url | Post(1:N), Comment(1:N), Media(1:N) |
+| `posts` | 포스트 | id(PK), author_id(FK), title, slug, content, status, visibility, category_id(FK, nullable) | User, Category, Comment(1:N), PostLike(1:N), PostTag(N:N) |
+| `categories` | 카테고리(계층형, MAX_DEPTH=3) | id(PK), name, slug, parent_id(자기참조, nullable), order | Post(1:N) |
+| `tags` | 태그 | id(PK), name, slug | PostTag(N:N) |
+| `post_tags` | Post-Tag 연결 | post_id(FK), tag_id(FK) | Post, Tag |
+| `comments` | 댓글 | id(PK), post_id(FK), author_id(FK, nullable), content, status | Post, User, Comment(계층형) |
+| `post_likes` | 추천 | id(PK), post_id(FK), user_id(FK) | Post, User |
+| `post_meta` | 포스트 메타데이터 | id(PK), post_id(FK), meta_key, meta_value | Post |
+| `media` | 파일 메타데이터 | id(PK), uploaded_by(FK), filename, filepath, size | User |
+| `options` | 전역 설정 | id(PK), option_name, option_value | (단일 행) |
+| `menus` / `menu_items` | 네비게이션 메뉴 | menu_id, parent_id(자기참조) | (계층형) |
+
+### 상세 컬럼 정의
+
+#### `users` (사용자 관리)
+```
+id: int (PK)
+username: str(64) UNIQUE NOT NULL
+email: str(120) UNIQUE NOT NULL
+password_hash: str(255) NOT NULL
+role: str(20) default='subscriber' [admin, editor, subscriber, deactivated]
+bio: Text nullable (Sprint 1 추가)
+avatar_url: str(500) nullable (Sprint 1 추가)
+created_at: DateTime server_default=now()
+```
+
+#### `posts` (포스트)
+```
+id: int (PK)
+author_id: int FK NOT NULL
+title: str(255) NOT NULL
+slug: str(255) INDEX NOT NULL
+content: Text nullable
+excerpt: Text nullable
+status: str(20) default='draft' [draft, published, scheduled]
+post_type: str(20) default='post'
+content_format: str(10) default='html' [html, markdown] (Sprint 1 추가)
+visibility: str(20) default='public' [public, members_only, private] (Sprint 1 추가)
+category_id: int FK nullable, ondelete=SET NULL (Sprint 2 추가)
+view_count: int default=0
+created_at: DateTime server_default=now()
+updated_at: DateTime nullable, onupdate=now()
+```
+
+#### `categories` (카테고리, Sprint 2 완료)
+```
+id: int (PK)
+name: str(100) NOT NULL
+slug: str(100) UNIQUE NOT NULL
+description: Text nullable
+parent_id: int FK nullable, ondelete=SET NULL (자기참조)
+order: int default=0
+created_at: DateTime server_default=now()
+UNIQUE constraint: (name, parent_id)
+MAX_DEPTH: 3 (API 검증)
+```
+
+#### `tags` (태그, Sprint 2 완료)
+```
+id: int (PK)
+name: str(50) UNIQUE NOT NULL
+slug: str(50) UNIQUE NOT NULL
+created_at: DateTime server_default=now()
+```
+
+#### `post_tags` (Post-Tag 조인, Sprint 2 완료)
+```
+post_id: int FK (CASCADE delete)
+tag_id: int FK (CASCADE delete)
+created_at: DateTime server_default=now()
+UNIQUE constraint: (post_id, tag_id)
+```
+
+#### `comments` (댓글)
+```
+id: int (PK)
+post_id: int FK NOT NULL
+author_id: int FK nullable (로그인 사용자) / author_name, author_email (게스트)
+parent_id: int FK nullable (자기참조, 1단 계층만 지원)
+content: Text NOT NULL
+status: str(20) default='approved' [approved, pending, spam]
+created_at: DateTime server_default=now()
+```
+
+#### `post_likes` (추천, 1인 1추천)
+```
+id: int (PK)
+post_id: int FK
+user_id: int FK
+created_at: DateTime server_default=now()
+UNIQUE constraint: (post_id, user_id)
+```
+
+#### `media` (파일 메타데이터)
+```
+id: int (PK)
+uploaded_by: int FK NOT NULL
+filename: str(255) NOT NULL
+filepath: str(500) NOT NULL (storage 경로 또는 CDN URL)
+mimetype: str(100)
+size: int (bytes)
+meta_data: JSON nullable (너비, 높이, alt 텍스트 등)
+created_at: DateTime server_default=now()
+```
+
+### 인덱스 설계
+
+**주요 인덱스:**
+- `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
+- `comments`: (post_id, status, created_at)
+- `post_tags`: (tag_id) — 태그별 포스트 조회 최적화
+- `categories`: (parent_id, order), slug
+- `post_likes`: (user_id, post_id)
+
+**Fulltext 인덱스 (검색):**
+- `posts`: FULLTEXT(title, excerpt, content) — `MATCH ... AGAINST` 쿼리용
+
+### 마이그레이션 히스토리
+
+| 파일명 | 변경 사항 | 상태 |
+|--------|---------|------|
+| `70ee9763efa3_initial_schema.py` | 초기 스키마 생성 | ✅ |
+| `4822d4e6438a_sync_schema_main_branch.py` | 메인 브랜치 스키마 동기화 | ✅ |
+| `559b21475b90_posts_updated_at_nullable_수정.py` | posts.updated_at nullable 수정 | ✅ |
+| `d56f01212789_post_author_id_nullable.py` | posts.author_id nullable 변경 | ✅ |
+| `a296bac8cb7e_add_comment_author_password_hash.py` | comment 게스트 인증 추가 | ✅ |
+| `d3b142695ad9_add_post_view_count_and_post_likes_table.py` | view_count + PostLike 추가 | ✅ |
+| `merge_heads.py` | 마이그레이션 분기 merge | ✅ |
+| `7d29f46cdf24_add_content_format_to_posts.py` | content_format 컬럼 추가 | ✅ |
+| `c254032213d8_add_user_bio_avatar_url.py` | bio, avatar_url 추가 (Sprint 1) | ✅ |
+| `2f45cb66c55f_add_post_visibility.py` | visibility 컬럼 추가 (Sprint 1) | ✅ |
+| `e141b01590f2_create_tags_and_post_tags.py` | Tag + PostTag 테이블 생성 (Sprint 2) | ✅ |
+| `761ee81e777c_create_categories_add_category_id.py` | Category 테이블 생성 + Post.category_id FK (Sprint 2) | ✅ |
+
+### 주의사항
+
+**Sprint 1 (완료):**
+- `users.bio`, `users.avatar_url` — nullable, TEXT/String(500) 타입, 마이그레이션 완료
+- `posts.visibility` — default='public', nullable=False, server_default='public' 적용 완료
+- `posts.category_id` — Sprint 2에서 추가 완료
+
+**Sprint 2 (완료):**
+- `categories` 테이블 — MAX_DEPTH=3 API 레벨 검증 적용됨
+- `PostTag` 다대다 — 복합 UNIQUE 제약 `(post_id, tag_id)` 적용됨
+- `posts.category_id` — nullable, ondelete=SET NULL (카테고리 삭제 시 포스트 유지)
+
+**성능 최적화:**
+- 포스트 > 10만 건 시점에 `(category_id, status, created_at DESC)` 복합 인덱스 추가 권장
+- Fulltext 검색은 MariaDB 자연어 검색 사용 (한글 지원: ngram 토크나이저 필요 시 추가)
