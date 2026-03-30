@@ -1,7 +1,7 @@
 // frontend/src/pages/admin/AdminComments.jsx
 import { useCallback, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { listAllComments, deleteComment } from '../../api/comments';
+import { listAllComments, deleteComment, approveComment, rejectComment } from '../../api/comments';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 
 const STATUS_LABEL = { approved: '공개', pending: '승인 대기', spam: '스팸' };
@@ -20,6 +20,7 @@ export default function AdminComments() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const [deletedIds, setDeletedIds] = useState(new Set());
+  const [updatedStatuses, setUpdatedStatuses] = useState({}); // { [id]: 'approved' | 'spam' }
 
   const fetchFn = useCallback(
     (page) => {
@@ -34,11 +35,26 @@ export default function AdminComments() {
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
   const comments = items.filter((c) => !deletedIds.has(c.id));
+  const commentsWithStatusUpdates = comments.map((c) =>
+    updatedStatuses[c.id] ? { ...c, status: updatedStatuses[c.id] } : c
+  );
 
   const handleDelete = async (commentId) => {
     if (!window.confirm('이 댓글을 삭제할까요? 답글도 함께 삭제됩니다.')) return;
     const res = await deleteComment(token, commentId);
     if (res.success) setDeletedIds((prev) => new Set([...prev, commentId]));
+    else alert(res.error);
+  };
+
+  const handleApprove = async (commentId) => {
+    const res = await approveComment(token, commentId);
+    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'approved' }));
+    else alert(res.error);
+  };
+
+  const handleReject = async (commentId) => {
+    const res = await rejectComment(token, commentId);
+    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'spam' }));
     else alert(res.error);
   };
 
@@ -60,7 +76,7 @@ export default function AdminComments() {
             </tr>
           </thead>
           <tbody>
-            {comments.map((comment) => (
+            {commentsWithStatusUpdates.map((comment) => (
               <tr key={comment.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ padding: '10px 12px', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <Link to={`/posts/${comment.post_id}`} style={{ color: 'var(--accent)' }}>
@@ -88,9 +104,30 @@ export default function AdminComments() {
                 <td style={{ padding: '10px 12px', color: 'var(--text-light)', whiteSpace: 'nowrap' }}>
                   {formatDate(comment.created_at)}
                 </td>
-                <td style={{ padding: '10px 12px' }}>
-                  <button className="btn btn-danger" style={{ fontSize: 12, padding: '3px 10px' }}
-                    onClick={() => handleDelete(comment.id)}>
+                <td style={{ padding: '10px 12px', display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                  {comment.status === 'pending' && (
+                    <>
+                      <button
+                        className="btn btn-primary"
+                        style={{ fontSize: 12, padding: '3px 10px' }}
+                        onClick={() => handleApprove(comment.id)}
+                      >
+                        승인
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ fontSize: 12, padding: '3px 10px' }}
+                        onClick={() => handleReject(comment.id)}
+                      >
+                        스팸
+                      </button>
+                    </>
+                  )}
+                  <button
+                    className="btn btn-danger"
+                    style={{ fontSize: 12, padding: '3px 10px' }}
+                    onClick={() => handleDelete(comment.id)}
+                  >
                     삭제
                   </button>
                 </td>

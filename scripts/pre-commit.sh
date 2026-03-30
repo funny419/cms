@@ -66,7 +66,7 @@ if [ -n "$STAGED_JS" ]; then
     echo -e "${YELLOW}⚠  프론트엔드 컨테이너 미실행. JS 검사 건너뜀.${NC}"
   else
     echo "▶ eslint..."
-    if docker compose exec -T frontend npx eslint frontend/src/ 2>&1; then
+    if docker compose exec -T frontend npx eslint src/ 2>&1; then
       echo -e "${GREEN}  ✓ eslint${NC}"
     else
       echo -e "${RED}  ✗ eslint 실패 — 위 오류를 수정하세요.${NC}"

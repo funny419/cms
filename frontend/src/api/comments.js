@@ -56,3 +56,29 @@ export const listAllComments = async (token, status = '', page = 1, perPage = 20
     return { success: false, error: error.response?.data?.error || '댓글 목록을 불러오지 못했습니다.' };
   }
 };
+
+export const approveComment = async (token, commentId) => {
+  try {
+    const response = await axios.put(
+      `/api/admin/comments/${commentId}/approve`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '승인에 실패했습니다.' };
+  }
+};
+
+export const rejectComment = async (token, commentId) => {
+  try {
+    const response = await axios.put(
+      `/api/admin/comments/${commentId}/reject`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '스팸 처리에 실패했습니다.' };
+  }
+};
