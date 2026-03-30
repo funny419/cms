@@ -59,6 +59,18 @@ class User(Base):
     # Relationships
     posts: Mapped[List["Post"]] = relationship(back_populates="author")
     comments: Mapped[List["Comment"]] = relationship(back_populates="author")
+    followers: Mapped[List["Follow"]] = relationship(
+        "Follow",
+        foreign_keys="[Follow.following_id]",
+        back_populates="following_user",
+        cascade="all, delete-orphan",
+    )
+    followings: Mapped[List["Follow"]] = relationship(
+        "Follow",
+        foreign_keys="[Follow.follower_id]",
+        back_populates="follower_user",
+        cascade="all, delete-orphan",
+    )
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
@@ -362,3 +374,27 @@ class Category(Base):
             "post_count": post_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class Follow(Base):
+    """팔로우 관계 (이웃)"""
+
+    __tablename__ = "follows"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    follower_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    following_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("follower_id", "following_id", name="uq_follow"),)
+
+    follower_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[follower_id], back_populates="followings"
+    )
+    following_user: Mapped["User"] = relationship(
+        "User", foreign_keys=[following_id], back_populates="followers"
+    )
