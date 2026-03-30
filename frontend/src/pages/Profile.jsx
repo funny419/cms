@@ -4,7 +4,7 @@ import { getCurrentUser, updateUser } from '../api/auth';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', bio: '', avatar_url: '' });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +16,12 @@ export default function Profile() {
     getCurrentUser(token).then((result) => {
       if (result.success) {
         setUser(result.data);
-        setFormData({ email: result.data.email, password: '' });
+        setFormData({
+          email: result.data.email,
+          password: '',
+          bio: result.data.bio || '',
+          avatar_url: result.data.avatar_url || '',
+        });
       } else {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -37,12 +42,14 @@ export default function Profile() {
     const updateData = {};
     if (formData.email !== user.email) updateData.email = formData.email;
     if (formData.password) updateData.password = formData.password;
+    if (formData.bio !== (user.bio || '')) updateData.bio = formData.bio;
+    if (formData.avatar_url !== (user.avatar_url || '')) updateData.avatar_url = formData.avatar_url;
     if (Object.keys(updateData).length === 0) return;
 
     const result = await updateUser(token, updateData);
     if (result.success) {
       setMessage('프로필이 저장됐습니다.');
-      if (updateData.email) setUser({ ...user, email: updateData.email });
+      setUser({ ...user, ...updateData });
       if (updateData.password) setFormData({ ...formData, password: '' });
     } else {
       setError(result.error || '저장에 실패했습니다.');
@@ -80,10 +87,52 @@ export default function Profile() {
 
         <hr className="divider" />
 
+        {formData.avatar_url && (
+          <div style={{ marginBottom: 16, textAlign: 'center' }}>
+            <img
+              src={formData.avatar_url}
+              alt="프로필 이미지"
+              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                setError('유효하지 않은 이미지 URL입니다.');
+              }}
+              onLoad={() => setError('')}
+            />
+          </div>
+        )}
+
         {message && <div className="alert alert-success">{message}</div>}
         {error   && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="avatar_url">프로필 이미지 URL</label>
+            <input
+              className="form-input"
+              type="url"
+              id="avatar_url"
+              name="avatar_url"
+              value={formData.avatar_url}
+              onChange={handleChange}
+              placeholder="https://... 또는 /uploads/..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="bio">자기소개</label>
+            <textarea
+              className="form-input"
+              id="bio"
+              name="bio"
+              value={formData.bio}
+              onChange={handleChange}
+              placeholder="간단한 자기소개를 입력하세요"
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
           <div className="form-group">
             <label className="form-label" htmlFor="email">이메일</label>
             <input
