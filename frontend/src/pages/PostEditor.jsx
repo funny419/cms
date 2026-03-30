@@ -7,6 +7,8 @@ import { getPost, createPost, updatePost } from '../api/posts';
 import { uploadMedia } from '../api/media';
 import { useTheme } from '../context/ThemeContext';
 
+const DRAFT_KEY = 'cms_post_draft';
+
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
   catch { return null; }
@@ -30,16 +32,19 @@ export default function PostEditor() {
   const { theme } = useTheme();
   const quillRef = useRef(null);
 
-  const [form, setForm] = useState({
-    title: '',
-    content: '',
-    excerpt: '',
-    slug: '',
-    post_type: 'post',
-    content_format: 'html',
+  const [form, setForm] = useState(() => {
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html' };
+    if (id) return base; // 편집 모드: draft 무시
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      return saved ? { ...base, ...JSON.parse(saved) } : base;
+    } catch {
+      return base;
+    }
   });
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,6 +68,19 @@ export default function PostEditor() {
       });
     }
   }, [id]);
+
+  // 신규 작성 시: 10초마다 자동저장
+  useEffect(() => {
+    if (isEdit) return;
+    const timer = setInterval(() => {
+      if (form.title || form.content) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 2000);
+      }
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [form, isEdit]);
 
   // WYSIWYG 이미지 핸들러: 파일 선택 → API 업로드 → Quill에 삽입
   const quillImageHandler = useCallback(() => {
@@ -141,6 +159,7 @@ export default function PostEditor() {
     setSaving(false);
 
     if (result.success) {
+      localStorage.removeItem(DRAFT_KEY);
       navigate(`/posts/${result.data.id}`);
     } else {
       setError(result.error || '저장에 실패했습니다.');
@@ -173,6 +192,11 @@ export default function PostEditor() {
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
+      {draftSaved && !isEdit && (
+        <div style={{ fontSize: 12, color: 'var(--text-light)', textAlign: 'right', marginBottom: 8 }}>
+          ✓ 임시저장됨
+        </div>
+      )}
       {imageUploading && (
         <div className="alert" style={{ marginBottom: 16, background: 'var(--accent-bg)', color: 'var(--accent-text)', border: '1px solid var(--accent)' }}>
           이미지 업로드 중...
