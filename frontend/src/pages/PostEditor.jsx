@@ -33,7 +33,7 @@ export default function PostEditor() {
   const quillRef = useRef(null);
 
   const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html' };
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public' };
     if (id) return base; // 편집 모드: draft 무시
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -62,6 +62,7 @@ export default function PostEditor() {
             slug: res.data.slug || '',
             post_type: res.data.post_type || 'post',
             content_format: res.data.content_format || 'html',
+            visibility: res.data.visibility || 'public',
           });
         }
         setLoading(false);
@@ -315,7 +316,7 @@ export default function PostEditor() {
       {/* 하단 옵션 */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 120px',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         gap: 12,
         paddingTop: 16,
         borderTop: '1px solid var(--border)',
@@ -345,6 +346,19 @@ export default function PostEditor() {
           <select className="form-input" name="post_type" value={form.post_type} onChange={handleChange}>
             <option value="post">post</option>
             <option value="page">page</option>
+          </select>
+        </div>
+        <div>
+          <label className="form-label">공개 범위</label>
+          <select
+            className="form-input"
+            name="visibility"
+            value={form.visibility}
+            onChange={handleChange}
+          >
+            <option value="public">전체 공개</option>
+            <option value="members_only">회원만</option>
+            <option value="private">나만 보기</option>
           </select>
         </div>
       </div>
