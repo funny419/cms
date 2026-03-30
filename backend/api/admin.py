@@ -60,6 +60,42 @@ def admin_list_posts() -> tuple:
     ), 200
 
 
+@admin_bp.route("/comments/<int:comment_id>/approve", methods=["PUT"])
+@roles_required("admin")
+def admin_approve_comment(comment_id: int) -> tuple:
+    """게스트 댓글 승인 — pending → approved."""
+    comment: Comment | None = db.session.get(Comment, comment_id)
+    if not comment:
+        return jsonify({"success": False, "data": {}, "error": "Comment not found"}), 404
+    comment.status = "approved"
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
+    return jsonify(
+        {"success": True, "data": {"id": comment.id, "status": comment.status}, "error": ""}
+    ), 200
+
+
+@admin_bp.route("/comments/<int:comment_id>/reject", methods=["PUT"])
+@roles_required("admin")
+def admin_reject_comment(comment_id: int) -> tuple:
+    """댓글 스팸 처리 — pending/approved → spam."""
+    comment: Comment | None = db.session.get(Comment, comment_id)
+    if not comment:
+        return jsonify({"success": False, "data": {}, "error": "Comment not found"}), 404
+    comment.status = "spam"
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
+    return jsonify(
+        {"success": True, "data": {"id": comment.id, "status": comment.status}, "error": ""}
+    ), 200
+
+
 @admin_bp.route("/users", methods=["GET"])
 @roles_required("admin")
 def admin_list_users() -> tuple:
