@@ -16,6 +16,8 @@ services:
       MYSQL_PASSWORD: ${CMS_DB_APP_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
+      - ./scripts/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
