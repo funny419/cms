@@ -104,9 +104,13 @@ class Post(Base):
     # members_only: 로그인 사용자만 조회 가능
     # private: 작성자 + admin만 조회 가능
     visibility: Mapped[str] = mapped_column(String(20), default="public", nullable=False)
+    category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
+    category: Mapped[Optional["Category"]] = relationship("Category", back_populates="posts")
     metas: Mapped[List["PostMeta"]] = relationship(
         back_populates="post", cascade="all, delete-orphan"
     )
@@ -124,6 +128,7 @@ class Post(Base):
             "post_type": self.post_type,
             "content_format": self.content_format,
             "visibility": self.visibility,
+            "category_id": self.category_id,
             "author_id": self.author_id,
             "view_count": self.view_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -304,3 +309,48 @@ class PostTag(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (UniqueConstraint("post_id", "tag_id", name="uq_post_tag"),)
+
+
+MAX_CATEGORY_DEPTH = 3  # 카테고리 최대 깊이 (API 레벨 검증)
+
+
+class Category(Base):
+    """카테고리 (계층형, 최대 3단)"""
+
+    __tablename__ = "categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
+    order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships (자기참조)
+    posts: Mapped[List["Post"]] = relationship("Post", back_populates="category")
+    parent: Mapped[Optional["Category"]] = relationship(
+        "Category",
+        back_populates="children",
+        remote_side="Category.id",
+        foreign_keys="[Category.parent_id]",
+    )
+    children: Mapped[List["Category"]] = relationship(
+        "Category",
+        back_populates="parent",
+        foreign_keys="[Category.parent_id]",
+    )
+
+    def to_dict(self, post_count: int = 0) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "slug": self.slug,
+            "description": self.description,
+            "parent_id": self.parent_id,
+            "order": self.order,
+            "post_count": post_count,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
