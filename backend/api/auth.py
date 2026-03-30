@@ -108,6 +108,29 @@ def list_users() -> tuple:
     return jsonify({"success": True, "data": [u.to_dict() for u in users], "error": ""}), 200
 
 
+@auth_bp.route("/users/search", methods=["GET"])
+def search_users() -> tuple:
+    """작성자 자동완성용 유저 검색 (공개, username prefix 매칭)."""
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"success": True, "data": {"items": []}, "error": ""}), 200
+
+    users = (
+        db.session.execute(
+            select(User)
+            .where(User.username.ilike(f"{q}%"))
+            .where(User.role != "deactivated")
+            .order_by(User.username)
+            .limit(10)
+        )
+        .scalars()
+        .all()
+    )
+
+    items = [{"id": u.id, "username": u.username} for u in users]
+    return jsonify({"success": True, "data": {"items": items}, "error": ""}), 200
+
+
 @auth_bp.route("/users/<username>", methods=["GET"])
 def get_user_profile(username: str) -> tuple:
     """유저 블로그 프로필 조회 — 비로그인도 접근 가능."""
