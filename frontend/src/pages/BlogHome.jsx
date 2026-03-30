@@ -64,7 +64,7 @@ export default function BlogHome() {
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
-      <ProfileCard user={profile} />
+      <ProfileCard user={profile} blogColor={profile?.blog_color} />
 
       <div style={{ display: 'flex', gap: 32 }}>
         {/* 사이드바 */}
