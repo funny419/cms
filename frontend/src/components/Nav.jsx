@@ -42,6 +42,7 @@ export default function Nav() {
           ) : (
             <>
               <Link to="/my-posts" className="nav-link">내 글</Link>
+              <Link to={`/blog/${user?.username}`} className="nav-link">내 블로그</Link>
               <Link to="/posts" className="nav-link">전체 글</Link>
               <Link to="/profile" className="nav-link">프로필</Link>
               <button onClick={handleLogout} className="nav-link" style={{ border: 'none', cursor: 'pointer', background: 'none', color: 'var(--danger)' }}>
