@@ -13,6 +13,7 @@ import PostEditor from './pages/PostEditor';
 import MyPosts from './pages/MyPosts';
 import BlogHome from './pages/BlogHome';
 import Search from './pages/Search';
+import Feed from './pages/Feed';
 import BlogSettings from './pages/BlogSettings';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -48,6 +49,7 @@ function AppContent() {
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/blog/:username" element={<BlogHome />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/feed" element={<Feed />} />
         <Route path="/my-blog/settings" element={<BlogSettings />} />
         {/* /posts/new 는 /posts/:id 보다 반드시 먼저 */}
         <Route path="/posts/new" element={<PostEditor />} />
