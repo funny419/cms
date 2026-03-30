@@ -7,7 +7,9 @@ import { getPost, createPost, updatePost } from '../api/posts';
 import { uploadMedia } from '../api/media';
 import { getTags } from '../api/tags';
 import { useTheme } from '../context/ThemeContext';
+import { useCategories } from '../context/CategoryContext';
 import TagInput from '../components/inputs/TagInput';
+import CategoryDropdown from '../components/inputs/CategoryDropdown';
 
 const DRAFT_KEY = 'cms_post_draft';
 
@@ -32,10 +34,11 @@ export default function PostEditor() {
   const token = localStorage.getItem('token');
   const user = getUser();
   const { theme } = useTheme();
+  const { categories } = useCategories();
   const quillRef = useRef(null);
 
   const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', tags: [] };
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, tags: [] };
     if (id) return base; // 편집 모드: draft 무시
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -66,6 +69,7 @@ export default function PostEditor() {
             post_type: res.data.post_type || 'post',
             content_format: res.data.content_format || 'html',
             visibility: res.data.visibility || 'public',
+            category_id: res.data.category_id ?? null,
             tags: res.data.tags || [],
           });
         }
@@ -370,6 +374,14 @@ export default function PostEditor() {
             <option value="members_only">회원만</option>
             <option value="private">나만 보기</option>
           </select>
+        </div>
+        <div>
+          <label className="form-label">카테고리</label>
+          <CategoryDropdown
+            value={form.category_id}
+            onChange={(id) => setForm((prev) => ({ ...prev, category_id: id }))}
+            categories={categories}
+          />
         </div>
       </div>
 

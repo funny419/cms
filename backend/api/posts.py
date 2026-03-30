@@ -71,8 +71,12 @@ def list_posts() -> tuple:
 
     if q:
         base_query = base_query.where(Post.title.ilike(f"%{q}%"))
-    if q:
         total_query = total_query.where(Post.title.ilike(f"%{q}%"))
+
+    category_id = request.args.get("category_id", type=int)
+    if category_id:
+        base_query = base_query.where(Post.category_id == category_id)
+        total_query = total_query.where(Post.category_id == category_id)
     total: int = db.session.execute(total_query).scalar() or 0
 
     rows = db.session.execute(
@@ -260,6 +264,7 @@ def create_post() -> tuple:
         post_type=data.get("post_type", "post"),
         content_format=content_format,
         visibility=data.get("visibility", "public"),
+        category_id=data.get("category_id"),
         author_id=author_id,
     )
     db.session.add(post)
@@ -298,6 +303,7 @@ def update_post(post_id: int) -> tuple:
         "post_type",
         "content_format",
         "visibility",
+        "category_id",
     ):
         if field in data:
             if field == "content_format" and data[field] not in ("html", "markdown"):

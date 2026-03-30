@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SkinProvider, useSkin } from './context/SkinContext';
+import { CategoryProvider } from './context/CategoryContext';
 import Nav from './components/Nav';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -62,7 +63,9 @@ function App() {
   return (
     <ThemeProvider>
       <SkinProvider>
-        <AppContent />
+        <CategoryProvider>
+          <AppContent />
+        </CategoryProvider>
       </SkinProvider>
     </ThemeProvider>
   );
