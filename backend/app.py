@@ -73,6 +73,10 @@ def create_app(config_class=None):
 
     app.register_blueprint(tags_bp)
 
+    from api.categories import categories_bp
+
+    app.register_blueprint(categories_bp)
+
     return app
 
 
