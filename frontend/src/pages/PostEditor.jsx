@@ -5,7 +5,9 @@ import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import { getPost, createPost, updatePost } from '../api/posts';
 import { uploadMedia } from '../api/media';
+import { getTags } from '../api/tags';
 import { useTheme } from '../context/ThemeContext';
+import TagInput from '../components/inputs/TagInput';
 
 const DRAFT_KEY = 'cms_post_draft';
 
@@ -33,7 +35,7 @@ export default function PostEditor() {
   const quillRef = useRef(null);
 
   const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public' };
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', tags: [] };
     if (id) return base; // 편집 모드: draft 무시
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -47,6 +49,7 @@ export default function PostEditor() {
   const [draftSaved, setDraftSaved] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
+  const [availableTags, setAvailableTags] = useState([]);
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
@@ -63,12 +66,19 @@ export default function PostEditor() {
             post_type: res.data.post_type || 'post',
             content_format: res.data.content_format || 'html',
             visibility: res.data.visibility || 'public',
+            tags: res.data.tags || [],
           });
         }
         setLoading(false);
       });
     }
   }, [id]);
+
+  useEffect(() => {
+    getTags().then((res) => {
+      if (res.success) setAvailableTags(res.data.items || []);
+    });
+  }, []);
 
   // 신규 작성 시: 10초마다 자동저장
   useEffect(() => {
@@ -152,7 +162,7 @@ export default function PostEditor() {
     setSaving(true);
     setError('');
 
-    const payload = { ...form, status };
+    const payload = { ...form, status, tags: form.tags.map((t) => t.id) };
     const result = isEdit
       ? await updatePost(token, id, payload)
       : await createPost(token, payload);
@@ -361,6 +371,15 @@ export default function PostEditor() {
             <option value="private">나만 보기</option>
           </select>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <label className="form-label">태그</label>
+        <TagInput
+          selectedTags={form.tags}
+          availableTags={availableTags}
+          onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+        />
       </div>
     </div>
   );

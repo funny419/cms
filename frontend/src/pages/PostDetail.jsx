@@ -4,6 +4,7 @@ import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
+import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
 
 const getUser = () => {
@@ -189,6 +190,14 @@ export default function PostDetail() {
             style={{ padding: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-h)' }}
             dangerouslySetInnerHTML={{ __html: post.content || '' }}
           />
+        </div>
+      )}
+
+      {/* 태그 */}
+      {post.tags && post.tags.length > 0 && (
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8 }}>태그</p>
+          <TagCloud tags={post.tags} />
         </div>
       )}
 

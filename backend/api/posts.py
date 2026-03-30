@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, PostLike, User
+from models.schema import Comment, Post, PostLike, Tag, User
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
@@ -263,6 +263,11 @@ def create_post() -> tuple:
         author_id=author_id,
     )
     db.session.add(post)
+    db.session.flush()  # post.id 생성 (commit 전)
+    tag_ids: list = data.get("tags", [])
+    if tag_ids:
+        tags = db.session.execute(select(Tag).where(Tag.id.in_(tag_ids))).scalars().all()
+        post.tags.extend(tags)
     try:
         db.session.commit()
     except Exception:
@@ -300,6 +305,13 @@ def update_post(post_id: int) -> tuple:
             if field == "visibility" and data[field] not in ("public", "members_only", "private"):
                 continue  # 유효하지 않은 값 무시
             setattr(post, field, data[field])
+    if "tags" in data:
+        post.tags.clear()
+        if data["tags"]:
+            new_tags = (
+                db.session.execute(select(Tag).where(Tag.id.in_(data["tags"]))).scalars().all()
+            )
+            post.tags.extend(new_tags)
     try:
         db.session.commit()
     except Exception:
