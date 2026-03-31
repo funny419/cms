@@ -1,8 +1,9 @@
+from datetime import date
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
-from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import desc, func, insert, or_, select, text
 from sqlalchemy import distinct as sa_distinct
-from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
@@ -246,16 +247,23 @@ def get_post(post_id: int) -> tuple:
         try:
             ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45]
             referer = (request.headers.get("Referer") or "")[:500] or None
-            db.session.execute(
-                mysql_insert(VisitLog)
-                .values(
-                    post_id=post.id,
-                    user_id=current_user_id,
-                    ip_address=ip,
-                    referer=referer,
+            today = date.today()
+            already_visited = db.session.execute(
+                select(VisitLog).where(
+                    VisitLog.post_id == post.id,
+                    VisitLog.ip_address == ip,
+                    func.date(VisitLog.visited_at) == today,
                 )
-                .prefix_with("IGNORE")
-            )
+            ).scalar_one_or_none()
+            if not already_visited:
+                db.session.execute(
+                    insert(VisitLog).values(
+                        post_id=post.id,
+                        user_id=current_user_id,
+                        ip_address=ip,
+                        referer=referer,
+                    )
+                )
             db.session.commit()
         except Exception:
             db.session.rollback()
