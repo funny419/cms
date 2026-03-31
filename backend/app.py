@@ -82,6 +82,10 @@ def create_app(config_class=None):
     app.register_blueprint(follows_bp)
     app.register_blueprint(feed_bp)
 
+    from api.feeds import feeds_bp
+
+    app.register_blueprint(feeds_bp)
+
     return app
 
 

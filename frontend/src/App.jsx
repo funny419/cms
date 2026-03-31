@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SkinProvider, useSkin } from './context/SkinContext';
 import { CategoryProvider } from './context/CategoryContext';
 import Nav from './components/Nav';
+import OnboardingModal from './components/OnboardingModal';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
@@ -36,6 +37,7 @@ function AppContent() {
   return (
     <Router>
       <Nav />
+      <OnboardingModal />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
