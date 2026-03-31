@@ -131,6 +131,7 @@ class Post(Base):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
+    thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
@@ -158,6 +159,7 @@ class Post(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "tags": [{"id": t.id, "name": t.name, "slug": t.slug} for t in self.tags],
+            "thumbnail_url": self.thumbnail_url,
         }
 
 

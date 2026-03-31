@@ -289,6 +289,8 @@ export default function BlogSettings() {
               {[
                 { value: 'default', label: 'A. 기본', desc: '사이드바 + 포스트 목록' },
                 { value: 'compact', label: 'B. 콤팩트', desc: '포스트 목록만 (사이드바 숨김)' },
+                { value: 'magazine', label: 'D. 매거진', desc: '첫 글 대형 카드 + 리스트' },
+                { value: 'photo', label: 'C. 포토', desc: '썸네일 그리드 (이미지 강조)' },
               ].map(({ value, label, desc }) => (
                 <button
                   key={value}

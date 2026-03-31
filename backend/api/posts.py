@@ -311,6 +311,7 @@ def create_post() -> tuple:
         content_format=content_format,
         visibility=data.get("visibility", "public"),
         category_id=data.get("category_id"),
+        thumbnail_url=data.get("thumbnail_url"),
         author_id=author_id,
     )
     db.session.add(post)
@@ -350,6 +351,7 @@ def update_post(post_id: int) -> tuple:
         "content_format",
         "visibility",
         "category_id",
+        "thumbnail_url",
     ):
         if field in data:
             if field == "content_format" and data[field] not in ("html", "markdown"):

@@ -3,10 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getUserProfile, getUserPosts, followUser, unfollowUser } from '../api/users';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import ProfileCard from '../components/ProfileCard';
-import CategorySidebar from '../components/widgets/CategorySidebar';
-import TagCloud from '../components/widgets/TagCloud';
-import { getCategories } from '../api/categories';
 import StatsWidget from '../components/widgets/StatsWidget';
+import BlogLayoutDefault from '../components/layouts/BlogLayoutDefault';
+import BlogLayoutCompact from '../components/layouts/BlogLayoutCompact';
+import BlogLayoutMagazine from '../components/layouts/BlogLayoutMagazine';
+import BlogLayoutPhoto from '../components/layouts/BlogLayoutPhoto';
+import { getCategories } from '../api/categories';
+
+const LAYOUT_MAX_WIDTH = {
+  default: 900,
+  compact: 720,
+  magazine: 800,
+  photo: 960,
+};
 
 export default function BlogHome() {
   const { username } = useParams();
@@ -70,7 +79,6 @@ export default function BlogHome() {
     [username, token]
   );
 
-  // 카테고리 필터 (FE 필터링)
   const filteredPosts = categoryId
     ? posts.filter((p) => p.category_id === categoryId)
     : posts;
@@ -85,13 +93,15 @@ export default function BlogHome() {
     </div>
   );
 
-  const isCompact = profile?.blog_layout === 'compact';
+  const layout = profile?.blog_layout || 'default';
+  const accentColor = profile?.blog_color || '#7c3aed';
+  const maxWidth = LAYOUT_MAX_WIDTH[layout] || 900;
 
   return (
-    <div className="page-content" style={{ maxWidth: isCompact ? 720 : 900 }}>
+    <div className="page-content" style={{ maxWidth }}>
       <ProfileCard
         user={profile}
-        blogColor={profile?.blog_color}
+        blogColor={accentColor}
         onFollow={handleFollow}
         isFollowing={isFollowing}
         isOwnBlog={isOwnBlog}
@@ -99,71 +109,43 @@ export default function BlogHome() {
 
       <StatsWidget profile={profile} />
 
-      <div style={{ display: 'flex', gap: 32 }}>
-        {/* 사이드바 (기본 레이아웃만) */}
-        {!isCompact && (
-          <aside style={{ width: 160, flexShrink: 0 }}>
-            <CategorySidebar
-              categories={categories}
-              selectedId={categoryId}
-              onSelect={setCategoryId}
-            />
-          </aside>
-        )}
-
-        {/* 포스트 목록 */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-            {categoryId
-              ? `${categories.find((c) => c.id === categoryId)?.name || '카테고리'} 글`
-              : '최근 글'}
-          </h2>
-
-          {filteredPosts.length === 0 && !loading ? (
-            <div className="empty-state"><p>게시된 글이 없습니다.</p></div>
-          ) : (
-            <ul className="post-list">
-              {filteredPosts.map((post) => (
-                <li
-                  key={post.id}
-                  className="post-item"
-                  onClick={() => navigate(`/posts/${post.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="post-title">{post.title}</div>
-                  {post.excerpt && <div className="post-excerpt">{post.excerpt}</div>}
-                  {post.tags && post.tags.length > 0 && (
-                    <div style={{ marginTop: 6 }}>
-                      <TagCloud tags={post.tags} />
-                    </div>
-                  )}
-                  <div className="post-meta">
-                    <span>
-                      {new Date(post.created_at).toLocaleDateString('ko-KR', {
-                        year: 'numeric', month: 'long', day: 'numeric',
-                      })}
-                    </span>
-                    <span>·</span>
-                    <span>👁 {post.view_count ?? 0}</span>
-                    <span>·</span>
-                    <span>♥ {post.like_count ?? 0}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div ref={sentinelRef} style={{ height: 1 }} />
-          {loading && (
-            <div className="empty-state" style={{ marginTop: 24 }}>불러오는 중...</div>
-          )}
-          {!hasMore && filteredPosts.length > 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-light)', fontSize: 13, padding: '24px 0' }}>
-              더 이상 글이 없습니다.
-            </div>
-          )}
-        </div>
-      </div>
+      {layout === 'compact' && (
+        <BlogLayoutCompact
+          posts={filteredPosts}
+          loading={loading}
+          hasMore={hasMore}
+          sentinelRef={sentinelRef}
+        />
+      )}
+      {layout === 'magazine' && (
+        <BlogLayoutMagazine
+          posts={filteredPosts}
+          loading={loading}
+          hasMore={hasMore}
+          sentinelRef={sentinelRef}
+          accentColor={accentColor}
+        />
+      )}
+      {layout === 'photo' && (
+        <BlogLayoutPhoto
+          posts={filteredPosts}
+          loading={loading}
+          hasMore={hasMore}
+          sentinelRef={sentinelRef}
+          accentColor={accentColor}
+        />
+      )}
+      {(layout === 'default' || !['compact', 'magazine', 'photo'].includes(layout)) && (
+        <BlogLayoutDefault
+          posts={filteredPosts}
+          categories={categories}
+          categoryId={categoryId}
+          setCategoryId={setCategoryId}
+          loading={loading}
+          hasMore={hasMore}
+          sentinelRef={sentinelRef}
+        />
+      )}
     </div>
   );
 }

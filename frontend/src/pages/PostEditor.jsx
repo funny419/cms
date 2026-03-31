@@ -38,7 +38,7 @@ export default function PostEditor() {
   const quillRef = useRef(null);
 
   const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, tags: [] };
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, tags: [], thumbnail_url: '' };
     if (id) return base; // 편집 모드: draft 무시
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -71,6 +71,7 @@ export default function PostEditor() {
             visibility: res.data.visibility || 'public',
             category_id: res.data.category_id ?? null,
             tags: res.data.tags || [],
+            thumbnail_url: res.data.thumbnail_url || '',
           });
         }
         setLoading(false);
@@ -381,6 +382,16 @@ export default function PostEditor() {
             value={form.category_id}
             onChange={(id) => setForm((prev) => ({ ...prev, category_id: id }))}
             categories={categories}
+          />
+        </div>
+        <div>
+          <label className="form-label">썸네일 URL (선택)</label>
+          <input
+            className="form-input"
+            name="thumbnail_url"
+            value={form.thumbnail_url}
+            onChange={handleChange}
+            placeholder="https://example.com/image.jpg"
           />
         </div>
       </div>
