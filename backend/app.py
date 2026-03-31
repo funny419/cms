@@ -90,6 +90,10 @@ def create_app(config_class=None):
 
     app.register_blueprint(series_bp)
 
+    from api.stats import stats_bp
+
+    app.register_blueprint(stats_bp)
+
     return app
 
 
