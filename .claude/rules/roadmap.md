@@ -1,8 +1,8 @@
 ## 프로젝트 관리
 
 **GitHub Projects:** https://github.com/users/funny419/projects/1
-- Done (31개): 완료된 기능
-- Todo (11개): Phase 1~3 미구현 기능 + 기존 기능 개선
+- Done (41개): 완료된 기능
+- Todo (8개): 미구현 기능
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
 **관련 분석 문서** (`.claude/rules/` 폴더):
@@ -16,7 +16,7 @@
 ## 구현 현황
 
 > 마지막 업데이트: 2026-03-31
-> 최근 완료: Sprint 1 + Sprint 2 (기획 분석 참고: `.claude/rules/sprint-planning.md`)
+> 최근 완료: Sprint 1 + Sprint 2 + Phase 2.5(블로그 커스터마이제이션) + 구독/이웃 + Phase 3.1(레이아웃A/B/C/D·통계위젯·온보딩·RSS) (기획 분석 참고: `.claude/rules/sprint-planning.md`)
 
 ### 완료
 
@@ -47,6 +47,12 @@
 | 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
 | **개발 도구** | **pre-commit 피드백 루프** — ruff(lint+autofix) → mypy → pytest → eslint. 실패 시 Claude 자가수정 트리거 (`scripts/pre-commit.sh`, `scripts/setup-hooks.sh`). ESLint staged files 버그 수정 완료. pytest 환경 구축 (conftest.py + TestConfig + 14개 테스트) |
 | **Claude Code 스킬** | **12개 프로젝트 특화 스킬** — `new-api-endpoint`, `db-migration`, `new-page`, `code-review`, `test-generation`, `dba-query`, `db-erd`, `api-docs`, `infra`, `debug`, `deploy`, `service-planning` |
+| **구독/이웃** | **`follows` 테이블 + 팔로우/언팔로우/팔로워목록/팔로잉목록 API + `/feed` 이웃 피드 페이지 + ProfileCard 팔로우 버튼 FE** |
+| **블로그 커스터마이제이션** | **`blog_title`, `blog_color`, `website_url`, `social_links` 컬럼 + `/my-blog/settings` 설정 페이지 (기본정보/디자인 탭) + ProfileCard 배너색상·SNS링크 반영** |
+| **블로그 레이아웃 (A/B/C/D)** | **`blog_layout` 컬럼 + `posts.thumbnail_url` 컬럼 + 레이아웃 선택 UI + BlogHome 4종 분기 (BlogLayoutDefault/Compact/Magazine/Photo)** |
+| **블로그 홈 통계 위젯** | **`total_view_count`, `total_comment_count` 집계 API + `StatsWidget.jsx` (포스트/조회수/댓글/팔로워 4종)** |
+| **온보딩 모달** | **`OnboardingModal.jsx` — 첫 로그인 editor 대상, 블로그 설정 유도** |
+| **RSS 피드** | **`GET /blog/:username/feed.xml` RSS 2.0 (python-feedgen)** |
 
 ### 미구현
 
@@ -66,11 +72,9 @@
 
 | 기능 | 비고 |
 |------|------|
-| 구독/이웃 | `follows` 테이블. `GET /api/feed` 피드 페이지 |
 | 알림 시스템 | `notifications` 테이블 + Socket.IO |
 | 블로그 통계 | `visit_logs` + 집계. recharts 대시보드 |
 | 포스트 시리즈 | `series` 테이블. 시리즈 네비게이션 컴포넌트 |
-| RSS/Atom 피드 | `GET /blog/:username/feed.xml` |
 | 소셜 공유 버튼 | PostDetail 하단 공유 버튼 |
 
 #### 기존 기능 개선
