@@ -46,6 +46,7 @@ export default function Nav() {
               <Link to="/my-posts" className="nav-link">내 글</Link>
               <Link to={`/blog/${user?.username}`} className="nav-link">내 블로그</Link>
               <Link to="/my-blog/settings" className="nav-link" title="블로그 설정">⚙️</Link>
+              <Link to="/my-blog/statistics" className="nav-link" title="통계">📊</Link>
               <Link to="/posts" className="nav-link">전체 글</Link>
               <Link to="/profile" className="nav-link">프로필</Link>
               <Link to="/search" className="nav-link" title="검색">🔍</Link>
