@@ -110,6 +110,15 @@ def update_me() -> tuple:
         user.website_url = data["website_url"] or None
     if "social_links" in data:
         user.social_links = data["social_links"] or None
+    if "blog_layout" in data:
+        layout = data["blog_layout"]
+        if layout and layout not in ("default", "compact"):
+            return jsonify(
+                {"success": False, "data": {}, "error": "허용되지 않는 layout 값입니다."}
+            ), 400
+        user.blog_layout = layout or None
+    if "banner_image_url" in data:
+        user.banner_image_url = data["banner_image_url"] or None
     try:
         db.session.commit()
         return jsonify({"success": True, "data": user.to_dict(), "error": ""}), 200

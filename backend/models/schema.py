@@ -55,6 +55,8 @@ class User(Base):
     blog_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     website_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     social_links: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    blog_layout: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    banner_image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     # Relationships
     posts: Mapped[List["Post"]] = relationship(back_populates="author")
@@ -91,6 +93,8 @@ class User(Base):
             "blog_color": self.blog_color,
             "website_url": self.website_url,
             "social_links": self.social_links,
+            "blog_layout": self.blog_layout,
+            "banner_image_url": self.banner_image_url,
         }
 
 
