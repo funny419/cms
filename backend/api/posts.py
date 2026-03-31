@@ -2,11 +2,12 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
 from sqlalchemy import desc, func, or_, select, text
 from sqlalchemy import distinct as sa_distinct
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, PostLike, PostTag, Tag, User
+from models.schema import Comment, Post, PostLike, PostTag, Tag, User, VisitLog
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
@@ -242,6 +243,22 @@ def get_post(post_id: int) -> tuple:
     if not skip_count:
         post.view_count += 1
         db.session.flush()
+        try:
+            ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45]
+            referer = (request.headers.get("Referer") or "")[:500] or None
+            db.session.execute(
+                mysql_insert(VisitLog)
+                .values(
+                    post_id=post.id,
+                    user_id=current_user_id,
+                    ip_address=ip,
+                    referer=referer,
+                )
+                .prefix_with("IGNORE")
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # 집계 (같은 트랜잭션)
     comment_count: int = (
