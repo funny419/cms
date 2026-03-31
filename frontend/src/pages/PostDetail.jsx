@@ -5,6 +5,7 @@ import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
 import SeriesNav from '../components/SeriesNav';
+import ShareButtons from '../components/ShareButtons';
 import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
 
@@ -206,6 +207,8 @@ export default function PostDetail() {
       {post.series && (
         <SeriesNav series={post.series} currentPostId={post.id} />
       )}
+
+      <ShareButtons title={post.title} />
 
       {/* 댓글 */}
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '40px 0 0' }} />
