@@ -308,9 +308,11 @@ def get_post(post_id: int) -> tuple:
 
     # 시리즈 정보
     series_info: dict | None = None
-    sp_entry: SeriesPost | None = db.session.execute(
-        select(SeriesPost).where(SeriesPost.post_id == post_id)
-    ).scalar_one_or_none()
+    sp_entry: SeriesPost | None = (
+        db.session.execute(select(SeriesPost).where(SeriesPost.post_id == post_id))
+        .scalars()
+        .first()
+    )
     if sp_entry:
         s: Series = sp_entry.series
         ordered_posts = sorted(s.series_posts, key=lambda x: x.order)

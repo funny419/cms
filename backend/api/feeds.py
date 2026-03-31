@@ -1,4 +1,6 @@
-from flask import Blueprint, Response
+import os
+
+from flask import Blueprint, Response, request
 from sqlalchemy import select
 
 from database import db
@@ -26,7 +28,7 @@ def rss_feed(username: str) -> Response:
         .all()
     )
 
-    base_url = "http://localhost:5173"
+    base_url = os.environ.get("SITE_URL", request.host_url.rstrip("/"))
     items = ""
     for p in posts:
         pub_date = p.created_at.strftime("%a, %d %b %Y %H:%M:%S +0000") if p.created_at else ""
