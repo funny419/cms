@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Follow, Post, User
+from models.schema import Comment, Follow, Post, User
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -211,9 +211,29 @@ def get_user_profile(username: str) -> tuple:
             ).scalar_one_or_none()
         )
 
+    total_view_count: int = (
+        db.session.execute(
+            select(func.coalesce(func.sum(Post.view_count), 0))
+            .where(Post.author_id == user.id)
+            .where(Post.status == "published")
+        ).scalar()
+        or 0
+    )
+    total_comment_count: int = (
+        db.session.execute(
+            select(func.count(Comment.id))
+            .join(Post, Comment.post_id == Post.id)
+            .where(Post.author_id == user.id)
+            .where(Comment.status == "approved")
+        ).scalar()
+        or 0
+    )
+
     d = user.to_dict()
     d["post_count"] = post_count
     d["follower_count"] = follower_count
     d["following_count"] = following_count
     d["is_following"] = is_following
+    d["total_view_count"] = total_view_count
+    d["total_comment_count"] = total_comment_count
     return jsonify({"success": True, "data": d, "error": ""}), 200
