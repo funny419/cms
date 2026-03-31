@@ -112,7 +112,7 @@ def update_me() -> tuple:
         user.social_links = data["social_links"] or None
     if "blog_layout" in data:
         layout = data["blog_layout"]
-        if layout and layout not in ("default", "compact"):
+        if layout and layout not in ("default", "compact", "magazine", "photo"):
             return jsonify(
                 {"success": False, "data": {}, "error": "허용되지 않는 layout 값입니다."}
             ), 400

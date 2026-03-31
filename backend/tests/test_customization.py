@@ -56,7 +56,7 @@ def test_update_blog_layout(client, app, editor_headers):
 
 
 def test_blog_layout_invalid_value(client, app, editor_headers):
-    res = client.put("/api/auth/me", json={"blog_layout": "magazine"}, headers=editor_headers)
+    res = client.put("/api/auth/me", json={"blog_layout": "invalid_layout"}, headers=editor_headers)
     assert res.status_code == 400
 
 
