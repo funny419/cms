@@ -10,6 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useCategories } from '../context/CategoryContext';
 import TagInput from '../components/inputs/TagInput';
 import CategoryDropdown from '../components/inputs/CategoryDropdown';
+import SeriesDropdown from '../components/inputs/SeriesDropdown';
 
 const DRAFT_KEY = 'cms_post_draft';
 
@@ -38,7 +39,7 @@ export default function PostEditor() {
   const quillRef = useRef(null);
 
   const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, tags: [], thumbnail_url: '' };
+    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, series_id: null, tags: [], thumbnail_url: '' };
     if (id) return base; // 편집 모드: draft 무시
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
@@ -70,6 +71,7 @@ export default function PostEditor() {
             content_format: res.data.content_format || 'html',
             visibility: res.data.visibility || 'public',
             category_id: res.data.category_id ?? null,
+            series_id: res.data.series_id ?? null,
             tags: res.data.tags || [],
             thumbnail_url: res.data.thumbnail_url || '',
           });
@@ -382,6 +384,14 @@ export default function PostEditor() {
             value={form.category_id}
             onChange={(id) => setForm((prev) => ({ ...prev, category_id: id }))}
             categories={categories}
+          />
+        </div>
+        <div>
+          <label className="form-label">시리즈</label>
+          <SeriesDropdown
+            value={form.series_id}
+            onChange={(id) => setForm((prev) => ({ ...prev, series_id: id }))}
+            username={user?.username}
           />
         </div>
         <div>

@@ -4,6 +4,7 @@ import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
+import SeriesNav from '../components/SeriesNav';
 import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
 
@@ -199,6 +200,11 @@ export default function PostDetail() {
           <p style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8 }}>태그</p>
           <TagCloud tags={post.tags} />
         </div>
+      )}
+
+      {/* 시리즈 네비게이션 */}
+      {post.series && (
+        <SeriesNav series={post.series} currentPostId={post.id} />
       )}
 
       {/* 댓글 */}

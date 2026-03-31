@@ -9,6 +9,7 @@ import BlogLayoutCompact from '../components/layouts/BlogLayoutCompact';
 import BlogLayoutMagazine from '../components/layouts/BlogLayoutMagazine';
 import BlogLayoutPhoto from '../components/layouts/BlogLayoutPhoto';
 import { getCategories } from '../api/categories';
+import { getUserSeries } from '../api/series';
 
 const LAYOUT_MAX_WIDTH = {
   default: 900,
@@ -28,13 +29,15 @@ export default function BlogHome() {
   const [profileError, setProfileError] = useState('');
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState(null);
+  const [seriesList, setSeriesList] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const [profileRes, catRes] = await Promise.all([
+      const [profileRes, catRes, seriesRes] = await Promise.all([
         getUserProfile(username),
         getCategories(),
+        getUserSeries(username),
       ]);
       if (cancelled) return;
       if (profileRes.success) {
@@ -44,6 +47,7 @@ export default function BlogHome() {
         setProfileError(profileRes.error || '사용자를 찾을 수 없습니다.');
       }
       if (catRes.success) setCategories(catRes.data.items || []);
+      if (seriesRes.success) setSeriesList(seriesRes.data.items || []);
       setProfileLoading(false);
     };
     load();
@@ -145,6 +149,36 @@ export default function BlogHome() {
           hasMore={hasMore}
           sentinelRef={sentinelRef}
         />
+      )}
+
+      {seriesList.length > 0 && (
+        <div style={{ marginTop: 40 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: 'var(--text-h)' }}>
+            시리즈
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+            {seriesList.map((s) => (
+              <div
+                key={s.id}
+                className="card"
+                style={{ padding: '16px', cursor: 'pointer' }}
+                onClick={() => navigate(`/blog/${username}/series/${s.slug || s.id}`)}
+              >
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6, color: 'var(--text-h)' }}>
+                  {s.title}
+                </div>
+                {s.description && (
+                  <div style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8, lineHeight: 1.5 }}>
+                    {s.description}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
+                  포스트 {s.post_count ?? 0}개
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
