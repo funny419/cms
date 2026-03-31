@@ -6,6 +6,7 @@ import ProfileCard from '../components/ProfileCard';
 import CategorySidebar from '../components/widgets/CategorySidebar';
 import TagCloud from '../components/widgets/TagCloud';
 import { getCategories } from '../api/categories';
+import StatsWidget from '../components/widgets/StatsWidget';
 
 export default function BlogHome() {
   const { username } = useParams();
@@ -96,29 +97,7 @@ export default function BlogHome() {
         isOwnBlog={isOwnBlog}
       />
 
-      {/* 블로그 통계 위젯 */}
-      <div style={{
-        display: 'flex', gap: 0, marginBottom: 24,
-        border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden',
-      }}>
-        {[
-          { label: '포스트', value: profile.post_count ?? 0 },
-          { label: '총 조회수', value: (profile.total_view_count ?? 0).toLocaleString() },
-          { label: '총 댓글', value: profile.total_comment_count ?? 0 },
-        ].map(({ label, value }, i, arr) => (
-          <div
-            key={label}
-            style={{
-              flex: 1, padding: '14px 0', textAlign: 'center',
-              borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-              background: 'var(--bg-subtle)',
-            }}
-          >
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{value}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 2 }}>{label}</div>
-          </div>
-        ))}
-      </div>
+      <StatsWidget profile={profile} />
 
       <div style={{ display: 'flex', gap: 32 }}>
         {/* 사이드바 (기본 레이아웃만) */}
