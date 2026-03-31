@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, PostLike, PostTag, Tag, User, VisitLog
+from models.schema import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
@@ -306,11 +306,43 @@ def get_post(post_id: int) -> tuple:
     if not skip_count:
         db.session.commit()
 
+    # 시리즈 정보
+    series_info: dict | None = None
+    sp_entry: SeriesPost | None = db.session.execute(
+        select(SeriesPost).where(SeriesPost.post_id == post_id)
+    ).scalar_one_or_none()
+    if sp_entry:
+        s: Series = sp_entry.series
+        ordered_posts = sorted(s.series_posts, key=lambda x: x.order)
+        current_index = next((i for i, sp in enumerate(ordered_posts) if sp.post_id == post_id), 0)
+        total_in_series = len(ordered_posts)
+        prev_post: dict | None = None
+        next_post: dict | None = None
+        if current_index > 0:
+            prev_sp = ordered_posts[current_index - 1]
+            prev_post = {"id": prev_sp.post.id, "title": prev_sp.post.title}
+        if current_index < total_in_series - 1:
+            next_sp = ordered_posts[current_index + 1]
+            next_post = {"id": next_sp.post.id, "title": next_sp.post.title}
+        series_info = {
+            "id": s.id,
+            "title": s.title,
+            "posts": [
+                {"id": sp.post.id, "title": sp.post.title, "order": sp.order}
+                for sp in ordered_posts
+            ],
+            "current_index": current_index,
+            "total": total_in_series,
+            "prev_post": prev_post,
+            "next_post": next_post,
+        }
+
     d = post.to_dict()
     d["author_username"] = author_username
     d["comment_count"] = comment_count
     d["like_count"] = like_count
     d["user_liked"] = user_liked
+    d["series"] = series_info
     return jsonify({"success": True, "data": d, "error": ""}), 200
 
 
