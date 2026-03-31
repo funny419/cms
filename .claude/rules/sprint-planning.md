@@ -171,24 +171,25 @@ blog_layout: str           # 레이아웃 선택 (기본값: 'default')
 ✅ Sprint 2 (완료):
   블로그 홈 기초 + 태그/카테고리 시스템
   ↓
-Phase 2.5 (다음):
-  + 블로그 설정 (웹사이트, SNS 링크, 대표 색상)
+✅ Phase 2.5 (완료, 2026-03-31):
+  + 블로그 설정 (blog_title, blog_color, website_url, social_links)
+  + /my-blog/settings 페이지 (기본정보/디자인 탭)
   → "내 블로그가 내 얼굴이다" 단계
   ↓
-Phase 3.1 (이후):
-  + 고급 레이아웃 선택 (4가지)
-  + 폰트 설정
+✅ 구독/이웃 (완료, 2026-03-31):
+  + follows 테이블 + 팔로우/언팔로우 API + /feed 피드 페이지
+  ↓
+✅ Phase 3.1 (완료, 2026-03-31):
+  + 블로그 레이아웃 A/B/C/D 전종 (BlogLayoutDefault/Compact/Magazine/Photo)
+  + posts.thumbnail_url 컬럼 + PostEditor 입력 UI
   + 온보딩 모달
+  + 블로그 홈 통계 위젯
   → "프로페셔널한 블로그 플랫폼" 단계
   ↓
-Phase 2 (공개 범위 고도화 + 예약 발행):
-  + published_at + APScheduler
-  + 검색 고도화 (Fulltext 인덱스, /search 페이지)
-  ↓
 Phase 3 (상호작용 + 분석):
-  + 구독/이웃 (follows 테이블)
   + 알림 시스템 (Socket.IO)
-  + 블로그 통계 (recharts 대시보드)
+  + 블로그 통계 대시보드 (recharts)
+  + RSS/Atom 피드 / 소셜 공유 버튼
 ```
 
 ---
