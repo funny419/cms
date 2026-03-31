@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -221,6 +222,25 @@ class PostLike(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_like"),)
+
+
+class VisitLog(Base):
+    """방문 로그 (포스트별 일별 집계용)"""
+
+    __tablename__ = "visit_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("posts.id", ondelete="SET NULL"), nullable=True
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
+    visited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    referer: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    __table_args__ = (Index("idx_visit_post_time", "post_id", "visited_at"),)
 
 
 class Comment(Base):
