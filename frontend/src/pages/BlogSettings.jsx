@@ -31,6 +31,7 @@ export default function BlogSettings() {
     website_url: '',
     social_links: { github: '', twitter: '', linkedin: '' },
     blog_color: '#7c3aed',
+    blog_layout: 'default',
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function BlogSettings() {
         website_url: u.website_url || '',
         social_links: u.social_links || { github: '', twitter: '', linkedin: '' },
         blog_color: u.blog_color || '#7c3aed',
+        blog_layout: u.blog_layout || 'default',
       });
       setLoading(false);
     });
@@ -85,6 +87,7 @@ export default function BlogSettings() {
       website_url: form.website_url || null,
       social_links: form.social_links,
       blog_color: form.blog_color,
+      blog_layout: form.blog_layout,
     });
     setSaving(false);
     if (res.success) {
@@ -275,6 +278,31 @@ export default function BlogSettings() {
                     cursor: 'pointer',
                   }}
                 />
+              ))}
+            </div>
+          </div>
+
+          {/* 레이아웃 선택 */}
+          <div className="form-group">
+            <label className="form-label">블로그 레이아웃</label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {[
+                { value: 'default', label: 'A. 기본', desc: '사이드바 + 포스트 목록' },
+                { value: 'compact', label: 'B. 콤팩트', desc: '포스트 목록만 (사이드바 숨김)' },
+              ].map(({ value, label, desc }) => (
+                <button
+                  key={value}
+                  onClick={() => setForm((p) => ({ ...p, blog_layout: value }))}
+                  style={{
+                    flex: 1, padding: '12px 8px', borderRadius: 8, cursor: 'pointer',
+                    border: form.blog_layout === value || (!form.blog_layout && value === 'default')
+                      ? '2px solid var(--accent)' : '2px solid var(--border)',
+                    background: 'var(--bg)', textAlign: 'center',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-light)' }}>{desc}</div>
+                </button>
               ))}
             </div>
           </div>

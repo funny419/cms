@@ -84,8 +84,10 @@ export default function BlogHome() {
     </div>
   );
 
+  const isCompact = profile?.blog_layout === 'compact';
+
   return (
-    <div className="page-content" style={{ maxWidth: 900 }}>
+    <div className="page-content" style={{ maxWidth: isCompact ? 720 : 900 }}>
       <ProfileCard
         user={profile}
         blogColor={profile?.blog_color}
@@ -95,14 +97,16 @@ export default function BlogHome() {
       />
 
       <div style={{ display: 'flex', gap: 32 }}>
-        {/* 사이드바 */}
-        <aside style={{ width: 160, flexShrink: 0 }}>
-          <CategorySidebar
-            categories={categories}
-            selectedId={categoryId}
-            onSelect={setCategoryId}
-          />
-        </aside>
+        {/* 사이드바 (기본 레이아웃만) */}
+        {!isCompact && (
+          <aside style={{ width: 160, flexShrink: 0 }}>
+            <CategorySidebar
+              categories={categories}
+              selectedId={categoryId}
+              onSelect={setCategoryId}
+            />
+          </aside>
+        )}
 
         {/* 포스트 목록 */}
         <div style={{ flex: 1, minWidth: 0 }}>
