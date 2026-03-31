@@ -47,3 +47,20 @@ def test_me_response_includes_customization_fields(client, app, editor_headers):
     assert "blog_color" in data
     assert "website_url" in data
     assert "social_links" in data
+
+
+def test_update_blog_layout(client, app, editor_headers):
+    res = client.put("/api/auth/me", json={"blog_layout": "compact"}, headers=editor_headers)
+    assert res.status_code == 200
+    assert res.get_json()["data"]["blog_layout"] == "compact"
+
+
+def test_blog_layout_invalid_value(client, app, editor_headers):
+    res = client.put("/api/auth/me", json={"blog_layout": "magazine"}, headers=editor_headers)
+    assert res.status_code == 400
+
+
+def test_me_includes_blog_layout(client, app, editor_headers):
+    res = client.get("/api/auth/me", headers=editor_headers)
+    assert res.status_code == 200
+    assert "blog_layout" in res.get_json()["data"]
