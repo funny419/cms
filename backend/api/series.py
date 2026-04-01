@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from slugify import slugify
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -12,7 +12,8 @@ from models.schema import Post, Series, SeriesPost, User
 series_bp = Blueprint("series", __name__)
 
 
-def _series_to_dict(s: Series, include_posts: bool = True) -> dict:
+def _series_to_dict(s: Series, post_count: int | None = None, include_posts: bool = True) -> dict:
+    total = post_count if post_count is not None else len(s.series_posts)
     result: dict = {
         "id": s.id,
         "title": s.title,
@@ -20,7 +21,7 @@ def _series_to_dict(s: Series, include_posts: bool = True) -> dict:
         "description": s.description,
         "author_id": s.author_id,
         "created_at": s.created_at.isoformat() if s.created_at else None,
-        "total": len(s.series_posts),
+        "total": total,
     }
     if include_posts:
         result["posts"] = [
@@ -89,17 +90,26 @@ def get_user_series(username: str) -> tuple:
     if not user or user.role == "deactivated":
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
 
-    series_list = (
-        db.session.execute(
-            select(Series).where(Series.author_id == user.id).order_by(Series.created_at.desc())
-        )
-        .scalars()
-        .all()
+    # PERF-4: 서브쿼리로 post_count 일괄 집계 (M개 시리즈 × lazy load 방지)
+    total_sq = (
+        select(func.count(SeriesPost.id))
+        .where(SeriesPost.series_id == Series.id)
+        .correlate(Series)
+        .scalar_subquery()
     )
+    rows = db.session.execute(
+        select(Series, total_sq.label("post_count"))
+        .where(Series.author_id == user.id)
+        .order_by(Series.created_at.desc())
+    ).all()
+
     return jsonify(
         {
             "success": True,
-            "data": [_series_to_dict(s, include_posts=False) for s in series_list],
+            "data": [
+                _series_to_dict(s, post_count=post_count, include_posts=False)
+                for s, post_count in rows
+            ],
             "error": "",
         }
     ), 200
