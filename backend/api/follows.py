@@ -72,12 +72,23 @@ def unfollow_user(username: str) -> tuple:
 
 @follows_bp.route("/<username>/followers", methods=["GET"])
 def list_followers(username: str) -> tuple:
-    """팔로워 목록."""
+    """팔로워 목록 (페이지네이션)."""
     target: User | None = db.session.execute(
         select(User).where(User.username == username)
     ).scalar_one_or_none()
     if not target:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    total: int = (
+        db.session.execute(
+            select(func.count(Follow.id)).where(Follow.following_id == target.id)
+        ).scalar()
+        or 0
+    )
 
     followers = (
         db.session.execute(
@@ -85,6 +96,8 @@ def list_followers(username: str) -> tuple:
             .join(Follow, Follow.follower_id == User.id)
             .where(Follow.following_id == target.id)
             .order_by(Follow.created_at.desc())
+            .offset(offset)
+            .limit(per_page)
         )
         .scalars()
         .all()
@@ -92,18 +105,33 @@ def list_followers(username: str) -> tuple:
 
     items = [{"id": u.id, "username": u.username, "avatar_url": u.avatar_url} for u in followers]
     return jsonify(
-        {"success": True, "data": {"items": items, "total": len(items)}, "error": ""}
+        {
+            "success": True,
+            "data": {"items": items, "total": total, "has_more": page * per_page < total},
+            "error": "",
+        }
     ), 200
 
 
 @follows_bp.route("/<username>/following", methods=["GET"])
 def list_following(username: str) -> tuple:
-    """팔로잉 목록."""
+    """팔로잉 목록 (페이지네이션)."""
     target: User | None = db.session.execute(
         select(User).where(User.username == username)
     ).scalar_one_or_none()
     if not target:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    total: int = (
+        db.session.execute(
+            select(func.count(Follow.id)).where(Follow.follower_id == target.id)
+        ).scalar()
+        or 0
+    )
 
     following = (
         db.session.execute(
@@ -111,6 +139,8 @@ def list_following(username: str) -> tuple:
             .join(Follow, Follow.following_id == User.id)
             .where(Follow.follower_id == target.id)
             .order_by(Follow.created_at.desc())
+            .offset(offset)
+            .limit(per_page)
         )
         .scalars()
         .all()
@@ -118,7 +148,11 @@ def list_following(username: str) -> tuple:
 
     items = [{"id": u.id, "username": u.username, "avatar_url": u.avatar_url} for u in following]
     return jsonify(
-        {"success": True, "data": {"items": items, "total": len(items)}, "error": ""}
+        {
+            "success": True,
+            "data": {"items": items, "total": total, "has_more": page * per_page < total},
+            "error": "",
+        }
     ), 200
 
 
