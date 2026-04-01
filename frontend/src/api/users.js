@@ -58,6 +58,28 @@ export const unfollowUser = async (token, username) => {
   }
 };
 
+export const getFollowers = async (username, page = 1, perPage = 20) => {
+  try {
+    const response = await axios.get(`/api/users/${username}/followers`, {
+      params: { page, per_page: perPage },
+    });
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '팔로워 목록을 불러오지 못했습니다.' };
+  }
+};
+
+export const getFollowing = async (username, page = 1, perPage = 20) => {
+  try {
+    const response = await axios.get(`/api/users/${username}/following`, {
+      params: { page, per_page: perPage },
+    });
+    return response.data;
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || '팔로잉 목록을 불러오지 못했습니다.' };
+  }
+};
+
 export const getFeed = async (token, page = 1, perPage = 20) => {
   try {
     const response = await axios.get('/api/feed', {
