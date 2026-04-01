@@ -16,7 +16,7 @@
 ## 구현 현황
 
 > 마지막 업데이트: 2026-04-01
-> 최근 완료: Setup Wizard Phase 1 (관리자 계정 생성 + 사이트 설정 마법사)
+> 최근 완료: Setup Wizard Phase 2 (DB 연결 UI + .env 동적 생성 + 마이그레이션)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO)
 
 ### 완료
@@ -58,13 +58,13 @@
 | **포스트 시리즈** | **`series`, `series_posts` 테이블 + CRUD API + `GET /api/users/:username/series` + `GET /api/posts/:id` series 필드 임베드. FE: `SeriesDropdown.jsx`(PostEditor) + `SeriesNav.jsx`(PostDetail) + BlogHome 시리즈 목록 섹션. 커밋: 032eba1(DB), 591e8bf(BE), 6aae81c(FE)** |
 | **블로그 통계 대시보드** | **`GET /api/blog/:username/stats` (본인/admin, ?period=7d\|30d\|90d) + `GET /api/admin/stats/:username`. FE: `Statistics.jsx` + `stats.js` + recharts@3.8.1. 커밋: c41519a(BE), 2b074c7(FE)** |
 | **소셜 공유 버튼** | **`ShareButtons.jsx` 신규 + PostDetail.jsx 수정. Web Share API(모바일) + URL 복사 fallback. BE 작업 없음. 커밋: aff94dc** |
-| **Setup Wizard (Phase 1)** | **`GET /api/wizard/status` + `POST /api/wizard/setup` (BE), `SetupWizard.jsx` 4단계 UI + `wizard.js` (FE), App.jsx wizard status 체크 + `/wizard` 라우트. 커밋: 7024855** |
+| **Setup Wizard (Phase 1+2)** | **Phase 1: `GET /api/wizard/status` + `POST /api/wizard/setup`. Phase 2: `POST /api/wizard/db-test` (4종 오류 분류) + `POST /api/wizard/env` (.env 동적 생성, chmod 0o600) + `POST /api/wizard/migrate` (already exists→stamp+retry, Multiple head→409). FE: SetupWizard.jsx 5단계 + localStorage step 복원. docker-compose.yml: depends_on service_started+required:false. 커밋: 7024855(P1), 3a3f3ae(docker), d3a28bd(BE), 7cfd47d(FE)** |
 
 ### 미구현
 
 | 기능 | 비고 | 상태 |
 |------|------|------|
-| Setup Wizard Phase 2 | DB 연결 UI + .env 동적 생성 + Flask 재시작 — 아키텍처 전면 수정 필요 | 미구현 |
+| (없음) | 모든 계획 기능 구현 완료 | - |
 
 #### 스팩아웃 (2026-03-31 확정)
 

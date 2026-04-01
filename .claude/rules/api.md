@@ -4,8 +4,11 @@
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `GET /api/wizard/status` | 공개 | Wizard 완료 여부 조회. 응답: `{ completed: bool, db_connected: bool, has_admin: bool }`. `completed=true` 조건: `WIZARD_COMPLETED=true` 환경변수 OR admin 계정 존재 |
+| `GET /api/wizard/status` | 공개 | Wizard 완료 여부 조회. 응답: `{ completed: bool, db_connected: bool, has_admin: bool, step: int }`. step: 1=DB미연결, 3=마이그레이션필요, 4=관리자계정필요, 5=완료 |
 | `POST /api/wizard/setup` | 공개 (미완료 시에만) | 관리자 계정 생성 + 사이트 설정. 요청: `{ admin: {username, email, password}, site: {site_title, site_url, tagline} }`. 이미 완료 시 409. 비밀번호 8자 미만 시 400. setup 완료 후 `.env`에 `WIZARD_COMPLETED=true` 추가 |
+| `POST /api/wizard/db-test` | 공개 | DB 연결 테스트. 요청: `{ host, port, user, password, dbname }`. 응답: `{ error_code: "auth_failed"\|"host_unreachable"\|"db_not_found"\|"invalid_url"\|null }`. 성공 200, 실패 400. 응답에 비밀번호 미포함 |
+| `POST /api/wizard/env` | 공개 | .env 파일 생성. 요청: `{ host, port, user, password, dbname, secret_key?, jwt_secret_key? }`. DB 연결 재확인 후 파일 작성(chmod 0o600). `DB_ENV_WRITTEN=true` 시 200+already_written, 첫 작성 201 |
+| `POST /api/wizard/migrate` | 공개 | DB 마이그레이션 실행 (`flask db upgrade`). 성공 200. "already exists" → stamp head 후 재시도. "Multiple head" → 409. 실패 500. 응답에 DB 비밀번호 미포함 |
 
 ### 포스트 API
 
