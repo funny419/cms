@@ -1,8 +1,8 @@
 ## 프로젝트 관리
 
 **GitHub Projects:** https://github.com/users/funny419/projects/1
-- Done (41개): 완료된 기능
-- Todo (8개): 미구현 기능
+- Done (47개): 완료된 기능
+- Todo (2개): 미구현 기능
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
 **관련 분석 문서** (`.claude/rules/` 폴더):
@@ -15,8 +15,9 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-03-31
-> 최근 완료: Sprint 1 + Sprint 2 + Phase 2.5(블로그 커스터마이제이션) + 구독/이웃 + Phase 3.1(레이아웃A/B/C/D·통계위젯·온보딩·RSS) (기획 분석 참고: `.claude/rules/sprint-planning.md`)
+> 마지막 업데이트: 2026-04-01
+> 최근 완료: Setup Wizard Phase 1 (관리자 계정 생성 + 사이트 설정 마법사)
+> 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO)
 
 ### 완료
 
@@ -53,35 +54,24 @@
 | **블로그 홈 통계 위젯** | **`total_view_count`, `total_comment_count` 집계 API + `StatsWidget.jsx` (포스트/조회수/댓글/팔로워 4종)** |
 | **온보딩 모달** | **`OnboardingModal.jsx` — 첫 로그인 editor 대상, 블로그 설정 유도** |
 | **RSS 피드** | **`GET /blog/:username/feed.xml` RSS 2.0 (python-feedgen)** |
+| **검색 고도화** | **`GET /api/posts?q=` FULLTEXT MATCH...AGAINST + `?category_id`, `?author`, `?tags` 필터. FE `Search.jsx` (작성자/카테고리/태그 필터 + URL params) — BE/FE 모두 구현 완료** |
+| **포스트 시리즈** | **`series`, `series_posts` 테이블 + CRUD API + `GET /api/users/:username/series` + `GET /api/posts/:id` series 필드 임베드. FE: `SeriesDropdown.jsx`(PostEditor) + `SeriesNav.jsx`(PostDetail) + BlogHome 시리즈 목록 섹션. 커밋: 032eba1(DB), 591e8bf(BE), 6aae81c(FE)** |
+| **블로그 통계 대시보드** | **`GET /api/blog/:username/stats` (본인/admin, ?period=7d\|30d\|90d) + `GET /api/admin/stats/:username`. FE: `Statistics.jsx` + `stats.js` + recharts@3.8.1. 커밋: c41519a(BE), 2b074c7(FE)** |
+| **소셜 공유 버튼** | **`ShareButtons.jsx` 신규 + PostDetail.jsx 수정. Web Share API(모바일) + URL 복사 fallback. BE 작업 없음. 커밋: aff94dc** |
+| **Setup Wizard (Phase 1)** | **`GET /api/wizard/status` + `POST /api/wizard/setup` (BE), `SetupWizard.jsx` 4단계 UI + `wizard.js` (FE), App.jsx wizard status 체크 + `/wizard` 라우트. 커밋: 7024855** |
 
 ### 미구현
 
-#### Phase 1 — 기본 블로그 구조 (진행 중)
-
 | 기능 | 비고 | 상태 |
 |------|------|------|
-| 검색 고도화 | DB Fulltext 인덱스. `/search` FE 페이지 (작성자/카테고리/태그 필터) | 미구현 |
+| Setup Wizard Phase 2 | DB 연결 UI + .env 동적 생성 + Flask 재시작 — 아키텍처 전면 수정 필요 | 미구현 |
 
-#### Phase 2 — 공개 제어 및 예약 발행 (진행 중)
+#### 스팩아웃 (2026-03-31 확정)
 
-| 기능 | 비고 | 상태 |
-|------|------|------|
-| 포스트 예약 발행 | `posts.published_at` + APScheduler 1분 간격 자동 발행 | 미구현 |
-
-#### Phase 3 — 상호작용 및 분석
-
-| 기능 | 비고 |
-|------|------|
-| 알림 시스템 | `notifications` 테이블 + Socket.IO |
-| 블로그 통계 | `visit_logs` + 집계. recharts 대시보드 |
-| 포스트 시리즈 | `series` 테이블. 시리즈 네비게이션 컴포넌트 |
-| 소셜 공유 버튼 | PostDetail 하단 공유 버튼 |
-
-#### 기존 기능 개선
-
-| 기능 | 비고 | 상태 |
-|------|------|------|
-| DB 연결 마법사 (Setup Wizard) | | 미구현 |
+| 기능 | 제거 사유 |
+|------|---------|
+| 포스트 예약 발행 | APScheduler + Gunicorn 4 workers 중복 실행 문제. Redis 없이 분산 락 불가. 구현 비용 대비 사용 빈도 낮음 |
+| 알림 시스템 (Socket.IO) | Gunicorn sync → eventlet/gevent 교체 필요. Redis 없이 멀티워커 브로드캐스트 불가. 아키텍처 전면 교체 수준 부담 |
 
 ---
 

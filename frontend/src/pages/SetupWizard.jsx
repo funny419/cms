@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submitWizardSetup } from '../api/wizard';
+import { getWizardStatus, submitWizardSetup } from '../api/wizard';
 
 const TOTAL_STEPS = 4;
 
 export default function SetupWizard({ dbConnected = true }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+
+  // wizard 완료 상태에서 직접 접근 시 대시보드로 리다이렉트
+  useEffect(() => {
+    let cancelled = false;
+    getWizardStatus().then((res) => {
+      if (cancelled) return;
+      if (res.success && res.data && res.data.completed) {
+        navigate('/', { replace: true });
+      }
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
