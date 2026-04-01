@@ -1,3 +1,4 @@
+/* global process */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -9,6 +10,16 @@ const filesUrl = process.env.FILES_URL || 'http://localhost:5000'
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    server: {
+      deps: {
+        inline: ['@testing-library/react'],
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {
