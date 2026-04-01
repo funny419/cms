@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SkinProvider, useSkin } from './context/SkinContext';
 import { CategoryProvider } from './context/CategoryContext';
@@ -18,30 +18,61 @@ import Feed from './pages/Feed';
 import BlogSettings from './pages/BlogSettings';
 import SeriesDetail from './pages/SeriesDetail';
 import Statistics from './pages/Statistics';
+import SetupWizard from './pages/SetupWizard';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminComments from './pages/admin/AdminComments';
 import AdminSettings from './pages/admin/AdminSettings';
 import { getSettings } from './api/settings';
+import { getWizardStatus } from './api/wizard';
 
-// SkinProvider 내부에서 설정 로드 (useSkin 사용 가능)
+// Router 내부에서 wizard status 체크 + 라우팅 처리
 function AppContent() {
   const { setSkin } = useSkin();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // /wizard 경로에서는 처음부터 checked=true (무한 리다이렉트 방지)
+  const [wizardChecked, setWizardChecked] = useState(() => location.pathname === '/wizard');
+  const [wizardDbConnected, setWizardDbConnected] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     getSettings().then((res) => {
+      if (cancelled) return;
       if (res.success && res.data.site_skin) {
         setSkin(res.data.site_skin);
       }
     });
+    return () => { cancelled = true; };
+  }, [setSkin]);
+
+  useEffect(() => {
+    if (wizardChecked) return; // /wizard 경로는 초기값으로 처리됨
+    let cancelled = false;
+    getWizardStatus().then((res) => {
+      if (cancelled) return;
+      if (res.success && res.data) {
+        setWizardDbConnected(res.data.db_connected);
+        if (!res.data.completed) {
+          navigate('/wizard', { replace: true });
+        }
+      }
+      setWizardChecked(true);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // wizard 확인 전에는 아무것도 렌더링하지 않음 (/wizard 페이지는 제외)
+  if (!wizardChecked && location.pathname !== '/wizard') return null;
+
   return (
-    <Router>
+    <>
       <Nav />
       <OnboardingModal />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/wizard" element={<SetupWizard dbConnected={wizardDbConnected} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
@@ -67,7 +98,7 @@ function AppContent() {
           </div>
         } />
       </Routes>
-    </Router>
+    </>
   );
 }
 
@@ -76,7 +107,9 @@ function App() {
     <ThemeProvider>
       <SkinProvider>
         <CategoryProvider>
-          <AppContent />
+          <Router>
+            <AppContent />
+          </Router>
         </CategoryProvider>
       </SkinProvider>
     </ThemeProvider>

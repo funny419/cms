@@ -94,6 +94,10 @@ def create_app(config_class=None):
 
     app.register_blueprint(stats_bp)
 
+    from api.wizard import wizard_bp
+
+    app.register_blueprint(wizard_bp)
+
     return app
 
 
