@@ -173,7 +173,7 @@ export default function BlogHome() {
                   </div>
                 )}
                 <div style={{ fontSize: 12, color: 'var(--text-light)' }}>
-                  포스트 {s.post_count ?? 0}개
+                  포스트 {s.total ?? 0}개
                 </div>
               </div>
             ))}
