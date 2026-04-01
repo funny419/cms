@@ -3,6 +3,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from slugify import slugify
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
 from database import db
@@ -69,7 +70,12 @@ def create_series() -> tuple:
 
 @series_bp.route("/api/series/<int:series_id>", methods=["GET"])
 def get_series(series_id: int) -> tuple:
-    s: Series | None = db.session.get(Series, series_id)
+    # PERF-3: selectinload로 N+1 쿼리 제거 (series_posts + post 한 번에 로드)
+    s: Series | None = db.session.execute(
+        select(Series)
+        .where(Series.id == series_id)
+        .options(selectinload(Series.series_posts).selectinload(SeriesPost.post))
+    ).scalar_one_or_none()
     if not s:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
     return jsonify({"success": True, "data": _series_to_dict(s), "error": ""}), 200
