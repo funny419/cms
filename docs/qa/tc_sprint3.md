@@ -76,3 +76,4 @@
 | BUG-3: 포스트 다중 시리즈 시 500 | MEDIUM | 완료 (commit 2c9dc2d, QA PASS 2026-04-01) | TC-U042 |
 | BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 미수정 | TC-U012 |
 | BUG-5: VisitLog DB UNIQUE 미구현 | LOW | 의도적 결정 | TC-U013, TC-I007 |
+| BUG-6: 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | TC-U004 |
