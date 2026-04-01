@@ -4,7 +4,7 @@
 **작성자:** QA
 **대상 브랜치:** dev
 **환경:** http://localhost:5173 (FE), http://localhost:5000 (BE API)
-**총 TC:** 76개 (사용자 50 + 어드민 17 + 통합 9)
+**총 TC:** 88개 (사용자 50 + 어드민 17 + 통합 9 + 위저드 12)
 
 ---
 
@@ -15,6 +15,7 @@
 | [tc_user.md](tc_user.md) | editor / visitor (비로그인) | 50개 | TC-U001 ~ TC-U050 |
 | [tc_admin.md](tc_admin.md) | admin | 17개 | TC-A001 ~ TC-A017 |
 | [tc_integration.md](tc_integration.md) | 크로스 롤 통합 시나리오 | 9개 | TC-I001 ~ TC-I009 |
+| [tc_wizard.md](tc_wizard.md) | Setup Wizard 초기 설치 플로우 | 12개 | TC-W001 ~ TC-W012 |
 
 ---
 
@@ -64,6 +65,27 @@
 | TC-040 | TC-U039 | 태그 필터 |
 | TC-041 | TC-U040 | 키워드 + 작성자 + 태그 복합 필터 |
 | TC-042 | TC-U041 | 검색 결과 없을 때 빈 상태 |
+| — | TC-U042 | BUG-3 재현 — 포스트 다중 시리즈 추가 시 500 오류 |
+| — | TC-U043 | members_only 포스트 비로그인 접근 차단 (401/403) |
+| — | TC-U044 | 첫 로그인 editor 온보딩 모달 노출 |
+| — | TC-U045 | 온보딩 모달 "설정하기" 버튼 → `/my-blog/settings` 이동 |
+| — | TC-U046 | 온보딩 모달 "나중에" 버튼 → 모달 닫힘, 리다이렉트 없음 |
+| — | TC-U047 | bio 설정 완료 후 온보딩 모달 미노출 |
+| — | TC-U048 | `/my-blog/statistics` 비로그인 접근 차단 |
+| — | TC-U049 | `/my-blog/settings` 비로그인 접근 차단 |
+| — | TC-U050 | `/feed` 비로그인 접근 차단 |
+| TC-W001 | TC-W001 | Wizard 완료 상태에서 `/wizard` 접속 → `/login` 리다이렉트 |
+| TC-W002 | TC-W002 | DB 연결 테스트 — 정상 연결 성공 |
+| TC-W003 | TC-W003 | DB 연결 테스트 — 잘못된 비밀번호 → auth_failed |
+| TC-W004 | TC-W004 | DB 연결 테스트 — 존재하지 않는 DB명 → db_not_found |
+| TC-W005 | TC-W005 | DB 연결 테스트 — 연결 불가 호스트 → host_unreachable |
+| TC-W006 | TC-W006 | .env 저장 후 재시작 안내 UI 표시 |
+| TC-W007 | TC-W007 | DB_ENV_WRITTEN=true 상태 env 재요청 → already_written 200 |
+| TC-W008 | TC-W008 | 마이그레이션 자동 실행 — 성공 200 반환 |
+| TC-W009 | TC-W009 | Setup 완료 — 관리자 계정 생성 성공 201 |
+| TC-W010 | TC-W010 | Setup 완료 후 재요청 → 409 |
+| TC-W011 | TC-W011 | 비밀번호 8자 미만 Setup 요청 → 400 |
+| TC-W012 | TC-W012 | Docker 재시작 후 FE step 복원 (localStorage) |
 
 ---
 
@@ -74,6 +96,6 @@
 | BUG-1: blog_layout magazine/photo 허용값 누락 | HIGH | 완료 (commit 35a84de, QA PASS 2026-04-01) | TC-U023, TC-U024, TC-I005 |
 | BUG-2: RSS base_url 하드코딩 | MEDIUM | 완료 (commit 2c9dc2d, QA PASS 2026-04-01) | TC-I008 |
 | BUG-3: 포스트 다중 시리즈 시 500 | MEDIUM | 완료 (commit 2c9dc2d, QA PASS 2026-04-01) | TC-U042 |
-| BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 완료 (commit 6baed90) | TC-U012 |
+| BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 완료 (commit 6baed90, QA PASS 2026-04-01) | TC-U012 |
 | BUG-5: VisitLog DB UNIQUE 미구현 | LOW | 의도적 결정 | TC-U013, TC-I007 |
 | BUG-6: 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | TC-U004 |
