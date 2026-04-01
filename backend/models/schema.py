@@ -110,9 +110,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    author_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("users.id"), nullable=True, index=True
-    )
+    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), index=True)
     content: Mapped[Optional[str]] = mapped_column(Text)  # HTML or Markdown
@@ -138,6 +136,8 @@ class Post(Base):
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    __table_args__ = (Index("idx_posts_author_id", "author_id"),)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
