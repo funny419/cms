@@ -1,33 +1,108 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getWizardStatus, submitWizardSetup } from '../api/wizard';
+import {
+  getWizardStatus,
+  testDbConnection,
+  saveEnvFile,
+  runMigration,
+  submitWizardSetup,
+} from '../api/wizard';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
-export default function SetupWizard({ dbConnected = true }) {
+const DB_ERROR_LABELS = {
+  auth_failed: '인증 실패: 사용자명 또는 비밀번호가 올바르지 않습니다.',
+  host_unreachable: '호스트 접근 불가: DB 서버 주소 또는 포트를 확인하세요.',
+  db_not_found: 'DB 없음: 해당 데이터베이스가 없거나 접근 권한이 없습니다.',
+  invalid_url: 'URL 오류: 연결 정보가 올바르지 않습니다.',
+  unknown: '알 수 없는 오류: DB 서버 로그를 확인하세요.',
+};
+
+export default function SetupWizard() {
   const navigate = useNavigate();
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const [step, setStep] = useState(1);
+  const [adminSubStep, setAdminSubStep] = useState(1); // Step 4: 1=계정, 2=사이트
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [migStatus, setMigStatus] = useState('idle'); // idle | running | success | failed
+  const [migError, setMigError] = useState('');
 
-  // wizard 완료 상태에서 직접 접근 시 대시보드로 리다이렉트
+  const [dbForm, setDbForm] = useState({ host: '', port: '3306', user: '', password: '', dbname: '' });
+  const [admin, setAdmin] = useState({ username: '', email: '', password: '', confirm: '' });
+  const [site, setSite] = useState({ site_title: '', site_url: '', tagline: '' });
+
+  // 마운트 시 wizard 상태 확인 — 서버 step과 localStorage step 중 큰 값 사용
   useEffect(() => {
     let cancelled = false;
     getWizardStatus().then((res) => {
       if (cancelled) return;
-      if (res.success && res.data && res.data.completed) {
+      if (res.success && res.data?.completed) {
         navigate('/', { replace: true });
+        return;
       }
+      const serverStep = res.success ? (res.data?.step ?? 1) : 1;
+      const localStep = parseInt(localStorage.getItem('wizard_step') || '0', 10);
+      setStep(Math.max(serverStep, localStep));
+      setStatusLoaded(true);
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const [admin, setAdmin] = useState({ username: '', email: '', password: '', confirm: '' });
-  const [site, setSite] = useState({ site_title: '', site_url: '', tagline: '' });
+  // Step 3: 마이그레이션 자동 실행
+  useEffect(() => {
+    if (step !== 3 || !statusLoaded || migStatus !== 'idle') return;
+    let cancelled = false;
+    setMigStatus('running');
+    runMigration().then((res) => {
+      if (cancelled) return;
+      if (res.success) {
+        setMigStatus('success');
+        setTimeout(() => {
+          goToStep(4);
+        }, 1200);
+      } else {
+        setMigStatus('failed');
+        setMigError(res.error || '마이그레이션 실패');
+      }
+    });
+    return () => { cancelled = true; };
+     
+  }, [step, statusLoaded, migStatus]);
 
-  const goNext = () => setStep((s) => s + 1);
+  const goToStep = (n) => {
+    localStorage.setItem('wizard_step', String(n));
+    setStep(n);
+    setError('');
+  };
 
+  // Step 1: DB 연결 테스트 + .env 저장
+  const handleDbConnect = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!dbForm.host || !dbForm.user || !dbForm.password || !dbForm.dbname) {
+      setError('모든 필드를 입력해주세요.');
+      return;
+    }
+    setLoading(true);
+    const testRes = await testDbConnection(dbForm);
+    if (!testRes.success) {
+      const code = testRes.data?.error_code;
+      setError(DB_ERROR_LABELS[code] || testRes.error || 'DB 연결 실패.');
+      setLoading(false);
+      return;
+    }
+    const envRes = await saveEnvFile(dbForm);
+    setLoading(false);
+    if (!envRes.success) {
+      setError(envRes.error || '.env 파일 생성 실패.');
+      return;
+    }
+    goToStep(2);
+  };
+
+  // Step 4 sub-step 1: 관리자 계정 유효성 검사
   const handleAdminNext = (e) => {
     e.preventDefault();
     setError('');
@@ -43,9 +118,10 @@ export default function SetupWizard({ dbConnected = true }) {
       setError('비밀번호가 일치하지 않습니다.');
       return;
     }
-    goNext();
+    setAdminSubStep(2);
   };
 
+  // Step 4 sub-step 2: 최종 제출
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -56,8 +132,19 @@ export default function SetupWizard({ dbConnected = true }) {
       setError(res.error || '설정 중 오류가 발생했습니다.');
       return;
     }
-    goNext();
+    localStorage.removeItem('wizard_step');
+    goToStep(5);
   };
+
+  if (!statusLoaded) {
+    return (
+      <div style={styles.container}>
+        <div className="card" style={styles.card}>
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wizard-container" style={styles.container}>
@@ -70,29 +157,134 @@ export default function SetupWizard({ dbConnected = true }) {
           </div>
         </div>
 
-        {/* Step 1: 환영 */}
+        {/* Step 1: DB 연결 정보 */}
         {step === 1 && (
-          <div>
-            <h1 style={styles.title}>CMS 설치에 오신 것을 환영합니다</h1>
-            <p style={styles.desc}>
-              이 마법사는 관리자 계정 생성과 기본 사이트 설정을 안내합니다.
-            </p>
-            <div style={styles.statusBox}>
-              <span>DB 연결 상태: </span>
-              {dbConnected ? (
-                <span className="badge" style={styles.badgeGreen}>연결됨</span>
-              ) : (
-                <span className="badge" style={styles.badgeRed}>연결 실패</span>
-              )}
+          <form onSubmit={handleDbConnect}>
+            <h2 style={styles.title}>데이터베이스 연결 설정</h2>
+            <p style={styles.desc}>MariaDB 연결 정보를 입력하세요. CMS가 사용할 데이터베이스입니다.</p>
+            {error && <div className="alert alert-error">{error}</div>}
+            <div style={styles.row2}>
+              <div style={{ ...styles.fieldGroup, flex: 2 }}>
+                <label style={styles.label}>호스트</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={dbForm.host}
+                  onChange={(e) => setDbForm({ ...dbForm, host: e.target.value })}
+                  placeholder="db 또는 localhost"
+                  required
+                />
+              </div>
+              <div style={{ ...styles.fieldGroup, flex: 1 }}>
+                <label style={styles.label}>포트</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  value={dbForm.port}
+                  onChange={(e) => setDbForm({ ...dbForm, port: e.target.value })}
+                  placeholder="3306"
+                  required
+                />
+              </div>
             </div>
-            <button className="btn btn-primary" style={styles.btn} onClick={goNext}>
-              시작하기
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>DB 사용자명</label>
+              <input
+                className="form-input"
+                type="text"
+                value={dbForm.user}
+                onChange={(e) => setDbForm({ ...dbForm, user: e.target.value })}
+                placeholder="funnycms"
+                required
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>DB 비밀번호</label>
+              <input
+                className="form-input"
+                type="password"
+                value={dbForm.password}
+                onChange={(e) => setDbForm({ ...dbForm, password: e.target.value })}
+                placeholder="비밀번호"
+                required
+              />
+            </div>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>데이터베이스 이름</label>
+              <input
+                className="form-input"
+                type="text"
+                value={dbForm.dbname}
+                onChange={(e) => setDbForm({ ...dbForm, dbname: e.target.value })}
+                placeholder="cmsdb"
+                required
+              />
+            </div>
+            <button className="btn btn-primary" style={styles.btn} type="submit" disabled={loading}>
+              {loading ? '연결 확인 중...' : '연결 테스트 및 저장'}
+            </button>
+          </form>
+        )}
+
+        {/* Step 2: 재시작 안내 */}
+        {step === 2 && (
+          <div>
+            <h2 style={styles.title}>설정 파일 저장 완료</h2>
+            <p style={styles.desc}>
+              DB 연결 정보가 <code style={styles.code}>.env</code> 파일에 저장되었습니다.
+              변경 사항을 적용하려면 백엔드를 재시작해야 합니다.
+            </p>
+            <div style={styles.cmdBox}>
+              <p style={styles.cmdLabel}>터미널에서 아래 명령을 실행하세요:</p>
+              <code style={styles.cmdCode}>docker compose restart backend</code>
+            </div>
+            <p style={styles.desc}>재시작이 완료되면 아래 버튼을 클릭하세요.</p>
+            <button
+              className="btn btn-primary"
+              style={styles.btn}
+              onClick={() => {
+                localStorage.setItem('wizard_step', '3');
+                window.location.reload();
+              }}
+            >
+              재시작 완료 — 새로고침
             </button>
           </div>
         )}
 
-        {/* Step 2: 관리자 계정 */}
-        {step === 2 && (
+        {/* Step 3: 마이그레이션 */}
+        {step === 3 && (
+          <div>
+            <h2 style={styles.title}>데이터베이스 초기화</h2>
+            <p style={styles.desc}>테이블 스키마를 생성합니다. 잠시 기다려주세요.</p>
+            {migStatus === 'running' && (
+              <div style={styles.statusBox}>
+                <div style={styles.spinner} />
+                <span>마이그레이션 실행 중...</span>
+              </div>
+            )}
+            {migStatus === 'success' && (
+              <div style={{ ...styles.statusBox, color: '#22c55e' }}>
+                <span>✓ 마이그레이션 완료 — 다음 단계로 이동합니다.</span>
+              </div>
+            )}
+            {migStatus === 'failed' && (
+              <div>
+                <div className="alert alert-error">{migError}</div>
+                <button
+                  className="btn btn-primary"
+                  style={styles.btn}
+                  onClick={() => { setMigStatus('idle'); setMigError(''); }}
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 4 — sub-step 1: 관리자 계정 */}
+        {step === 4 && adminSubStep === 1 && (
           <form onSubmit={handleAdminNext}>
             <h2 style={styles.title}>관리자 계정 설정</h2>
             <p style={styles.desc}>사이트를 관리할 관리자 계정을 생성합니다.</p>
@@ -147,8 +339,8 @@ export default function SetupWizard({ dbConnected = true }) {
           </form>
         )}
 
-        {/* Step 3: 사이트 설정 */}
-        {step === 3 && (
+        {/* Step 4 — sub-step 2: 사이트 설정 */}
+        {step === 4 && adminSubStep === 2 && (
           <form onSubmit={handleSubmit}>
             <h2 style={styles.title}>사이트 기본 설정</h2>
             <p style={styles.desc}>사이트 기본 정보를 입력합니다. (선택 사항)</p>
@@ -187,7 +379,7 @@ export default function SetupWizard({ dbConnected = true }) {
               <button
                 className="btn"
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => { setAdminSubStep(1); setError(''); }}
                 style={{ marginRight: 8 }}
               >
                 이전
@@ -199,8 +391,8 @@ export default function SetupWizard({ dbConnected = true }) {
           </form>
         )}
 
-        {/* Step 4: 완료 */}
-        {step === 4 && (
+        {/* Step 5: 완료 */}
+        {step === 5 && (
           <div style={{ textAlign: 'center' }}>
             <div style={styles.successIcon}>✓</div>
             <h2 style={styles.title}>설치 완료!</h2>
@@ -268,24 +460,18 @@ const styles = {
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
   },
-  statusBox: {
+  row2: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: '1.5rem',
-    color: 'var(--text-secondary)',
+    gap: 12,
   },
-  badgeGreen: {
-    background: '#22c55e',
-    color: '#fff',
-    padding: '2px 8px',
-    borderRadius: 4,
+  fieldGroup: {
+    marginBottom: '1rem',
   },
-  badgeRed: {
-    background: '#ef4444',
-    color: '#fff',
-    padding: '2px 8px',
-    borderRadius: 4,
+  label: {
+    display: 'block',
+    marginBottom: 4,
+    fontSize: '0.9rem',
+    color: 'var(--text)',
   },
   btn: {
     width: '100%',
@@ -296,14 +482,46 @@ const styles = {
     justifyContent: 'flex-end',
     marginTop: 4,
   },
-  fieldGroup: {
-    marginBottom: '1rem',
+  statusBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: '1.5rem',
+    color: 'var(--text-secondary)',
   },
-  label: {
+  spinner: {
+    display: 'inline-block',
+    width: 18,
+    height: 18,
+    border: '2px solid var(--border)',
+    borderTopColor: 'var(--accent)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+    flexShrink: 0,
+  },
+  cmdBox: {
+    background: 'var(--surface, #f4f4f4)',
+    border: '1px solid var(--border)',
+    borderRadius: 6,
+    padding: '1rem',
+    marginBottom: '1.5rem',
+  },
+  cmdLabel: {
+    margin: '0 0 0.5rem',
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary)',
+  },
+  cmdCode: {
     display: 'block',
-    marginBottom: 4,
-    fontSize: '0.9rem',
+    fontFamily: 'monospace',
     color: 'var(--text)',
+    fontSize: '0.95rem',
+  },
+  code: {
+    fontFamily: 'monospace',
+    background: 'var(--surface, #f4f4f4)',
+    padding: '1px 4px',
+    borderRadius: 3,
   },
   successIcon: {
     width: 64,
