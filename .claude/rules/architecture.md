@@ -81,7 +81,13 @@ cms/
 │   │   ├── media.py             # 파일 업로드 + 썸네일 (storage.py 통해 저장)
 │   │   ├── menus.py             # 동적 메뉴
 │   │   ├── posts.py             # 포스트 CRUD + 소유권 + 검색(q) + 페이지네이션
-│   │   └── settings.py          # 사이트 설정 (site_skin 포함)
+│   │   ├── settings.py          # 사이트 설정 (site_skin 포함)
+│   │   ├── follows.py           # 팔로우/언팔로우/팔로워/팔로잉 + 이웃 피드 API
+│   │   ├── feeds.py             # RSS 2.0 피드 (`/blog/:username/feed.xml`)
+│   │   ├── series.py            # 포스트 시리즈 CRUD + 시리즈-포스트 연결 API
+│   │   ├── stats.py             # 블로그 통계 + Admin 통계 API
+│   │   ├── wizard.py            # Setup Wizard Phase 1 (GET /api/wizard/status, POST /api/wizard/setup)
+│   │   └── wizard_phase2.py     # Setup Wizard Phase 2 (POST /api/wizard/db-test, /env, /migrate)
 │   ├── migrations/              # Flask-Migrate (반드시 git 커밋)
 │   ├── models/schema.py         # SQLAlchemy ORM 모델
 │   ├── app.py                   # Flask 팩토리 + 자동 마이그레이션
@@ -100,19 +106,32 @@ cms/
 │       │   ├── settings.js      # 사이트 설정 API (getSettings, updateSettings)
 │       │   ├── categories.js    # 카테고리 API (getCategories) — Sprint 2
 │       │   ├── tags.js          # 태그 API (getTags, getTagPosts) — Sprint 2
-│       │   └── users.js         # 사용자 API (getUserProfile, getUserPosts) — Sprint 2
+│       │   ├── users.js         # 사용자 API (getUserProfile, getUserPosts) — Sprint 2
+│       │   ├── series.js        # 시리즈 API (getSeries, createSeries 등) — Phase 3
+│       │   ├── stats.js         # 통계 API (getBlogStats) — Phase 3
+│       │   └── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
 │       ├── components/
 │       │   ├── Nav.jsx          # role별 네비게이션 (editor: 내 블로그 링크 추가 — Sprint 2)
 │       │   ├── CommentSection.jsx
 │       │   ├── ProfileCard.jsx  # 사용자 프로필 카드 (아바타, bio) — Sprint 2
 │       │   ├── inputs/          # 입력 컴포넌트
 │       │   │   ├── CategoryDropdown.jsx  # 카테고리 단일 선택 셀렉트 (PostEditor + AdminPosts) — Sprint 2
-│       │   │   └── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
+│       │   │   ├── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
+│       │   │   └── SeriesDropdown.jsx  # 시리즈 선택 드롭다운 (PostEditor) — Phase 3
+│       │   ├── layouts/         # 블로그 홈 레이아웃 컴포넌트 (Phase 3.1)
+│       │   │   ├── BlogLayoutDefault.jsx   # Layout A: 사이드바 + 포스트 목록
+│       │   │   ├── BlogLayoutCompact.jsx   # Layout B: 사이드바 숨김
+│       │   │   ├── BlogLayoutMagazine.jsx  # Layout D: 카드형 메인 + 리스트
+│       │   │   └── BlogLayoutPhoto.jsx     # Layout C: 썸네일 그리드
+│       │   ├── SeriesNav.jsx    # 시리즈 이전/다음 탐색 (PostDetail) — Phase 3
+│       │   ├── OnboardingModal.jsx  # 첫 로그인 editor 온보딩 모달 — Phase 3.1
+│       │   ├── ShareButtons.jsx # 소셜 공유 버튼 (Twitter/Facebook/LinkedIn/링크복사) — Phase 3
 │       │   └── widgets/
 │       │       ├── RecentPosts.jsx
 │       │       ├── Sidebar.jsx
 │       │       ├── CategorySidebar.jsx  # 카테고리 계층형 필터 (PostList + BlogHome) — Sprint 2
-│       │       └── TagCloud.jsx        # 태그 클라우드 위젯 (PostDetail) — Sprint 2
+│       │       ├── TagCloud.jsx        # 태그 클라우드 위젯 (PostDetail) — Sprint 2
+│       │       └── StatsWidget.jsx     # 블로그 홈 통계 위젯 (포스트/조회수/댓글/팔로워) — Phase 3.1
 │       ├── context/
 │       │   ├── ThemeContext.jsx     # 라이트/다크 모드 (useTheme)
 │       │   ├── SkinContext.jsx      # 스킨 4종 관리 (useSkin, SKINS 목록)
@@ -126,15 +145,22 @@ cms/
 │           │   ├── AdminComments.jsx  # 댓글 관리 (승인/스팸 버튼 추가 — Sprint 1)
 │           │   └── AdminSettings.jsx  # 사이트 설정 (스킨 선택)
 │           ├── BlogHome.jsx           # 유저별 블로그 페이지 (`/blog/:username`) — Sprint 2
+│           ├── BlogSettings.jsx       # 블로그 설정 (`/my-blog/settings`, 기본정보/디자인 탭) — Phase 2.5
+│           ├── Feed.jsx               # 이웃 피드 (`/feed`) — Phase 3
+│           ├── Search.jsx             # 검색 페이지 (`/search`) — 검색 고도화
+│           ├── Statistics.jsx         # 블로그 통계 대시보드 (`/my-blog/statistics`) — Phase 3
 │           ├── MyPosts.jsx            # 내 글 목록 (editor 로그인 후, 무한스크롤)
 │           ├── PostList.jsx           # 전체 공개 글 (검색+category필터+CategorySidebar — Sprint 2)
-│           ├── PostDetail.jsx         # 추천 + 댓글 + TagCloud — Sprint 2
-│           ├── PostEditor.jsx         # WYSIWYG/Markdown탭 + visibility선택 + category선택 + 태그입력 + localStorage자동저장 (Sprint 1/2)
+│           ├── PostDetail.jsx         # 추천 + 댓글 + TagCloud + SeriesNav + ShareButtons — Phase 3
+│           ├── PostEditor.jsx         # WYSIWYG/Markdown탭 + visibility선택 + category선택 + 태그입력 + 시리즈선택 + thumbnail_url + localStorage자동저장
 │           ├── Profile.jsx            # 프로필 수정 (bio/avatar_url 편집 — Sprint 1)
 │           ├── Login.jsx
-│           └── Register.jsx
+│           ├── Register.jsx
+│           └── SetupWizard.jsx  # Setup Wizard 5단계 UI (DB연결→재시작→마이그레이션→계정→완료)
 ├── docs/
 │   ├── superpowers/             # 설계 스펙 및 구현 계획서
+│   ├── qa/                      # QA 테스트 케이스 (tc_sprint3.md 인덱스, tc_user.md, tc_admin.md, tc_integration.md)
+│   ├── INSTALL.md               # 설치 가이드 (Setup Wizard 5단계 포함)
 │   ├── INFRA_ANALYSIS_REPORT.md
 │   └── 멀티유저블로그_UX기획_분석보고서.md
 ├── scripts/
@@ -166,14 +192,14 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-03-30 (Sprint 1 + Sprint 2 완료 반영)
+> 마지막 업데이트: 2026-03-31 (Phase 2.5 + Phase 3 완료 반영)
 
 ### 테이블 요약
 
 | 테이블 | 역할 | 주요 컬럼 | 관계 |
 |--------|------|---------|------|
-| `users` | 사용자 | id(PK), username, email, role, bio, avatar_url | Post(1:N), Comment(1:N), Media(1:N) |
-| `posts` | 포스트 | id(PK), author_id(FK), title, slug, content, status, visibility, category_id(FK, nullable) | User, Category, Comment(1:N), PostLike(1:N), PostTag(N:N) |
+| `users` | 사용자 | id(PK), username, email, role, bio, avatar_url, blog_title, blog_color, website_url, social_links, blog_layout, banner_image_url | Post(1:N), Comment(1:N), Media(1:N), Follow(1:N), Series(1:N) |
+| `posts` | 포스트 | id(PK), author_id(FK), title, slug, content, status, visibility, category_id(FK, nullable), thumbnail_url | User, Category, Comment(1:N), PostLike(1:N), PostTag(N:N), VisitLog(1:N) |
 | `categories` | 카테고리(계층형, MAX_DEPTH=3) | id(PK), name, slug, parent_id(자기참조, nullable), order | Post(1:N) |
 | `tags` | 태그 | id(PK), name, slug | PostTag(N:N) |
 | `post_tags` | Post-Tag 연결 | post_id(FK), tag_id(FK) | Post, Tag |
@@ -183,6 +209,10 @@ cms/
 | `media` | 파일 메타데이터 | id(PK), uploaded_by(FK), filename, filepath, size | User |
 | `options` | 전역 설정 | id(PK), option_name, option_value | (단일 행) |
 | `menus` / `menu_items` | 네비게이션 메뉴 | menu_id, parent_id(자기참조) | (계층형) |
+| `follows` | 팔로우 관계 | id(PK), follower_id(FK), following_id(FK) | User(N:M) |
+| `visit_logs` | 방문 로그 | id(PK), post_id(FK nullable), user_id(FK nullable), ip_address, visited_at | Post, User |
+| `series` | 포스트 시리즈 | id(PK), author_id(FK), title, slug, description | User, SeriesPost(1:N) |
+| `series_posts` | 시리즈-포스트 연결 | id(PK), series_id(FK), post_id(FK), order | Series, Post |
 
 ### 상세 컬럼 정의
 
@@ -195,6 +225,12 @@ password_hash: str(255) NOT NULL
 role: str(20) default='subscriber' [admin, editor, subscriber, deactivated]
 bio: Text nullable (Sprint 1 추가)
 avatar_url: str(500) nullable (Sprint 1 추가)
+blog_title: str(200) nullable (Phase 2.5 추가)
+blog_color: str(7) nullable — #rrggbb 형식 (Phase 2.5 추가)
+website_url: str(500) nullable (Phase 2.5 추가)
+social_links: JSON nullable (Phase 2.5 추가)
+blog_layout: str(20) nullable [default, compact, magazine, photo] (Phase 3.1 추가)
+banner_image_url: str(500) nullable (Phase 3.1 추가)
 created_at: DateTime server_default=now()
 ```
 
@@ -211,6 +247,7 @@ post_type: str(20) default='post'
 content_format: str(10) default='html' [html, markdown] (Sprint 1 추가)
 visibility: str(20) default='public' [public, members_only, private] (Sprint 1 추가)
 category_id: int FK nullable, ondelete=SET NULL (Sprint 2 추가)
+thumbnail_url: str(500) nullable (Phase 3.1 추가)
 view_count: int default=0
 created_at: DateTime server_default=now()
 updated_at: DateTime nullable, onupdate=now()
@@ -266,6 +303,48 @@ created_at: DateTime server_default=now()
 UNIQUE constraint: (post_id, user_id)
 ```
 
+#### `follows` (팔로우 관계, Phase 3 완료)
+```
+id: int (PK)
+follower_id: int FK NOT NULL, ondelete=CASCADE
+following_id: int FK NOT NULL, ondelete=CASCADE
+created_at: DateTime server_default=now()
+UNIQUE constraint: (follower_id, following_id)
+```
+
+#### `visit_logs` (방문 로그, Phase 3 Stage 1 완료)
+```
+id: int (PK)
+post_id: int FK nullable, ondelete=SET NULL
+user_id: int FK nullable, ondelete=SET NULL
+ip_address: str(45) NOT NULL
+visited_at: DateTime server_default=now()
+referer: str(500) nullable
+INDEX: (post_id, visited_at)
+⚠️ 중복 방지: DB UNIQUE 제약 불가(func.date 기반) → BE 레벨 SELECT→조건부 INSERT로 대체 (의도적 결정)
+```
+
+#### `series` (포스트 시리즈, Phase 3 Stage 2 완료)
+```
+id: int (PK)
+author_id: int FK NOT NULL, ondelete=CASCADE
+title: str(255) NOT NULL
+slug: str(255) UNIQUE NOT NULL
+description: Text nullable
+created_at: DateTime server_default=now()
+```
+
+#### `series_posts` (시리즈-포스트 연결, Phase 3 Stage 2 완료)
+```
+id: int (PK)
+series_id: int FK NOT NULL, ondelete=CASCADE
+post_id: int FK NOT NULL, ondelete=CASCADE
+order: int default=0
+created_at: DateTime server_default=now()
+UNIQUE constraint: (series_id, post_id)
+INDEX: (series_id, order)
+```
+
 #### `media` (파일 메타데이터)
 ```
 id: int (PK)
@@ -306,6 +385,13 @@ created_at: DateTime server_default=now()
 | `2f45cb66c55f_add_post_visibility.py` | visibility 컬럼 추가 (Sprint 1) | ✅ |
 | `e141b01590f2_create_tags_and_post_tags.py` | Tag + PostTag 테이블 생성 (Sprint 2) | ✅ |
 | `761ee81e777c_create_categories_add_category_id_to_.py` | Category 테이블 생성 + Post.category_id FK (Sprint 2) | ✅ |
+| `fffa879f6f26_add_fulltext_ngram_index_to_posts.py` | posts FULLTEXT 인덱스 추가 (검색 고도화) | ✅ |
+| `c891df1fe353_add_blog_customization_to_users.py` | blog_title, blog_color, website_url, social_links 추가 (Phase 2.5) | ✅ |
+| `3ae876c3593f_create_follows_table.py` | follows 테이블 생성 (구독/이웃) | ✅ |
+| `684c84c39efb_add_blog_layout_and_banner_image_url_to_.py` | blog_layout, banner_image_url 추가 (Phase 3.1) | ✅ |
+| `c888d26c19a1_add_thumbnail_url_to_posts.py` | posts.thumbnail_url 추가 (Phase 3.1) | ✅ |
+| `3c1734bf86e6_create_visit_logs_table.py` | visit_logs 테이블 생성 (Phase 3 Stage 1) | ✅ |
+| `79e90ed73d8d_create_series_and_series_posts_tables.py` | series, series_posts 테이블 생성 (Phase 3 Stage 2) | ✅ |
 
 ### 주의사항
 

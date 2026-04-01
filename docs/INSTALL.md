@@ -85,14 +85,18 @@ http://localhost:5173
 ```
 
 앱이 자동으로 `/wizard` 페이지로 리다이렉트됩니다.
-다음 4단계를 순서대로 완료합니다:
+다음 5단계를 순서대로 완료합니다:
 
 | 단계 | 내용 |
 |------|------|
-| Step 1 | DB 연결 상태 확인 |
-| Step 2 | 관리자 계정 생성 (username / email / password) |
-| Step 3 | 사이트 기본 설정 (사이트명 / URL / 태그라인) |
-| Step 4 | 설치 완료 → 로그인 페이지 이동 |
+| Step 1 | DB 연결 정보 입력 및 연결 테스트 (host / port / user / password / dbname) |
+| Step 2 | `.env` 파일 저장 완료 → 백엔드 재시작 안내 (`docker compose restart backend`) |
+| Step 3 | DB 마이그레이션 자동 실행 (테이블 스키마 생성) |
+| Step 4 | 관리자 계정 생성 (username / email / password) + 사이트 기본 설정 |
+| Step 5 | 설치 완료 → 로그인 페이지 이동 |
+
+> **Step 2 주의:** `.env` 저장 후 반드시 백엔드를 재시작해야 DB 연결이 적용됩니다.
+> "재시작 완료 — 새로고침" 버튼을 클릭하면 Step 3으로 자동 진행됩니다.
 
 완료 후 생성한 관리자 계정으로 로그인하면 CMS를 사용할 수 있습니다.
 

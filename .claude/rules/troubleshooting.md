@@ -42,3 +42,34 @@
 - **ESLint staged files 경로 오류 (커밋 0a034a10 수정)**: `No such file or directory: frontend/src/` — `scripts/pre-commit.sh` line 70에서 `sed 's|^frontend/||'`로 컨테이너 내부 경로(`/app`)로 변환하도록 수정. staged files만 lint하는 방식 적용.
 - **pytest + Flask-Migrate 충돌 (TestConfig)**: SQLite in-memory DB에서 `db_upgrade()` 실행 오류 — `app.py`의 `create_app()` 팩토리에서 `TESTING=True`일 때 `db.upgrade()` 스킵. `conftest.py`에서 `_db.create_all()`로 테이블 생성 (마이그레이션 파일 불필요). Flask-Migrate와 in-memory 테스트 DB 양립 불가.
 - **react-hooks/rules-of-hooks ESLint 에러 (useEffect + setState)**: 비동기 작업 중 unmount 시 setState 호출 제한 — `async/cancelled` 패턴으로 수정: `useEffect(() => { let cancelled = false; const fetchData = async () => { /*...*/ if (!cancelled) setState(...) }; return () => { cancelled = true } })`. BlogHome.jsx 등 비동기 페칭 컴포넌트에 적용.
+
+**Setup Wizard Phase 2:**
+- Wizard Step 1에서 DB 연결 실패 시 오류 코드 분류: `auth_failed`(비밀번호 틀림) / `host_unreachable`(호스트 미도달) / `db_not_found`(DB 없음 또는 권한 없음) / `invalid_url`(URL 형식 오류)
+- `db_not_found` vs `auth_failed` 혼동: MariaDB에서 존재하지 않는 DB 접근 시 권한 없는 사용자의 경우 `Access denied ... to database '...'` 오류 발생 → `to database` 키워드로 `db_not_found` 분류 (wizard_phase2.py:32-35)
+- Step 2 재시작 후 Step 3로 진행 안됨: `docker compose restart backend` 실행 후 "재시작 완료 — 새로고침" 버튼 클릭 필요. 새로고침 없이는 Step 2 유지됨
+- Step 3 마이그레이션 실패 (`already exists`): `wizard_phase2.py`에서 자동으로 `flask db stamp head` 후 재시도. 수동으로도 `docker compose exec backend flask db stamp head` 실행 가능
+- Step 3 마이그레이션 `Multiple head` 오류: 409 반환 → `docker compose exec backend flask db merge heads -m "merge"` 후 Wizard 재시도
+- `DB_ENV_WRITTEN=true` 환경변수 설정 후 Step 2 재실행 시 `already_written: true` 200 반환 (정상) — 재시작 전 중복 작성 방지 로직
+- Setup Wizard 완료 후에도 `/wizard`로 리다이렉트됨: admin 계정이 없거나 `.env`에 `WIZARD_COMPLETED=true` 미포함 → `POST /api/wizard/setup` 재실행 또는 직접 추가
+
+**팀 에이전트 (멀티 에이전트) 스폰:**
+- `API Error: 500 Invalid model: claude-opus-4-6` — Agent 도구의 `model` 파라미터에 `"opus"` 사용 시 발생. **`"opus"` 사용 금지.**
+- 팀원 스폰 시 반드시 `model: "sonnet"` 명시하거나 model 파라미터를 생략(부모 모델 상속)할 것.
+- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5)
+- `"opus"` 단독 지정은 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+
+**팀 에이전트 작업 완료 보고 형식:**
+작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
+- **DB 변경**: 추가/수정된 테이블명 + 컬럼명 (예: `users.blog_layout VARCHAR(20) NULL`)
+- **API 변경**: 추가/수정된 엔드포인트 + 요청/응답 필드 변경 (예: `GET /api/auth/users/:username` 응답에 `total_view_count` 추가)
+- **컴포넌트 변경**: 신규 생성/수정된 파일 경로 (예: `frontend/src/components/widgets/StatsWidget.jsx` 신규)
+- **커밋 해시**: 변경 커밋 ID
+
+예시 보고 형식:
+```
+[완료 보고]
+- DB: posts.thumbnail_url VARCHAR(500) NULL 추가 (마이그레이션: abc1234_add_thumbnail.py)
+- API: GET /api/posts 응답에 thumbnail_url 필드 추가
+- 컴포넌트: frontend/src/pages/BlogLayoutPhoto.jsx 신규, BlogHome.jsx 수정
+- 커밋: a1b2c3d
+```
