@@ -137,7 +137,7 @@ class Post(Base):
     )
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    __table_args__ = (Index("idx_posts_author_id", "author_id"),)
+    __table_args__ = (Index("ix_posts_author_id", "author_id"),)
 
     # Relationships
     author: Mapped["User"] = relationship(back_populates="posts")
