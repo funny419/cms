@@ -1,5 +1,25 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(bash scripts/pre-commit.sh)",
+      "Bash(bash scripts/setup-hooks.sh)"
+    ]
+  },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "branch=$(git branch --show-current 2>/dev/null || echo 'unknown'); if [ \"$branch\" = \"main\" ]; then env_msg=\"main 브랜치 → 리모트 Windows Docker (docker exec cms_backend_prod ...)\"; else env_msg=\"${branch} 브랜치 → 로컬 Mac Docker (docker compose exec ...)\"; fi; printf '{\"systemMessage\": \"CMS 프로젝트 시작 — %s\"}' \"$env_msg\"",
+            "statusMessage": "프로젝트 환경 확인 중..."
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -8,6 +28,16 @@
             "type": "command",
             "command": "jq -r '.tool_input.file_path // \"\"' | { read -r f; [ -z \"$f\" ] && exit 0; echo \"$f\" | grep -q 'CLAUDE\\.md$' || exit 0; count=$(wc -l < \"$f\" 2>/dev/null | tr -d ' '); if [ \"${count:-0}\" -gt 200 ]; then printf '{\"systemMessage\":\"CLAUDE.md가 %s줄입니다 (한도: 200줄). .claude/rules/ 파일로 분리하세요.\",\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"CLAUDE.md가 %s줄. 200줄 초과 — 내용을 .claude/rules/ 파일로 분리해야 합니다.\"}}' \"$count\" \"$count\"; fi; } 2>/dev/null || true",
             "statusMessage": "CLAUDE.md 줄 수 확인 중..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | { read -r f; [ -z \"$f\" ] && exit 0; echo \"$f\" | grep -qE 'backend/.*\\.py$' || exit 0; rel=$(echo \"$f\" | sed 's|.*/backend/||'); docker compose exec -T backend ruff check --fix \"$rel\" 2>/dev/null; docker compose exec -T backend ruff format \"$rel\" 2>/dev/null; } 2>/dev/null || true",
+            "statusMessage": "Python 린트/포맷 중..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | { read -r f; [ -z \"$f\" ] && exit 0; echo \"$f\" | grep -qE 'frontend/src/.*\\.(js|jsx)$' || exit 0; rel=$(echo \"$f\" | sed 's|.*/frontend/||'); docker compose exec -T frontend npx eslint --fix \"$rel\" 2>/dev/null; } 2>/dev/null || true",
+            "statusMessage": "JS/JSX 린트 중..."
           }
         ]
       },
