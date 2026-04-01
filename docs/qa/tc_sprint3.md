@@ -74,6 +74,6 @@
 | BUG-1: blog_layout magazine/photo 허용값 누락 | HIGH | 완료 (commit 35a84de, QA PASS 2026-04-01) | TC-U023, TC-U024, TC-I005 |
 | BUG-2: RSS base_url 하드코딩 | MEDIUM | 완료 (commit 2c9dc2d, QA PASS 2026-04-01) | TC-I008 |
 | BUG-3: 포스트 다중 시리즈 시 500 | MEDIUM | 완료 (commit 2c9dc2d, QA PASS 2026-04-01) | TC-U042 |
-| BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 미수정 | TC-U012 |
+| BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 완료 (commit 6baed90) | TC-U012 |
 | BUG-5: VisitLog DB UNIQUE 미구현 | LOW | 의도적 결정 | TC-U013, TC-I007 |
 | BUG-6: 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | TC-U004 |
