@@ -16,6 +16,7 @@ import BlogHome from './pages/BlogHome';
 import Search from './pages/Search';
 import Feed from './pages/Feed';
 import BlogSettings from './pages/BlogSettings';
+import SeriesDetail from './pages/SeriesDetail';
 import Statistics from './pages/Statistics';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -51,6 +52,7 @@ function AppContent() {
         <Route path="/admin/comments" element={<AdminComments />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/blog/:username" element={<BlogHome />} />
+        <Route path="/blog/:username/series/:slug" element={<SeriesDetail />} />
         <Route path="/search" element={<Search />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/my-blog/settings" element={<BlogSettings />} />

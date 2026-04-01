@@ -37,3 +37,12 @@ export const deleteSeries = async (token, id) => {
     return { success: false, error: e.response?.data?.error || '시리즈 삭제에 실패했습니다.' };
   }
 };
+
+export const getSeriesDetail = async (id) => {
+  try {
+    const res = await axios.get(`/api/series/${id}`);
+    return res.data;
+  } catch (e) {
+    return { success: false, error: e.response?.data?.error || '시리즈를 불러오지 못했습니다.' };
+  }
+};
