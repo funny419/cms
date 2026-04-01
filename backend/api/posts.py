@@ -109,7 +109,7 @@ def list_posts() -> tuple:
                 .where(PostTag.tag_id.in_(tag_ids))
                 .distinct()
             )
-            # total_query 재구성 (tags JOIN 포함)
+            # total_query 재구성 (tags JOIN 포함, category_id 조건 유지)
             total_query = (
                 select(func.count(sa_distinct(Post.id)))
                 .where(Post.status == "published")
@@ -118,6 +118,8 @@ def list_posts() -> tuple:
             )
             if _vis_cond is not None:
                 total_query = total_query.where(_vis_cond)
+            if category_id:
+                total_query = total_query.where(Post.category_id == category_id)
 
     total: int = db.session.execute(total_query).scalar() or 0
 
