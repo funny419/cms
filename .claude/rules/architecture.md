@@ -192,7 +192,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-03-31 (Phase 2.5 + Phase 3 완료 반영)
+> 마지막 업데이트: 2026-04-01 (인덱스 추가 반영 — ix_posts_author_id, idx_follows_following_id)
 
 ### 테이블 요약
 
@@ -310,6 +310,7 @@ follower_id: int FK NOT NULL, ondelete=CASCADE
 following_id: int FK NOT NULL, ondelete=CASCADE
 created_at: DateTime server_default=now()
 UNIQUE constraint: (follower_id, following_id)
+INDEX: idx_follows_following_id (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01)
 ```
 
 #### `visit_logs` (방문 로그, Phase 3 Stage 1 완료)
@@ -361,10 +362,12 @@ created_at: DateTime server_default=now()
 
 **주요 인덱스:**
 - `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
+- `posts`: `ix_posts_author_id` (author_id) — stats/feed 쿼리 최적화 (추가: 2026-04-01, commit a5a52cc)
 - `comments`: (post_id, status, created_at)
 - `post_tags`: (tag_id) — 태그별 포스트 조회 최적화
 - `categories`: (parent_id, order), slug
 - `post_likes`: (user_id, post_id)
+- `follows`: `idx_follows_following_id` (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01, commit a5a52cc)
 
 **Fulltext 인덱스 (검색):**
 - `posts`: FULLTEXT(title, excerpt, content) — `MATCH ... AGAINST` 쿼리용
@@ -392,6 +395,7 @@ created_at: DateTime server_default=now()
 | `c888d26c19a1_add_thumbnail_url_to_posts.py` | posts.thumbnail_url 추가 (Phase 3.1) | ✅ |
 | `3c1734bf86e6_create_visit_logs_table.py` | visit_logs 테이블 생성 (Phase 3 Stage 1) | ✅ |
 | `79e90ed73d8d_create_series_and_series_posts_tables.py` | series, series_posts 테이블 생성 (Phase 3 Stage 2) | ✅ |
+| `c6ba37f921ea_add_idx_posts_author_id_follows_.py` | ix_posts_author_id + idx_follows_following_id 인덱스 추가 (성능 개선) | ✅ |
 
 ### 주의사항
 
