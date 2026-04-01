@@ -138,6 +138,11 @@ cms/
 │       │   └── CategoryContext.jsx  # 전역 카테고리 목록 — Sprint 2
 │       ├── hooks/
 │       │   └── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
+│       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest)
+│       │   ├── setup.js              # Vitest 설정
+│       │   ├── OnboardingModal.test.jsx
+│       │   ├── SeriesNav.test.jsx
+│       │   └── ShareButtons.test.jsx
 │       └── pages/
 │           ├── admin/
 │           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+status필터+category필터+무한스크롤 — Sprint 2)
@@ -145,6 +150,7 @@ cms/
 │           │   ├── AdminComments.jsx  # 댓글 관리 (승인/스팸 버튼 추가 — Sprint 1)
 │           │   └── AdminSettings.jsx  # 사이트 설정 (스킨 선택)
 │           ├── BlogHome.jsx           # 유저별 블로그 페이지 (`/blog/:username`) — Sprint 2
+│           ├── SeriesDetail.jsx       # 시리즈 상세 (`/blog/:username/series/:slug`) — Phase 3
 │           ├── BlogSettings.jsx       # 블로그 설정 (`/my-blog/settings`, 기본정보/디자인 탭) — Phase 2.5
 │           ├── Feed.jsx               # 이웃 피드 (`/feed`) — Phase 3
 │           ├── Search.jsx             # 검색 페이지 (`/search`) — 검색 고도화

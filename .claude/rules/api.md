@@ -31,6 +31,7 @@
 | `GET /api/auth/me` | 로그인 | 현재 사용자 조회. 응답: id, username, email, role, bio, avatar_url, blog_title, blog_color, website_url, social_links, blog_layout, banner_image_url, created_at |
 | `PUT /api/auth/me` | 로그인 | 프로필 수정. 요청: username, email, bio, avatar_url, blog_title, blog_color(#rrggbb 형식), website_url, social_links(JSON), blog_layout(default\|compact\|magazine\|photo), banner_image_url |
 | `GET /api/auth/users/:username` | 공개 | 유저 블로그 프로필 조회. 응답: User 전체 필드 + post_count, follower_count, following_count, is_following(선택적JWT), total_view_count, total_comment_count. 404: 없음/비활성화된 사용자 |
+| `GET /api/auth/users/search` | 공개 | 작성자 자동완성용 유저 검색. 파라미터: `?q=username_prefix`. 비활성화 제외, 최대 10건. 응답: `{ items: [{id, username}] }` |
 
 ### 카테고리 API
 
@@ -95,8 +96,8 @@
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `POST /api/users/:username/follow` | editor/admin | 팔로우. 응답: `{ following: true }`. 신규 팔로우 201, 이미 팔로우 중 200. 자기 팔로우 400 |
-| `DELETE /api/users/:username/follow` | editor/admin | 언팔로우. 응답: `{ following: false }` |
+| `POST /api/users/:username/follow` | 로그인 | 팔로우. 응답: `{ following: true }`. 신규 팔로우 201, 이미 팔로우 중 200. 자기 팔로우 400 |
+| `DELETE /api/users/:username/follow` | 로그인 | 언팔로우. 응답: `{ following: false }` |
 | `GET /api/users/:username/followers` | 공개 | 팔로워 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
 | `GET /api/users/:username/following` | 공개 | 팔로잉 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
 | `GET /api/feed` | 로그인 | 이웃 피드 (팔로우한 사람의 published+public/members_only 포스트). 파라미터: `?page=1&per_page=20`. 응답: items, total, has_more |
@@ -124,4 +125,4 @@
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `GET /blog/:username/feed.xml` | 공개 | RSS 2.0 피드. 최근 20개 published+public 포스트. ⚠️ BUG-2: base_url 하드코딩(`http://localhost:5173`) — 프로덕션에서 링크 오류 발생 |
+| `GET /blog/:username/feed.xml` | 공개 | RSS 2.0 피드. 최근 20개 published+public 포스트. `SITE_URL` 환경변수 또는 `request.host_url` 기반 동적 생성 |

@@ -186,10 +186,23 @@ blog_layout: str           # 레이아웃 선택 (기본값: 'default')
   + 블로그 홈 통계 위젯
   → "프로페셔널한 블로그 플랫폼" 단계
   ↓
-Phase 3 (상호작용 + 분석):
-  + 알림 시스템 (Socket.IO)
-  + 블로그 통계 대시보드 (recharts)
-  + RSS/Atom 피드 / 소셜 공유 버튼
+✅ Phase 3 (완료, 2026-03-31):
+  Stage 1: visit_logs 수집 인프라
+    + visit_logs 테이블 (ip_address, post_id, user_id, visited_at, referer)
+    + UNIQUE(ip_address, post_id, DATE(visited_at)) + INSERT IGNORE 중복 방지
+    + POST /api/posts/:id 조회 시 비동기 적재
+  Stage 2: 포스트 시리즈 (완전체) — 커밋: 032eba1, 591e8bf, 6aae81c
+    + series / series_posts 테이블 + CRUD API
+    + GET /api/posts/:id 응답에 series_info 임베드
+    + FE: SeriesDropdown(PostEditor) + SeriesNav(PostDetail) + BlogHome 시리즈 섹션
+  Stage 3: 블로그 통계 대시보드 — 커밋: c41519a, 2b074c7
+    + GET /api/blog/:username/stats (?period=7d|30d|90d) + GET /api/admin/stats/:username
+    + /my-blog/statistics 대시보드 (recharts@3.8.1)
+  + 소셜 공유 버튼 (FE only, Web Share API) — 커밋: aff94dc
+  + 검색 고도화 — 이미 구현 완료 확인 (BE Fulltext + FE Search.jsx)
+  → "완전한 블로그 플랫폼" 단계
+
+  스팩아웃 확정: 포스트 예약 발행(APScheduler 인프라 부담), 알림 시스템(Socket.IO 아키텍처 전면 교체)
 ```
 
 ---

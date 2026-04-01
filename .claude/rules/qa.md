@@ -53,12 +53,14 @@ docker compose exec db mariadb -u funnycms -pfunnycms cmsdb \
 | `tc_user.md` | editor / visitor TC | `docs/qa/` |
 | `tc_admin.md` | admin TC | `docs/qa/` |
 | `tc_integration.md` | 크로스 롤 통합 시나리오 TC | `docs/qa/` |
+| `tc_wizard.md` | Setup Wizard 초기 설치 플로우 TC | `docs/qa/` |
 
 ### TC 네이밍 컨벤션
 
 - **TC-U001~**: 사용자(editor/visitor) 기능 테스트
 - **TC-A001~**: admin 기능 테스트
 - **TC-I001~**: 크로스 롤 통합 시나리오
+- **TC-W001~**: Setup Wizard 초기 설치 플로우
 
 **TC 구성 요소 (필수):**
 ```markdown
