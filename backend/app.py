@@ -98,6 +98,10 @@ def create_app(config_class=None):
 
     app.register_blueprint(wizard_bp)
 
+    from api.wizard_phase2 import wizard_phase2_bp
+
+    app.register_blueprint(wizard_phase2_bp)
+
     return app
 
 

@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import select
@@ -38,6 +39,37 @@ def _db_connected() -> bool:
         return False
 
 
+def _migration_done() -> bool:
+    """flask db current 출력에 (head) 포함 여부로 마이그레이션 완료 판단."""
+    try:
+        result = subprocess.run(
+            ["flask", "db", "current"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return result.returncode == 0 and "(head)" in result.stdout
+    except Exception:
+        return False
+
+
+def _current_step(db_connected: bool, has_admin: bool) -> int:
+    """현재 Wizard 단계 번호 반환.
+
+    1: DB 연결 정보 입력 필요
+    3: DB 연결됨 + 마이그레이션 필요
+    4: 마이그레이션 완료 + 관리자 계정 생성 필요
+    5: 완료
+    """
+    if not db_connected:
+        return 1
+    if not _migration_done():
+        return 3
+    if not has_admin:
+        return 4
+    return 5
+
+
 @wizard_bp.route("/status", methods=["GET"])
 def get_wizard_status() -> tuple:
     """Setup Wizard 완료 여부 및 DB 연결 상태 반환 (공개 엔드포인트)."""
@@ -45,6 +77,7 @@ def get_wizard_status() -> tuple:
         db_connected = _db_connected()
         has_admin = _has_admin() if db_connected else False
         completed = (os.environ.get("WIZARD_COMPLETED") == "true") or has_admin
+        step = 5 if completed else _current_step(db_connected, has_admin)
         return (
             jsonify(
                 {
@@ -53,6 +86,7 @@ def get_wizard_status() -> tuple:
                         "completed": completed,
                         "db_connected": db_connected,
                         "has_admin": has_admin,
+                        "step": step,
                     },
                     "error": "",
                 }
@@ -68,6 +102,7 @@ def get_wizard_status() -> tuple:
                         "completed": False,
                         "db_connected": False,
                         "has_admin": False,
+                        "step": 1,
                     },
                     "error": "",
                 }
