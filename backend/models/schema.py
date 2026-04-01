@@ -110,7 +110,9 @@ class Post(Base):
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    author_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), index=True)
     content: Mapped[Optional[str]] = mapped_column(Text)  # HTML or Markdown
@@ -419,7 +421,10 @@ class Follow(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (UniqueConstraint("follower_id", "following_id", name="uq_follow"),)
+    __table_args__ = (
+        UniqueConstraint("follower_id", "following_id", name="uq_follow"),
+        Index("idx_follows_following_id", "following_id"),
+    )
 
     follower_user: Mapped["User"] = relationship(
         "User", foreign_keys=[follower_id], back_populates="followings"
