@@ -245,7 +245,11 @@ def get_post(post_id: int) -> tuple:
     # view_count +1 (편집 페이지는 제외)
     if not skip_count:
         post.view_count += 1
-        db.session.flush()
+        try:
+            db.session.commit()  # view_count 먼저 커밋 (VisitLog 실패 영향 없도록)
+        except Exception:
+            db.session.rollback()
+        # VisitLog INSERT 별도 트랜잭션 (실패해도 view_count에 영향 없음)
         try:
             ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45]
             referer = (request.headers.get("Referer") or "")[:500] or None
@@ -266,7 +270,7 @@ def get_post(post_id: int) -> tuple:
                         referer=referer,
                     )
                 )
-            db.session.commit()
+                db.session.commit()
         except Exception:
             db.session.rollback()
 
@@ -303,10 +307,6 @@ def get_post(post_id: int) -> tuple:
         author: User | None = db.session.get(User, post.author_id)
         if author:
             author_username = author.username
-
-    # skip_count=False일 때만 commit (view_count +1 반영)
-    if not skip_count:
-        db.session.commit()
 
     # 시리즈 정보
     series_info: dict | None = None
