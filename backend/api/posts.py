@@ -5,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_req
 from sqlalchemy import desc, func, insert, or_, select, text
 from sqlalchemy import distinct as sa_distinct
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
 from database import db
@@ -311,7 +312,15 @@ def get_post(post_id: int) -> tuple:
     # 시리즈 정보
     series_info: dict | None = None
     sp_entry: SeriesPost | None = (
-        db.session.execute(select(SeriesPost).where(SeriesPost.post_id == post_id))
+        db.session.execute(
+            select(SeriesPost)
+            .where(SeriesPost.post_id == post_id)
+            .options(
+                selectinload(SeriesPost.series)
+                .selectinload(Series.series_posts)
+                .selectinload(SeriesPost.post)
+            )
+        )
         .scalars()
         .first()
     )
