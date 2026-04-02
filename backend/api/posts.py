@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
+from api.helpers import get_pagination_params
 from database import db
 from models import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
@@ -24,9 +25,7 @@ def list_posts() -> tuple:
     except Exception:
         current_user_id = None
 
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
     q = request.args.get("q", "").strip()
 
     # 댓글수 서브쿼리 (approved 댓글만)
@@ -175,9 +174,7 @@ def get_my_posts() -> tuple:
     if user and user.role == "deactivated":
         return jsonify({"success": False, "data": {}, "error": "비활성화된 계정입니다."}), 403
 
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
 
     total: int = (
         db.session.execute(

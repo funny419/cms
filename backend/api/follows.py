@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from api.helpers import get_pagination_params
 from database import db
 from models import Follow, Post, User
 
@@ -79,9 +80,7 @@ def list_followers(username: str) -> tuple:
     if not target:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
 
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
 
     total: int = (
         db.session.execute(
@@ -122,9 +121,7 @@ def list_following(username: str) -> tuple:
     if not target:
         return jsonify({"success": False, "data": {}, "error": "User not found"}), 404
 
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
 
     total: int = (
         db.session.execute(
@@ -162,9 +159,7 @@ def get_feed() -> tuple:
     """이웃 피드 — 팔로우한 사람들의 최신 포스트."""
     current_user_id: int = int(get_jwt_identity())
 
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
 
     following_sq = select(Follow.following_id).where(Follow.follower_id == current_user_id)
 
