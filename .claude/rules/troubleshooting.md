@@ -1,5 +1,11 @@
 ## 트러블슈팅
 
+**모델 파일 분리 (models/ 디렉토리, Issue #21 이후):**
+- `from models.schema import X` ImportError: `schema.py`는 삭제됨 → `from models import X`로 변경
+- 새 모델 추가 후 Alembic이 해당 테이블을 DROP으로 감지: `models/__init__.py`에 re-export 누락 → 반드시 `__init__.py`에 추가 후 `flask db migrate` 재실행
+- 새 도메인 상수(`MAX_DEPTH` 등) 추가 위치: `models/constants.py` (config.py가 아님 — config.py는 환경/배포 설정 전용)
+- 크로스 파일 forward reference 오류 (`Mapped["Post"]`에서 ruff F821 또는 mypy name-defined): `from __future__ import annotations` + `TYPE_CHECKING` 블록으로 조건부 import 추가
+
 **Docker 빌드:**
 - `SELF_SIGNED_CERT_IN_CHAIN`: 개발용 `frontend/Dockerfile`에 `npm config set strict-ssl false` 적용됨
 - `npm ci` 실패(lock 불일치): 개발용은 `npm install` 사용, `Dockerfile.prod`만 `npm ci` 사용
