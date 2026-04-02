@@ -70,6 +70,8 @@
 - **API 변경**: 추가/수정된 엔드포인트 + 요청/응답 필드 변경 (예: `GET /api/auth/users/:username` 응답에 `total_view_count` 추가)
 - **컴포넌트 변경**: 신규 생성/수정된 파일 경로 (예: `frontend/src/components/widgets/StatsWidget.jsx` 신규)
 - **커밋 해시**: 변경 커밋 ID
+- **코드 리뷰**: `code-review.md` 체크리스트 실행 결과 (예: `통과`, `필수 수정 N건`, `미실행`)
+  - 코드 변경이 있는 모든 작업에서 필수. 커밋 전 반드시 실행할 것.
 
 예시 보고 형식:
 ```

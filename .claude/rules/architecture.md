@@ -3,7 +3,7 @@
 | 구분 | 기술 |
 |------|------|
 | Frontend | React 19 + Vite + CSS Variables (Tailwind 미설치) |
-| Backend | Python 3.11 + Flask + SQLAlchemy 3.x + Flask-JWT-Extended |
+| Backend | Python 3.11 + Flask + Flask-SQLAlchemy 3.x (SQLAlchemy 2.x 스타일 쿼리) + Flask-JWT-Extended |
 | Database | MariaDB 10.11 |
 | 로컬 개발 포트 | FE: 5173, BE: 5000, DB: 4807 |
 

@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: CMS 프로젝트 코드 리뷰 시 사용. 프로젝트 고유 규칙(Tailwind 금지, fetch 금지, SQLAlchemy 2.x, 응답 포맷 등)을 체크리스트로 검증.
+description: "구현 단계 완료 후, 커밋 전 필수 실행. PR 생성 전에도 실행. FE 변경 시 FE 체크리스트, BE 변경 시 BE 체크리스트 실행. 리팩토링 작업 시 SOLID 항목 반드시 확인." CMS 프로젝트 고유 규칙(Tailwind 금지, fetch 금지, SQLAlchemy 2.x, 응답 포맷, SOLID 원칙, models import 경로 등)을 체크리스트로 검증.
 ---
 
 # Code Review
