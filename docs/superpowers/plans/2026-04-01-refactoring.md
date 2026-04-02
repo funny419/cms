@@ -156,7 +156,7 @@ def _get_post_aggregates(post_id: int) -> tuple[int, int]:
 | **P2** | 인덱스 3개 추가 (comments, post_tags, post_likes) | 낮음 | 필요 (1개) |
 | **P2** | `MAX_CATEGORY_DEPTH` → `config.py` 또는 `models/constants.py` 이동 | 낮음 | 불필요 |
 | **P3** | `User.set_password/check_password` → `api/auth.py` 내부 함수로 이동 | 낮음 | 불필요 |
-| **P4** | schema.py 도메인별 파일 분리 | 높음 | 불필요 |
+| **P4** | schema.py 도메인별 파일 분리 | 높음 | 불필요 | ✅ 완료 (커밋 d02d633, 68bbc24, 2026-04-02) |
 | **P5** | Repository Pattern 선택적 도입 | 높음 | 불필요 |
 
 **이미 완료 (이번 세션):**

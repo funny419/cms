@@ -89,7 +89,18 @@ cms/
 │   │   ├── wizard.py            # Setup Wizard Phase 1 (GET /api/wizard/status, POST /api/wizard/setup)
 │   │   └── wizard_phase2.py     # Setup Wizard Phase 2 (POST /api/wizard/db-test, /env, /migrate)
 │   ├── migrations/              # Flask-Migrate (반드시 git 커밋)
-│   ├── models/schema.py         # SQLAlchemy ORM 모델
+│   ├── models/                  # SQLAlchemy ORM 모델 (도메인별 분리, Issue #21)
+│   │   ├── __init__.py          # 전체 모델 re-export (Alembic 자동 감지용)
+│   │   ├── base.py              # Base(DeclarativeBase)
+│   │   ├── user.py              # User, Follow
+│   │   ├── post.py              # Post, PostMeta, PostLike, VisitLog
+│   │   ├── comment.py           # Comment
+│   │   ├── media.py             # Media
+│   │   ├── category.py          # Category
+│   │   ├── tag.py               # Tag, PostTag
+│   │   ├── series.py            # Series, SeriesPost
+│   │   ├── option.py            # Option, Menu, MenuItem
+│   │   └── constants.py         # MAX_CATEGORY_DEPTH=3 등 비즈니스 상수
 │   ├── app.py                   # Flask 팩토리 + 자동 마이그레이션
 │   ├── config.py                # Dev/Prod 설정
 │   ├── database.py              # db = SQLAlchemy(model_class=Base)
@@ -198,7 +209,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-04-01 (인덱스 추가 반영 — ix_posts_author_id, idx_follows_following_id)
+> 마지막 업데이트: 2026-04-02 (models/ 도메인별 분리 반영 — Issue #21)
 
 ### 테이블 요약
 
