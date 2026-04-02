@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Option
+from models import Option
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 

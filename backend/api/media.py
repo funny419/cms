@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Media
+from models import Media
 from storage import UPLOAD_FOLDER, get_storage
 
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")

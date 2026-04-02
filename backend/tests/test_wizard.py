@@ -34,7 +34,7 @@ class TestWizardStatus:
     def test_status_with_admin_has_admin_true(self, client, app):
         """admin 계정이 존재하면 has_admin=True, completed=True."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         with app.app_context():
             admin = User(username="statusadmin", email="statusadmin@test.com", role="admin")
@@ -93,7 +93,7 @@ class TestWizardSetup:
         """setup 후 admin 계정이 DB에 생성된다."""
         client.post("/api/wizard/setup", json=self.VALID_PAYLOAD)
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         with app.app_context():
             from sqlalchemy import select
@@ -108,7 +108,7 @@ class TestWizardSetup:
         """setup 후 options 테이블에 site_title이 저장된다."""
         client.post("/api/wizard/setup", json=self.VALID_PAYLOAD)
         from database import db as _db
-        from models.schema import Option
+        from models import Option
 
         with app.app_context():
             from sqlalchemy import select
@@ -137,7 +137,7 @@ class TestWizardSetup:
     def test_setup_admin_exists_blocked_409(self, client, app, monkeypatch):
         """admin 계정이 이미 존재하면 setup 시 409 반환."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         with app.app_context():
             admin = User(username="existadmin", email="existadmin@test.com", role="admin")
@@ -192,7 +192,7 @@ class TestWizardSetup:
     def test_setup_duplicate_username_400(self, client, app):
         """이미 존재하는 username으로 setup 시도 → 400."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         with app.app_context():
             existing = User(username="newadmin", email="other@test.com", role="editor")
@@ -207,7 +207,7 @@ class TestWizardSetup:
     def test_setup_duplicate_email_400(self, client, app):
         """이미 존재하는 email로 setup 시도 → 400."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         with app.app_context():
             existing = User(username="other", email="newadmin@test.com", role="editor")

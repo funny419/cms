@@ -4,7 +4,7 @@ from database import db as _db
 
 
 def create_option(app, name, value):
-    from models.schema import Option
+    from models import Option
 
     opt = Option(option_name=name, option_value=value)
     _db.session.add(opt)
@@ -106,7 +106,7 @@ class TestUpdateSettings:
         with app.app_context():
             from sqlalchemy import select
 
-            from models.schema import Option
+            from models import Option
 
             opt = _db.session.execute(
                 select(Option).where(Option.option_name == "unknown_key")

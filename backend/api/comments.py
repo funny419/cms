@@ -5,7 +5,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, User
+from models import Comment, User
 
 comments_bp = Blueprint("comments", __name__, url_prefix="/api/comments")
 

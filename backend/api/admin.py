@@ -4,7 +4,7 @@ from sqlalchemy import func, select, update
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, User
+from models import Comment, Post, User
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 

@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Follow, Post, User
+from models import Comment, Follow, Post, User
 
 auth_bp = Blueprint("auth", __name__)
 

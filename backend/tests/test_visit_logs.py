@@ -6,7 +6,7 @@ from database import db as _db
 
 
 def make_user_and_post(app, status="published", visibility="public"):
-    from models.schema import Post, User
+    from models import Post, User
 
     uname = f"u_{uuid.uuid4().hex[:6]}"
     user = User(username=uname, email=f"{uname}@t.com", role="editor")
@@ -26,7 +26,7 @@ def make_user_and_post(app, status="published", visibility="public"):
 
 
 def count_visit_logs(app, post_id):
-    from models.schema import VisitLog
+    from models import VisitLog
 
     return (
         _db.session.execute(
@@ -66,7 +66,7 @@ def test_view_count_not_incremented_when_skip_count(client, app):
     """?skip_count=1 파라미터 시 view_count가 증가하지 않아야 한다."""
     with app.app_context():
         post_id, _, _ = make_user_and_post(app)
-        from models.schema import Post
+        from models import Post
 
         post = _db.session.get(Post, post_id)
         initial_count = post.view_count
@@ -74,7 +74,7 @@ def test_view_count_not_incremented_when_skip_count(client, app):
     client.get(f"/api/posts/{post_id}?skip_count=1")
 
     with app.app_context():
-        from models.schema import Post
+        from models import Post
 
         post = _db.session.get(Post, post_id)
         assert post.view_count == initial_count, "skip_count=1이면 view_count 증가하면 안 됨"
@@ -84,7 +84,7 @@ def test_view_count_incremented_on_normal_view(client, app):
     """정상 조회 시 view_count +1 되어야 한다."""
     with app.app_context():
         post_id, _, _ = make_user_and_post(app)
-        from models.schema import Post
+        from models import Post
 
         post = _db.session.get(Post, post_id)
         initial = post.view_count
@@ -92,7 +92,7 @@ def test_view_count_incremented_on_normal_view(client, app):
     client.get(f"/api/posts/{post_id}")
 
     with app.app_context():
-        from models.schema import Post
+        from models import Post
 
         post = _db.session.get(Post, post_id)
         assert post.view_count == initial + 1
@@ -133,7 +133,7 @@ def test_visit_log_includes_post_id(client, app):
     client.get(f"/api/posts/{post_id}")
 
     with app.app_context():
-        from models.schema import VisitLog
+        from models import VisitLog
 
         log = _db.session.execute(
             _db.select(VisitLog).where(VisitLog.post_id == post_id)

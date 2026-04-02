@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from database import db
-from models.schema import Follow, Post, User
+from models import Follow, Post, User
 
 follows_bp = Blueprint("follows", __name__, url_prefix="/api/users")
 feed_bp = Blueprint("feed", __name__, url_prefix="/api")

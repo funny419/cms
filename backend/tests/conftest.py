@@ -55,7 +55,7 @@ def client(app):
 @pytest.fixture(scope="function")
 def admin_headers(client, app):
     with app.app_context():
-        from models.schema import User
+        from models import User
 
         user = User(username="admin_user", email="admin@test.com", role="admin")
         user.set_password("testpass123")
@@ -69,7 +69,7 @@ def admin_headers(client, app):
 @pytest.fixture(scope="function")
 def editor_headers(client, app):
     with app.app_context():
-        from models.schema import User
+        from models import User
 
         user = User(username="editor_user", email="editor@test.com", role="editor")
         user.set_password("testpass123")
@@ -84,7 +84,7 @@ def editor_headers(client, app):
 
 def make_comment(app, status="pending"):
     """테스트용 댓글 생성 헬퍼. app context 내부에서 호출할 것."""
-    from models.schema import Comment, Post, User
+    from models import Comment, Post, User
 
     author = User(username=f"author_{status}", email=f"auth_{status}@test.com", role="editor")
     author.set_password("pass")

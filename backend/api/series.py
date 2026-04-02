@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Post, Series, SeriesPost, User
+from models import Post, Series, SeriesPost, User
 
 series_bp = Blueprint("series", __name__)
 

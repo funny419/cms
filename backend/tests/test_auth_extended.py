@@ -4,7 +4,7 @@ from database import db as _db
 
 
 def make_user(username, role="editor"):
-    from models.schema import User
+    from models import User
 
     user = User(username=username, email=f"{username}@test.com", role=role)
     user.set_password("pass123")

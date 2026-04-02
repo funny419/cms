@@ -9,6 +9,7 @@ ignore = ["E501"]                # 줄 길이는 formatter에 위임
 
 [tool.ruff.lint.per-file-ignores]
 "models/__init__.py" = ["F401", "F403"]  # star import 허용
+"models/*.py" = ["F821"]  # SQLAlchemy 문자열 기반 forward reference (Mapped["X"])는 런타임 미해석 — 정상
 
 [tool.mypy]
 python_version = "3.11"

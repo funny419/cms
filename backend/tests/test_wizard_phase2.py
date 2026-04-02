@@ -25,7 +25,7 @@ class TestWizardStatusStep:
     def test_status_step_5_when_completed(self, client, app, monkeypatch):
         """admin 계정 있으면 step=5 (completed)."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         monkeypatch.delenv("WIZARD_COMPLETED", raising=False)
         with app.app_context():

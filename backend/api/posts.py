@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
+from models import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 

@@ -4,7 +4,7 @@ from database import db as _db
 
 
 def make_user(app, username, role="editor"):
-    from models.schema import User
+    from models import User
 
     user = User(username=username, email=f"{username}@test.com", role=role)
     user.set_password("pass123")
@@ -14,7 +14,7 @@ def make_user(app, username, role="editor"):
 
 
 def make_post(app, author_id, title="테스트 포스트", status="published"):
-    from models.schema import Post
+    from models import Post
 
     slug = title.replace(" ", "-").lower()
     post = Post(title=title, slug=slug, author_id=author_id, status=status)
@@ -24,7 +24,7 @@ def make_post(app, author_id, title="테스트 포스트", status="published"):
 
 
 def make_comment_for_post(app, post_id, content="댓글", status="pending"):
-    from models.schema import Comment
+    from models import Comment
 
     comment = Comment(
         post_id=post_id,
@@ -150,7 +150,7 @@ class TestAdminChangeRole:
         """자기 자신의 권한 변경 불가."""
         # admin_user의 ID 조회
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             admin = _db.session.execute(
                 _db.select(User).where(User.username == "admin_user")
@@ -185,7 +185,7 @@ class TestAdminDeactivateUser:
 
     def test_cannot_deactivate_self(self, client, app, admin_headers):
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             admin = _db.session.execute(
                 _db.select(User).where(User.username == "admin_user")
@@ -215,7 +215,7 @@ class TestAdminDeleteUser:
         assert res.status_code == 200
         # 포스트는 남아 있고 author_id만 NULL
         with app.app_context():
-            from models.schema import Post
+            from models import Post
 
             post = _db.session.get(Post, post_id)
             assert post is not None
@@ -223,7 +223,7 @@ class TestAdminDeleteUser:
 
     def test_cannot_delete_self(self, client, app, admin_headers):
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             admin = _db.session.execute(
                 _db.select(User).where(User.username == "admin_user")

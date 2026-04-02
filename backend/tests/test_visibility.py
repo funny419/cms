@@ -2,7 +2,7 @@ def make_post(app, status="published", visibility="public", author_username=None
     import uuid
 
     from database import db
-    from models.schema import Post, User
+    from models import Post, User
 
     uname = author_username or f"u_{uuid.uuid4().hex[:8]}"
     user = User(username=uname, email=f"{uname}@test.com", role="editor")

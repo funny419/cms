@@ -2,7 +2,7 @@ from database import db as _db
 
 
 def make_tag(app, name="Python", slug="python"):
-    from models.schema import Tag
+    from models import Tag
 
     tag = Tag(name=name, slug=slug)
     _db.session.add(tag)
@@ -109,7 +109,7 @@ def test_create_tag_duplicate(client, app, admin_headers):
 def test_list_tag_posts_public(client, app):
     """비로그인 사용자는 public 포스트만 조회."""
     with app.app_context():
-        from models.schema import Post, PostTag, User
+        from models import Post, PostTag, User
 
         user = User(username="tagpost_author", email="tagpost@test.com", role="editor")
         user.set_password("pass")
@@ -143,7 +143,7 @@ def test_list_tag_posts_not_found(client):
 def test_list_tag_posts_logged_in_sees_members_only(client, app, editor_headers):
     """로그인 사용자는 members_only 포스트도 조회."""
     with app.app_context():
-        from models.schema import Post, PostTag, User
+        from models import Post, PostTag, User
 
         user = User(username="monly_author2", email="monly2@test.com", role="editor")
         user.set_password("pass")

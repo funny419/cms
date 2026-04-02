@@ -1,7 +1,7 @@
 def test_get_user_profile(client, app):
     with app.app_context():
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         user = User(
             username="alice",
@@ -30,7 +30,7 @@ def test_get_nonexistent_user_returns_404(client):
 def test_deactivated_user_returns_404(client, app):
     with app.app_context():
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         user = User(username="banned", email="banned@test.com", role="deactivated")
         user.set_password("pass")

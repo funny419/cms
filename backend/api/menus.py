@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Menu, MenuItem
+from models import Menu, MenuItem
 
 menus_bp = Blueprint("menus", __name__, url_prefix="/api/menus")
 

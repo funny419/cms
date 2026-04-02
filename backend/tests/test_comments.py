@@ -5,7 +5,7 @@ from database import db as _db
 
 def make_post_and_user(app, username="commenter", role="editor"):
     """테스트용 유저+포스트 생성. (post_id, user_id) 반환."""
-    from models.schema import Post, User
+    from models import Post, User
 
     user = User(username=username, email=f"{username}@test.com", role=role)
     user.set_password("pass123")
@@ -23,7 +23,7 @@ def make_guest_comment(app, post_id, content="게스트 댓글"):
     """게스트 댓글 생성. comment_id 반환."""
     from werkzeug.security import generate_password_hash
 
-    from models.schema import Comment
+    from models import Comment
 
     comment = Comment(
         post_id=post_id,
@@ -41,7 +41,7 @@ def make_guest_comment(app, post_id, content="게스트 댓글"):
 
 def make_logged_in_comment(app, post_id, user_id, content="로그인 댓글"):
     """로그인 사용자 댓글 생성. comment_id 반환."""
-    from models.schema import Comment
+    from models import Comment
 
     comment = Comment(
         post_id=post_id,
@@ -213,7 +213,7 @@ class TestCreateComment:
             # 부모에 답글 달기
             from werkzeug.security import generate_password_hash
 
-            from models.schema import Comment
+            from models import Comment
 
             child = Comment(
                 post_id=post_id,
@@ -244,7 +244,7 @@ class TestCreateComment:
     def test_deactivated_user_cannot_comment(self, client, app):
         """비활성화 사용자는 댓글 작성 불가."""
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             deact = User(username="deact_user", email="deact@test.com", role="deactivated")
             deact.set_password("pass123")
@@ -255,7 +255,7 @@ class TestCreateComment:
         with app.app_context():
             from flask_jwt_extended import create_access_token
 
-            from models.schema import User
+            from models import User
 
             deact = _db.session.execute(
                 _db.select(User).where(User.username == "deact_user")
@@ -338,7 +338,7 @@ class TestUpdateComment:
     def test_logged_in_user_update_own_comment(self, client, app, editor_headers):
         """editor_user 자신의 댓글을 수정."""
         with app.app_context():
-            from models.schema import Comment, User
+            from models import Comment, User
 
             editor = _db.session.execute(
                 _db.select(User).where(User.username == "editor_user")
@@ -366,7 +366,7 @@ class TestUpdateComment:
         with app.app_context():
             post_id, _ = make_post_and_user(app, "upd2host")
             # 다른 유저의 댓글 생성
-            from models.schema import Comment, User
+            from models import Comment, User
 
             other = User(username="other_upd2", email="other_upd2@test.com", role="editor")
             other.set_password("pass")
@@ -470,7 +470,7 @@ class TestUpdateComment:
 
     def test_deactivated_user_cannot_update(self, client, app):
         with app.app_context():
-            from models.schema import Comment, User
+            from models import Comment, User
 
             deact = User(username="deact_upd", email="deact_upd@test.com", role="deactivated")
             deact.set_password("pass")
@@ -510,7 +510,7 @@ class TestDeleteComment:
     def test_user_can_delete_own_comment(self, client, app, editor_headers):
         """editor_user 자신의 댓글 삭제."""
         with app.app_context():
-            from models.schema import Comment, User
+            from models import Comment, User
 
             editor = _db.session.execute(
                 _db.select(User).where(User.username == "editor_user")
@@ -533,7 +533,7 @@ class TestDeleteComment:
     def test_user_cannot_delete_others_comment(self, client, app, editor_headers):
         with app.app_context():
             post_id, _ = make_post_and_user(app, "del3host")
-            from models.schema import Comment, User
+            from models import Comment, User
 
             other = User(username="other_del3", email="other_del3@test.com", role="editor")
             other.set_password("pass")
@@ -598,7 +598,7 @@ class TestDeleteComment:
             # 답글 생성
             from werkzeug.security import generate_password_hash
 
-            from models.schema import Comment
+            from models import Comment
 
             reply = Comment(
                 post_id=post_id,
@@ -618,7 +618,7 @@ class TestDeleteComment:
 
     def test_deactivated_user_cannot_delete(self, client, app):
         with app.app_context():
-            from models.schema import Comment, User
+            from models import Comment, User
 
             deact = User(username="deact_del", email="deact_del@test.com", role="deactivated")
             deact.set_password("pass")
