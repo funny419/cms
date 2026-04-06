@@ -42,19 +42,26 @@ domain_bp = Blueprint('domain', __name__)
 def some_endpoint() -> tuple:
     user_id = int(get_jwt_identity())  # str → int 변환 필수
     # ...
-    return jsonify({"success": True, "data": result, "error": None}), 200
+    return success_response(result, 200)
 ```
 
 ## 3. 응답 포맷 (반드시 준수)
 
+**신규 엔드포인트는 반드시 `success_response` / `error_response` 헬퍼 사용.**
+기존 핸들러는 현행 유지(소급 적용 없음).
+
 ```python
+from api.helpers import success_response, error_response
+
 # 성공
-return jsonify({"success": True, "data": {...}, "error": None}), 200
+return success_response({"items": items, "total": total}, 200)
+return success_response({}, 201)
 
 # 실패
-return jsonify({"success": False, "data": None, "error": "메시지"}), 400
-return jsonify({"success": False, "data": None, "error": "Forbidden"}), 403
-return jsonify({"success": False, "data": None, "error": "Not found"}), 404
+return error_response("메시지", 400)
+return error_response("Forbidden", 403)
+return error_response("Not found", 404)
+return error_response("An internal error occurred.", 500)
 ```
 
 ## 4. SQLAlchemy 2.x 스타일 (1.x 금지)
@@ -82,7 +89,7 @@ claims = get_jwt()
 role = claims.get('role')
 
 if role != 'admin' and item.author_id != user_id:
-    return jsonify({"success": False, "data": None, "error": "Forbidden"}), 403
+    return error_response("Forbidden", 403)
 ```
 
 ## 6. Import 주의
@@ -115,9 +122,9 @@ page, per_page, offset = get_pagination_params()
 return success_response({"items": items, "total": total}, 200)
 return error_response("Not found", 404)
 
-# 게스트 댓글 인증
-ok, err = verify_guest_auth(comment, data)
-if not ok:
+# 게스트 댓글 인증 (None=성공, tuple=실패)
+err = verify_guest_auth(comment, data)
+if err:
     return err
 ```
 
@@ -154,7 +161,7 @@ def _apply_category_filter(query, category_id): ...
 
 ## 8. 완료 체크리스트
 
-- [ ] 응답 포맷이 `{ success, data, error }` 형태 (또는 `success_response`/`error_response` 활용)
+- [ ] **신규 엔드포인트**: `success_response()` / `error_response()` 사용 필수 (기존 핸들러 소급 적용 없음)
 - [ ] 모든 함수에 타입 힌트 (`-> tuple`)
 - [ ] SQLAlchemy 2.x 스타일 (`select()`, `scalar_one_or_none()`)
 - [ ] JWT identity `int()` 변환
