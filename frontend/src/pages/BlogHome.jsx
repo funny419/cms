@@ -8,7 +8,6 @@ import BlogLayoutDefault from '../components/layouts/BlogLayoutDefault';
 import BlogLayoutCompact from '../components/layouts/BlogLayoutCompact';
 import BlogLayoutMagazine from '../components/layouts/BlogLayoutMagazine';
 import BlogLayoutPhoto from '../components/layouts/BlogLayoutPhoto';
-import { getCategories } from '../api/categories';
 import { getUserSeries } from '../api/series';
 import { useAuth } from '../hooks/useAuth';
 
@@ -21,16 +20,13 @@ export default function BlogHome() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
-  const [categories, setCategories] = useState([]);
-  const [categoryId, setCategoryId] = useState(null);
   const [seriesList, setSeriesList] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const [profileRes, catRes, seriesRes] = await Promise.all([
+      const [profileRes, seriesRes] = await Promise.all([
         getUserProfile(username),
-        getCategories(),
         getUserSeries(username),
       ]);
       if (cancelled) return;
@@ -40,7 +36,6 @@ export default function BlogHome() {
       } else {
         setProfileError(profileRes.error || '사용자를 찾을 수 없습니다.');
       }
-      if (catRes.success) setCategories(catRes.data.items || []);
       if (seriesRes.success) setSeriesList(seriesRes.data.items || []);
       setProfileLoading(false);
     };
@@ -73,10 +68,6 @@ export default function BlogHome() {
     [username, token]
   );
 
-  const filteredPosts = categoryId
-    ? posts.filter((p) => p.category_id === categoryId)
-    : posts;
-
   if (profileLoading) return (
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
   );
@@ -93,7 +84,7 @@ export default function BlogHome() {
     compact:  { component: BlogLayoutCompact,  maxWidth: 720, extraProps: {} },
     magazine: { component: BlogLayoutMagazine, maxWidth: 800, extraProps: { accentColor } },
     photo:    { component: BlogLayoutPhoto,    maxWidth: 960, extraProps: { accentColor } },
-    default:  { component: BlogLayoutDefault,  maxWidth: 900, extraProps: { categories, categoryId, setCategoryId } },
+    default:  { component: BlogLayoutDefault,  maxWidth: 900, extraProps: {} },
   };
   const { component: LayoutComponent, maxWidth, extraProps } = LAYOUTS[layout] || LAYOUTS.default;
 
@@ -110,7 +101,7 @@ export default function BlogHome() {
       <StatsWidget profile={profile} />
 
       <LayoutComponent
-        posts={filteredPosts}
+        posts={posts}
         loading={loading}
         hasMore={hasMore}
         sentinelRef={sentinelRef}

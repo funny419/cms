@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCategories } from '../../context/CategoryContext';
 import CategorySidebar from '../widgets/CategorySidebar';
 import TagCloud from '../widgets/TagCloud';
 
@@ -51,9 +53,13 @@ function PostList({ posts, loading, hasMore, sentinelRef }) {
   );
 }
 
-export default function BlogLayoutDefault({
-  posts, categories, categoryId, setCategoryId, loading, hasMore, sentinelRef,
-}) {
+export default function BlogLayoutDefault({ posts, loading, hasMore, sentinelRef }) {
+  const { categories } = useCategories();
+  const [categoryId, setCategoryId] = useState(null);
+  const filteredPosts = categoryId
+    ? posts.filter((p) => p.category_id === categoryId)
+    : posts;
+
   return (
     <div style={{ display: 'flex', gap: 32 }}>
       <aside style={{ width: 160, flexShrink: 0 }}>
@@ -69,7 +75,7 @@ export default function BlogLayoutDefault({
             ? `${categories.find((c) => c.id === categoryId)?.name || '카테고리'} 글`
             : '최근 글'}
         </h2>
-        <PostList posts={posts} loading={loading} hasMore={hasMore} sentinelRef={sentinelRef} />
+        <PostList posts={filteredPosts} loading={loading} hasMore={hasMore} sentinelRef={sentinelRef} />
       </div>
     </div>
   );
