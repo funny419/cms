@@ -1,21 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
-import { getPost, createPost, updatePost } from '../api/posts';
 import { uploadMedia } from '../api/media';
-import { getTags } from '../api/tags';
 import { useTheme } from '../context/ThemeContext';
 import { useCategories } from '../context/CategoryContext';
 import TagInput from '../components/inputs/TagInput';
 import CategoryDropdown from '../components/inputs/CategoryDropdown';
 import SeriesDropdown from '../components/inputs/SeriesDropdown';
-import { useAuth } from '../hooks/useAuth';
-
-const DRAFT_KEY = 'cms_post_draft';
-const isEditorOrAdmin = (user) =>
-  user && (user.role === 'admin' || user.role === 'editor');
+import { usePostEditor } from '../hooks/usePostEditor';
 
 const QUILL_FORMATS = [
   'bold', 'italic', 'underline',
@@ -25,77 +18,18 @@ const QUILL_FORMATS = [
 ];
 
 export default function PostEditor() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const isEdit = Boolean(id);
-  const { token, user } = useAuth();
   const { theme } = useTheme();
   const { categories } = useCategories();
   const quillRef = useRef(null);
-
-  const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, series_id: null, tags: [], thumbnail_url: '' };
-    if (id) return base; // 편집 모드: draft 무시
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      return saved ? { ...base, ...JSON.parse(saved) } : base;
-    } catch {
-      return base;
-    }
-  });
-  const [loading, setLoading] = useState(isEdit);
-  const [saving, setSaving] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [availableTags, setAvailableTags] = useState([]);
 
-  useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    if (!isEditorOrAdmin(user)) { navigate('/posts'); return; }
+  const {
+    isEdit, form, setForm,
+    loading, saving, draftSaved, error, setError,
+    availableTags, token, user,
+    handleChange, handleSave, handleCancel,
+  } = usePostEditor();
 
-    if (isEdit) {
-      getPost(id, token, true).then((res) => {
-        if (res.success) {
-          setForm({
-            title: res.data.title || '',
-            content: res.data.content || '',
-            excerpt: res.data.excerpt || '',
-            slug: res.data.slug || '',
-            post_type: res.data.post_type || 'post',
-            content_format: res.data.content_format || 'html',
-            visibility: res.data.visibility || 'public',
-            category_id: res.data.category_id ?? null,
-            series_id: res.data.series_id ?? null,
-            tags: res.data.tags || [],
-            thumbnail_url: res.data.thumbnail_url || '',
-          });
-        }
-        setLoading(false);
-      });
-    }
-  }, [id]);
-
-  useEffect(() => {
-    getTags().then((res) => {
-      if (res.success) setAvailableTags(res.data.items || []);
-    });
-  }, []);
-
-  // 신규 작성 시: 10초마다 자동저장
-  useEffect(() => {
-    if (isEdit) return;
-    const timer = setInterval(() => {
-      if (form.title || form.content) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
-        setDraftSaved(true);
-        setTimeout(() => setDraftSaved(false), 2000);
-      }
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [form, isEdit]);
-
-  // WYSIWYG 이미지 핸들러: 파일 선택 → API 업로드 → Quill에 삽입
   const quillImageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -119,9 +53,8 @@ export default function PostEditor() {
       }
     };
     input.click();
-  }, [token]);
+  }, [token, setError]);
 
-  // QUILL_MODULES: quillImageHandler 의존성 때문에 useMemo로 컴포넌트 내부에 선언
   const quillModules = useMemo(() => ({
     toolbar: {
       container: [
@@ -135,11 +68,10 @@ export default function PostEditor() {
     },
   }), [quillImageHandler]);
 
-  // Markdown 이미지 삽입: 업로드 후 ![이미지](url) 커서 위치에 추가
   const handleMarkdownImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    e.target.value = ''; // 같은 파일 재선택 허용
+    e.target.value = '';
     setImageUploading(true);
     setError('');
     const res = await uploadMedia(token, file);
@@ -150,37 +82,6 @@ export default function PostEditor() {
     } else {
       setError(res.error || '이미지 업로드에 실패했습니다.');
     }
-  };
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = async (status) => {
-    if (!form.title.trim()) {
-      setError('제목을 입력해주세요.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-
-    const payload = { ...form, status, tags: form.tags.map((t) => t.id) };
-    const result = isEdit
-      ? await updatePost(token, id, payload)
-      : await createPost(token, payload);
-
-    setSaving(false);
-
-    if (result.success) {
-      localStorage.removeItem(DRAFT_KEY);
-      navigate(`/posts/${result.data.id}`);
-    } else {
-      setError(result.error || '저장에 실패했습니다.');
-    }
-  };
-
-  const handleCancel = () => {
-    navigate(isEdit ? `/posts/${id}` : '/posts');
   };
 
   if (loading) return (
@@ -243,7 +144,7 @@ export default function PostEditor() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         <button
           type="button"
-          onClick={() => setForm({ ...form, content_format: 'html' })}
+          onClick={() => setForm((prev) => ({ ...prev, content_format: 'html' }))}
           disabled={form.content_format === 'markdown'}
           style={{
             padding: '4px 14px',
@@ -260,7 +161,7 @@ export default function PostEditor() {
         </button>
         <button
           type="button"
-          onClick={() => setForm({ ...form, content_format: 'markdown' })}
+          onClick={() => setForm((prev) => ({ ...prev, content_format: 'markdown' }))}
           disabled={isEdit && form.content_format === 'html'}
           style={{
             padding: '4px 14px',
@@ -308,7 +209,7 @@ export default function PostEditor() {
           <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
             <MDEditor
               value={form.content}
-              onChange={(val) => setForm({ ...form, content: val || '' })}
+              onChange={(val) => setForm((prev) => ({ ...prev, content: val || '' }))}
               height={400}
             />
           </div>
@@ -318,7 +219,7 @@ export default function PostEditor() {
           ref={quillRef}
           theme="snow"
           value={form.content}
-          onChange={(val) => setForm({ ...form, content: val })}
+          onChange={(val) => setForm((prev) => ({ ...prev, content: val }))}
           modules={quillModules}
           formats={QUILL_FORMATS}
           style={{ marginBottom: 24 }}
@@ -377,7 +278,7 @@ export default function PostEditor() {
           <label className="form-label">카테고리</label>
           <CategoryDropdown
             value={form.category_id}
-            onChange={(id) => setForm((prev) => ({ ...prev, category_id: id }))}
+            onChange={(catId) => setForm((prev) => ({ ...prev, category_id: catId }))}
             categories={categories}
           />
         </div>
@@ -385,7 +286,7 @@ export default function PostEditor() {
           <label className="form-label">시리즈</label>
           <SeriesDropdown
             value={form.series_id}
-            onChange={(id) => setForm((prev) => ({ ...prev, series_id: id }))}
+            onChange={(sid) => setForm((prev) => ({ ...prev, series_id: sid }))}
             username={user?.username}
           />
         </div>
