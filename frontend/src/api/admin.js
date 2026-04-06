@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { authHeader } from './client';
 
 const BASE_URL = '/api/admin';
-const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 export const adminListPosts = async (token, page = 1, perPage = 20, q = '', status = '') => {
   try {

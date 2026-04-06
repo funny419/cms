@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { authHeader } from './client';
 
 const BASE_URL = '/api/posts';
-const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 // listPosts: token이 있으면 Authorization 헤더 포함 (user_liked 반영)
 export const listPosts = async (

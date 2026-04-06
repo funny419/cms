@@ -1,8 +1,8 @@
 // frontend/src/api/comments.js
 import axios from 'axios';
+import { authHeader } from './client';
 
 const BASE_URL = '/api/comments';
-const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 export const listComments = async (postId) => {
   try {
@@ -62,7 +62,7 @@ export const approveComment = async (token, commentId) => {
     const response = await axios.put(
       `/api/admin/comments/${commentId}/approve`,
       {},
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: authHeader(token) }
     );
     return response.data;
   } catch (error) {
@@ -75,7 +75,7 @@ export const rejectComment = async (token, commentId) => {
     const response = await axios.put(
       `/api/admin/comments/${commentId}/reject`,
       {},
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: authHeader(token) }
     );
     return response.data;
   } catch (error) {
