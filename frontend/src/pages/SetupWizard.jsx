@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getWizardStatus,
@@ -7,6 +7,7 @@ import {
   runMigration,
   submitWizardSetup,
 } from '../api/wizard';
+import { useFetch } from '../hooks/useFetch';
 
 const TOTAL_STEPS = 5;
 
@@ -32,50 +33,43 @@ export default function SetupWizard() {
   const [admin, setAdmin] = useState({ username: '', email: '', password: '', confirm: '' });
   const [site, setSite] = useState({ site_title: '', site_url: '', tagline: '' });
 
-  // 마운트 시 wizard 상태 확인 — 서버 step과 localStorage step 중 큰 값 사용
-  useEffect(() => {
-    let cancelled = false;
-    getWizardStatus().then((res) => {
-      if (cancelled) return;
-      if (res.success && res.data?.completed) {
-        navigate('/', { replace: true });
-        return;
-      }
-      const serverStep = res.success ? (res.data?.step ?? 1) : 1;
-      const localStep = parseInt(localStorage.getItem('wizard_step') || '0', 10);
-      setStep(Math.max(serverStep, localStep));
-      setStatusLoaded(true);
-    });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Step 3: 마이그레이션 자동 실행
-  useEffect(() => {
-    if (step !== 3 || !statusLoaded || migStatus !== 'idle') return;
-    let cancelled = false;
-    setMigStatus('running');
-    runMigration().then((res) => {
-      if (cancelled) return;
-      if (res.success) {
-        setMigStatus('success');
-        setTimeout(() => {
-          goToStep(4);
-        }, 1200);
-      } else {
-        setMigStatus('failed');
-        setMigError(res.error || '마이그레이션 실패');
-      }
-    });
-    return () => { cancelled = true; };
-     
-  }, [step, statusLoaded, migStatus]);
-
   const goToStep = (n) => {
     localStorage.setItem('wizard_step', String(n));
     setStep(n);
     setError('');
   };
+
+  // 마운트 시 wizard 상태 확인 — 서버 step과 localStorage step 중 큰 값 사용
+  useFetch(
+    getWizardStatus,
+    (res) => {
+      if (res.success && res.data?.completed) { navigate('/', { replace: true }); return; }
+      const serverStep = res.success ? (res.data?.step ?? 1) : 1;
+      const localStep = parseInt(localStorage.getItem('wizard_step') || '0', 10);
+      setStep(Math.max(serverStep, localStep));
+      setStatusLoaded(true);
+    },
+    []
+  );
+
+  // Step 3: 마이그레이션 자동 실행
+  useFetch(
+    () => {
+      if (step !== 3 || !statusLoaded || migStatus !== 'idle') return null;
+      setMigStatus('running');
+      return runMigration();
+    },
+    (res) => {
+      if (res.success) {
+        setMigStatus('success');
+        setTimeout(() => { goToStep(4); }, 1200);
+      } else {
+        setMigStatus('failed');
+        setMigError(res.error || '마이그레이션 실패');
+      }
+    },
+    [step, statusLoaded, migStatus]
+  );
 
   // Step 1: DB 연결 테스트 + .env 저장
   const handleDbConnect = async (e) => {

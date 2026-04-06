@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SkinProvider, useSkin } from './context/SkinContext';
@@ -25,6 +25,7 @@ import AdminComments from './pages/admin/AdminComments';
 import AdminSettings from './pages/admin/AdminSettings';
 import { getSettings } from './api/settings';
 import { getWizardStatus } from './api/wizard';
+import { useFetch } from './hooks/useFetch';
 
 // Router 내부에서 wizard status 체크 + 라우팅 처리
 function AppContent() {
@@ -35,33 +36,23 @@ function AppContent() {
   const [wizardChecked, setWizardChecked] = useState(() => location.pathname === '/wizard');
   const [wizardDbConnected, setWizardDbConnected] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    getSettings().then((res) => {
-      if (cancelled) return;
-      if (res.success && res.data.site_skin) {
-        setSkin(res.data.site_skin);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [setSkin]);
+  useFetch(
+    getSettings,
+    (res) => { if (res.success && res.data.site_skin) setSkin(res.data.site_skin); },
+    [setSkin]
+  );
 
-  useEffect(() => {
-    if (wizardChecked) return; // /wizard 경로는 초기값으로 처리됨
-    let cancelled = false;
-    getWizardStatus().then((res) => {
-      if (cancelled) return;
+  useFetch(
+    () => wizardChecked ? null : getWizardStatus(),
+    (res) => {
       if (res.success && res.data) {
         setWizardDbConnected(res.data.db_connected);
-        if (!res.data.completed) {
-          navigate('/wizard', { replace: true });
-        }
+        if (!res.data.completed) navigate('/wizard', { replace: true });
       }
       setWizardChecked(true);
-    });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    },
+    []
+  );
 
   // wizard 확인 전에는 아무것도 렌더링하지 않음 (/wizard 페이지는 제외)
   if (!wizardChecked && location.pathname !== '/wizard') return null;

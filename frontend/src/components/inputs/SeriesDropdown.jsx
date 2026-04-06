@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getUserSeries } from '../../api/series';
+import { useFetch } from '../../hooks/useFetch';
 
 /**
  * SeriesDropdown — 시리즈 단일 선택 셀렉트
@@ -11,18 +12,11 @@ import { getUserSeries } from '../../api/series';
 export default function SeriesDropdown({ value = null, onChange, username }) {
   const [series, setSeries] = useState([]);
 
-  useEffect(() => {
-    if (!username) return;
-    let cancelled = false;
-    const load = async () => {
-      const res = await getUserSeries(username);
-      if (!cancelled && res.success) {
-        setSeries(res.data.items || []);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [username]);
+  useFetch(
+    () => username ? getUserSeries(username) : null,
+    (res) => { if (res.success) setSeries(res.data.items || []); },
+    [username]
+  );
 
   return (
     <select
