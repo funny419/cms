@@ -155,7 +155,7 @@ def _get_post_aggregates(post_id: int) -> tuple[int, int]:
 |------|------|--------|------------|
 | **P2** | 인덱스 3개 추가 (comments, post_tags, post_likes) | 낮음 | 필요 (1개) |
 | **P2** | `MAX_CATEGORY_DEPTH` → `config.py` 또는 `models/constants.py` 이동 | 낮음 | 불필요 |
-| **P3** | `User.set_password/check_password` → `api/auth.py` 내부 함수로 이동 | 낮음 | 불필요 |
+| **P3** | `User.set_password/check_password` → `api/auth.py` 내부 함수로 이동 | 낮음 | 불필요 | ❌ 스킵 결정 (2026-04-06) — wizard.py + tests/ 20건+ 파급, User 모델 캡슐화는 Flask 표준 관례 |
 | **P4** | schema.py 도메인별 파일 분리 | 높음 | 불필요 | ✅ 완료 (커밋 d02d633, 68bbc24, 2026-04-02) |
 | **P5** | Repository Pattern 선택적 도입 | 높음 | 불필요 |
 
@@ -474,7 +474,7 @@ P3(`_record_visit`, `_get_post_aggregates`, `_build_series_info`)와 P4(`_apply_
 | **P2** | `comments.py` 게스트 인증 중복 제거 | comments.py | 낮음 | 버그 전파 방지 |
 | **P3** | `get_post()` 내부 함수 분해 | posts.py | 중간 | SRP, 가독성 향상 |
 | **P4** | `list_posts()` 필터 함수 분리 | posts.py | 중간 | OCP, 테스트 용이성 |
-| **P5** | Service Layer 도입 (선택) | 전체 | 높음 | 구조적 분리 |
+| **P5** | Service Layer 도입 (선택) | 전체 | 높음 | 구조적 분리 | ❌ 장기 보류 결정 (2026-04-06) — Blueprint + models/ 분리로 SRP 달성, SQLAlchemy 세션 분리 설계 부담 |
 
 ---
 
@@ -538,4 +538,4 @@ P3(`_record_visit`, `_get_post_aggregates`, `_build_series_info`)와 P4(`_apply_
 **파일:** `backend/api/posts.py`
 **작업:** `_apply_*_filter()` 함수군 분리
 
-### P5: Service Layer (별도 논의 후 결정)
+### P5: Service Layer — ❌ 장기 보류 확정 (2026-04-06, Issue #17 Close)
