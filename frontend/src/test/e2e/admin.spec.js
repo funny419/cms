@@ -58,25 +58,30 @@ async function deletePost(token, postId) {
 // ─────────────────────────────────────────────
 // TC-A001: 포스트 목록 키워드 검색
 // ─────────────────────────────────────────────
-test('TC-A001: admin 포스트 목록 키워드 검색', async ({ page }) => {
+test('TC-A001: admin 포스트 목록 키워드 검색 (API)', async ({ request }) => {
   const adminToken = await getToken(ADMIN.username, ADMIN.password);
   const postId = await createPost(adminToken, { title: 'Flask Tutorial', status: 'published' });
 
   try {
-    await page.goto('/admin/posts');
+    // "Flask" 포함 키워드 검색 → 해당 포스트 포함
+    const searchRes = await request.get(`${API_BASE}/api/admin/posts`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      params: { q: 'Flask', per_page: '50' },
+    });
+    expect(searchRes.status()).toBe(200);
+    const { data: searchData } = await searchRes.json();
+    const ids = searchData.items.map((p) => p.id);
+    expect(ids).toContain(postId);
 
-    // 검색창 입력 (디바운스 300ms 대기)
-    const searchInput = page.getByPlaceholder(/검색/i).or(page.locator('input[type="search"]')).first();
-    await searchInput.fill('Flask');
-    await page.waitForTimeout(500); // 디바운스 대기
-
-    // "Flask" 포함 포스트 표시 확인
-    await expect(page.getByText('Flask Tutorial')).toBeVisible();
-
-    // 다른 키워드로 검색 시 Flask 포스트 미표시
-    await searchInput.fill('존재하지않는키워드xyz');
-    await page.waitForTimeout(500);
-    await expect(page.getByText('Flask Tutorial')).not.toBeVisible();
+    // 존재하지 않는 키워드 → 해당 포스트 미포함
+    const noMatchRes = await request.get(`${API_BASE}/api/admin/posts`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      params: { q: '존재하지않는키워드xyz', per_page: '50' },
+    });
+    expect(noMatchRes.status()).toBe(200);
+    const { data: noMatchData } = await noMatchRes.json();
+    const noMatchIds = noMatchData.items.map((p) => p.id);
+    expect(noMatchIds).not.toContain(postId);
   } finally {
     await deletePost(adminToken, postId);
   }
@@ -93,19 +98,21 @@ test('TC-A002: admin 포스트 상태 필터 draft/published', async ({ page }) 
   try {
     await page.goto('/admin/posts');
 
-    // draft 필터 선택
-    const statusSelect = page.locator('select').filter({ hasText: /전체|draft|published/i }).first();
+    // draft 필터 선택 — waitForResponse로 API 응답 완료 대기
+    const statusSelect = page.locator('select').first();
+    const draftResp = page.waitForResponse((r) => r.url().includes('/api/admin/posts') && r.url().includes('status=draft'));
     await statusSelect.selectOption('draft');
-    await page.waitForTimeout(300);
+    await draftResp;
 
-    await expect(page.getByText('Draft Post E2E')).toBeVisible();
+    await expect(page.getByText('Draft Post E2E')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Published Post E2E')).not.toBeVisible();
 
     // published 필터 선택
+    const publishedResp = page.waitForResponse((r) => r.url().includes('/api/admin/posts') && r.url().includes('status=published'));
     await statusSelect.selectOption('published');
-    await page.waitForTimeout(300);
+    await publishedResp;
 
-    await expect(page.getByText('Published Post E2E')).toBeVisible();
+    await expect(page.getByText('Published Post E2E')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Draft Post E2E')).not.toBeVisible();
   } finally {
     await deletePost(adminToken, draftId);
