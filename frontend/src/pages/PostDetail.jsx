@@ -8,11 +8,7 @@ import SeriesNav from '../components/SeriesNav';
 import ShareButtons from '../components/ShareButtons';
 import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
-
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
+import { useAuth } from '../hooks/useAuth';
 const STATUS_BADGE = {
   published: {
     label: '발행됨',
@@ -36,9 +32,8 @@ export default function PostDetail() {
   const [next, setNext] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const user = getUser();
+  const { token, user } = useAuth();
   const { theme } = useTheme();
-  const token = localStorage.getItem('token');
   const [likeCount, setLikeCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
   const [liking, setLiking] = useState(false);

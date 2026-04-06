@@ -11,13 +11,9 @@ import { useCategories } from '../context/CategoryContext';
 import TagInput from '../components/inputs/TagInput';
 import CategoryDropdown from '../components/inputs/CategoryDropdown';
 import SeriesDropdown from '../components/inputs/SeriesDropdown';
+import { useAuth } from '../hooks/useAuth';
 
 const DRAFT_KEY = 'cms_post_draft';
-
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
 const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
 
@@ -32,8 +28,7 @@ export default function PostEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
-  const token = localStorage.getItem('token');
-  const user = getUser();
+  const { token, user } = useAuth();
   const { theme } = useTheme();
   const { categories } = useCategories();
   const quillRef = useRef(null);

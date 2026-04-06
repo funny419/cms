@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listAllComments, deleteComment, approveComment, rejectComment } from '../../api/comments';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
+import { useAuth } from '../../hooks/useAuth';
 
 const STATUS_LABEL = { approved: '공개', pending: '승인 대기', spam: '스팸' };
 const STATUS_COLOR = {
@@ -18,20 +19,17 @@ function formatDate(iso) {
 
 export default function AdminComments() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [updatedStatuses, setUpdatedStatuses] = useState({}); // { [id]: 'approved' | 'spam' }
 
   const fetchFn = useCallback(
     (page) => {
       if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return listAllComments(token, '', page);
     },
-    [token, navigate]
+    [token, navigate, user?.role]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
   const comments = items.filter((c) => !deletedIds.has(c.id));

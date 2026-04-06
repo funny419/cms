@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMyStats } from '../api/stats';
 import { getUserProfile } from '../api/users';
 import StatsWidget from '../components/widgets/StatsWidget';
+import { useAuth } from '../hooks/useAuth';
 
 const LazyLineChart = lazy(() =>
   import('recharts').then((m) => ({
@@ -35,15 +36,9 @@ const PERIODS = [
   { label: '90일', value: '90d' },
 ];
 
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
-
 export default function Statistics() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const user = getUser();
+  const { token, user } = useAuth();
 
   const [period, setPeriod] = useState('7d');
   const [stats, setStats] = useState(null);

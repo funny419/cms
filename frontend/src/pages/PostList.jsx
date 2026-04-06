@@ -4,6 +4,7 @@ import { listPosts } from '../api/posts';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import { useCategories } from '../context/CategoryContext';
 import CategorySidebar from '../components/widgets/CategorySidebar';
+import { useAuth } from '../hooks/useAuth';
 
 function highlightText(text, q) {
   if (!q || !text) return text;
@@ -16,17 +17,12 @@ function highlightText(text, q) {
   );
 }
 
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
 const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
 
 export default function PostList({ externalFilters = null, highlightQ = '' }) {
   const navigate = useNavigate();
-  const user = getUser();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
 
   const { categories } = useCategories();
   const [categoryId, setCategoryId] = useState(null);

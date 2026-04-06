@@ -1,16 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
+import { useAuth } from '../hooks/useAuth';
 
 export default function Nav() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const user = getUser();
+  const { token, user } = useAuth();
 
   const handleLogout = () => {
     localStorage.removeItem('token');

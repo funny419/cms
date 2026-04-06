@@ -4,6 +4,7 @@ import {
   adminListUsers, adminChangeRole,
   adminDeactivateUser, adminDeleteUser, adminGetUserPosts,
 } from '../../api/admin';
+import { useAuth } from '../../hooks/useAuth';
 
 const ROLE_STYLE = {
   admin:       { background: 'var(--accent-bg)',  color: 'var(--accent-text)' },
@@ -20,12 +21,8 @@ export default function AdminUsers() {
   const [userPosts, setUserPosts] = useState({});
   const [selectedUser, setSelectedUser] = useState(null); // 정보 모달용
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-
-  const currentUserId = (() => {
-    try { return JSON.parse(localStorage.getItem('user'))?.id; }
-    catch { return null; }
-  })();
+  const { token, user } = useAuth();
+  const currentUserId = user?.id ?? null;
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }

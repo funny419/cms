@@ -10,6 +10,7 @@ import BlogLayoutMagazine from '../components/layouts/BlogLayoutMagazine';
 import BlogLayoutPhoto from '../components/layouts/BlogLayoutPhoto';
 import { getCategories } from '../api/categories';
 import { getUserSeries } from '../api/series';
+import { useAuth } from '../hooks/useAuth';
 
 const LAYOUT_MAX_WIDTH = {
   default: 900,
@@ -21,7 +22,7 @@ const LAYOUT_MAX_WIDTH = {
 export default function BlogHome() {
   const { username } = useParams();
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user: currentUser } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -54,10 +55,6 @@ export default function BlogHome() {
     return () => { cancelled = true; };
   }, [username]);
 
-  const getUser = () => {
-    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
-  };
-  const currentUser = getUser();
   const isOwnBlog = currentUser?.username === username;
 
   const handleFollow = async () => {

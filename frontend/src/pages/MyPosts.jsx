@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyPosts, deletePost } from '../api/posts';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
+import { useAuth } from '../hooks/useAuth';
 
 const STATUS_BADGE = {
   published: { label: '발행됨', style: { background: 'var(--accent-bg)', color: 'var(--accent-text)' } },
@@ -11,7 +12,7 @@ const STATUS_BADGE = {
 
 export default function MyPosts() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
 
   const fetchFn = useCallback(
@@ -19,7 +20,7 @@ export default function MyPosts() {
       if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return getMyPosts(token, page);
     },
-    [token]
+    [token, navigate]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
   const posts = items.filter((p) => !deletedIds.has(p.id));

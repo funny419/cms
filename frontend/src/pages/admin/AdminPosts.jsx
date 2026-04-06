@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminListPosts } from '../../api/admin';
 import { deletePost } from '../../api/posts';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
+import { useAuth } from '../../hooks/useAuth';
 
 const STATUS_LABEL = { published: '발행됨', draft: '임시저장', scheduled: '예약됨' };
 const STATUS_COLOR = {
@@ -13,7 +14,7 @@ const STATUS_COLOR = {
 
 export default function AdminPosts() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [inputQ, setInputQ] = useState('');
   const [q, setQ] = useState('');
@@ -28,13 +29,10 @@ export default function AdminPosts() {
   const fetchFn = useCallback(
     (page) => {
       if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return adminListPosts(token, page, 20, q, status);
     },
-    [token, q, status]
+    [token, q, status, user?.role, navigate]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q, status]);
   const posts = items.filter((p) => !deletedIds.has(p.id));

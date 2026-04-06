@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, updateUser } from '../api/auth';
 import { uploadMedia } from '../api/media';
+import { useAuth } from '../hooks/useAuth';
 
 const SOCIAL_FIELDS = [
   { key: 'github', label: 'GitHub', placeholder: 'https://github.com/username' },
@@ -14,7 +15,7 @@ const TAB_DESIGN = 'design';
 
 export default function BlogSettings() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

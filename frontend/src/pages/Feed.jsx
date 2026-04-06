@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { getFeed } from '../api/users';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import TagCloud from '../components/widgets/TagCloud';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Feed() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   const fetchFn = useCallback(
     (page) => {
