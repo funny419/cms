@@ -56,13 +56,12 @@
 - **Vite proxy**: `vite.config.js`에서 환경변수로 분기
   - `/api` → `BACKEND_URL` (Docker: `http://backend:5000`, 로컬: `http://localhost:5000`)
   - `/uploads` → `FILES_URL` (Docker: `http://nginx-files:80`, 로컬: `http://localhost:5000`)
-- **권한 확인 패턴** (각 페이지에서 사용):
+- **권한 확인 패턴** (리팩토링 후):
   ```js
-  const getUser = () => {
-    try { return JSON.parse(localStorage.getItem('user')); }
-    catch { return null; }
-  };
+  import { useAuth } from '../hooks/useAuth';
+  const { token, user, isLoggedIn } = useAuth();
   ```
+  (`hooks/useAuth.js` — localStorage 직접 접근 단일 창구. 리팩토링 전 `getUser()` 인라인 패턴은 제거됨)
 
 ---
 
@@ -120,7 +119,8 @@ cms/
 │       │   ├── users.js         # 사용자 API (getUserProfile, getUserPosts) — Sprint 2
 │       │   ├── series.js        # 시리즈 API (getSeries, createSeries 등) — Phase 3
 │       │   ├── stats.js         # 통계 API (getBlogStats) — Phase 3
-│       │   └── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
+│       │   ├── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
+│       │   └── client.js        # axios 인스턴스 + authHeader 헬퍼 — 9개 api/*.js 공통 사용 (리팩토링 FE-P1)
 │       ├── components/
 │       │   ├── Nav.jsx          # role별 네비게이션 (editor: 내 블로그 링크 추가 — Sprint 2)
 │       │   ├── CommentSection.jsx
@@ -148,12 +148,16 @@ cms/
 │       │   ├── SkinContext.jsx      # 스킨 4종 관리 (useSkin, SKINS 목록)
 │       │   └── CategoryContext.jsx  # 전역 카테고리 목록 — Sprint 2
 │       ├── hooks/
-│       │   └── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
+│       │   ├── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
+│       │   ├── useAuth.js            # localStorage token/user 단일 창구 (리팩토링 FE-P1)
+│       │   ├── useFetch.js           # cancelled 패턴 공통 훅 — 단순 단일 fetch 케이스 (리팩토링 FE-P2)
+│       │   └── usePostEditor.js      # PostEditor 폼 상태 + draft 자동저장 + API 호출 (리팩토링 FE-P3)
 │       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest)
 │       │   ├── setup.js              # Vitest 설정
 │       │   ├── OnboardingModal.test.jsx
 │       │   ├── SeriesNav.test.jsx
-│       │   └── ShareButtons.test.jsx
+│       │   ├── ShareButtons.test.jsx
+│       │   └── usePostEditor.test.jsx  # usePostEditor 훅 테스트 3개 (리팩토링 FE-P3)
 │       └── pages/
 │           ├── admin/
 │           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+status필터+category필터+무한스크롤 — Sprint 2)
@@ -380,10 +384,10 @@ created_at: DateTime server_default=now()
 **주요 인덱스:**
 - `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
 - `posts`: `ix_posts_author_id` (author_id) — stats/feed 쿼리 최적화 (추가: 2026-04-01, commit a5a52cc)
-- `comments`: (post_id, status, created_at)
-- `post_tags`: (tag_id) — 태그별 포스트 조회 최적화
+- `comments`: `idx_comments_post_status_created` (post_id, status, created_at) — 댓글 목록 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
+- `post_tags`: (tag_id) — 태그별 포스트 조회 최적화 / `idx_post_likes_user_id` (user_id) — 좋아요 집계 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `categories`: (parent_id, order), slug
-- `post_likes`: (user_id, post_id)
+- `post_likes`: `idx_post_likes_user_id` (user_id) — 좋아요 집계 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `follows`: `idx_follows_following_id` (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01, commit a5a52cc)
 
 **Fulltext 인덱스 (검색):**
@@ -413,6 +417,7 @@ created_at: DateTime server_default=now()
 | `3c1734bf86e6_create_visit_logs_table.py` | visit_logs 테이블 생성 (Phase 3 Stage 1) | ✅ |
 | `79e90ed73d8d_create_series_and_series_posts_tables.py` | series, series_posts 테이블 생성 (Phase 3 Stage 2) | ✅ |
 | `c6ba37f921ea_add_idx_posts_author_id_follows_.py` | ix_posts_author_id + idx_follows_following_id 인덱스 추가 (성능 개선) | ✅ |
+| `5c4b3411ca67_add_comments_post_tags_post_likes_indexes.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
 
 ### 주의사항
 
