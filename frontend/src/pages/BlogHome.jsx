@@ -12,13 +12,6 @@ import { getCategories } from '../api/categories';
 import { getUserSeries } from '../api/series';
 import { useAuth } from '../hooks/useAuth';
 
-const LAYOUT_MAX_WIDTH = {
-  default: 900,
-  compact: 720,
-  magazine: 800,
-  photo: 960,
-};
-
 export default function BlogHome() {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -96,7 +89,13 @@ export default function BlogHome() {
 
   const layout = profile?.blog_layout || 'default';
   const accentColor = profile?.blog_color || '#7c3aed';
-  const maxWidth = LAYOUT_MAX_WIDTH[layout] || 900;
+  const LAYOUTS = {
+    compact:  { component: BlogLayoutCompact,  maxWidth: 720, extraProps: {} },
+    magazine: { component: BlogLayoutMagazine, maxWidth: 800, extraProps: { accentColor } },
+    photo:    { component: BlogLayoutPhoto,    maxWidth: 960, extraProps: { accentColor } },
+    default:  { component: BlogLayoutDefault,  maxWidth: 900, extraProps: { categories, categoryId, setCategoryId } },
+  };
+  const { component: LayoutComponent, maxWidth, extraProps } = LAYOUTS[layout] || LAYOUTS.default;
 
   return (
     <div className="page-content" style={{ maxWidth }}>
@@ -110,43 +109,13 @@ export default function BlogHome() {
 
       <StatsWidget profile={profile} />
 
-      {layout === 'compact' && (
-        <BlogLayoutCompact
-          posts={filteredPosts}
-          loading={loading}
-          hasMore={hasMore}
-          sentinelRef={sentinelRef}
-        />
-      )}
-      {layout === 'magazine' && (
-        <BlogLayoutMagazine
-          posts={filteredPosts}
-          loading={loading}
-          hasMore={hasMore}
-          sentinelRef={sentinelRef}
-          accentColor={accentColor}
-        />
-      )}
-      {layout === 'photo' && (
-        <BlogLayoutPhoto
-          posts={filteredPosts}
-          loading={loading}
-          hasMore={hasMore}
-          sentinelRef={sentinelRef}
-          accentColor={accentColor}
-        />
-      )}
-      {(layout === 'default' || !['compact', 'magazine', 'photo'].includes(layout)) && (
-        <BlogLayoutDefault
-          posts={filteredPosts}
-          categories={categories}
-          categoryId={categoryId}
-          setCategoryId={setCategoryId}
-          loading={loading}
-          hasMore={hasMore}
-          sentinelRef={sentinelRef}
-        />
-      )}
+      <LayoutComponent
+        posts={filteredPosts}
+        loading={loading}
+        hasMore={hasMore}
+        sentinelRef={sentinelRef}
+        {...extraProps}
+      />
 
       {seriesList.length > 0 && (
         <div style={{ marginTop: 40 }}>
