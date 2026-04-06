@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import select
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 
 from api.decorators import roles_required
+from api.helpers import verify_guest_auth
 from database import db
 from models import Comment, User
 
@@ -145,22 +146,9 @@ def update_comment(comment_id: int) -> tuple:
                 {"success": False, "data": {}, "error": "본인 댓글만 수정할 수 있습니다."}
             ), 403
     else:
-        # 게스트 인증
-        author_email: str = (data.get("author_email") or "").strip()
-        author_password: str = (data.get("author_password") or "").strip()
-        if not author_email or not author_password:
-            return jsonify(
-                {"success": False, "data": {}, "error": "이메일과 패스워드를 입력하세요."}
-            ), 400
-        if (
-            comment.author_id is not None
-            or comment.author_email != author_email
-            or not comment.author_password_hash
-            or not check_password_hash(comment.author_password_hash, author_password)
-        ):
-            return jsonify(
-                {"success": False, "data": {}, "error": "이메일 또는 패스워드가 올바르지 않습니다."}
-            ), 401
+        err = verify_guest_auth(comment, data)
+        if err:
+            return err
 
     comment.content = content
     try:
@@ -225,22 +213,9 @@ def delete_comment(comment_id: int) -> tuple:
                 {"success": False, "data": {}, "error": "본인 댓글만 삭제할 수 있습니다."}
             ), 403
     else:
-        # 게스트 인증
-        author_email: str = (data.get("author_email") or "").strip()
-        author_password: str = (data.get("author_password") or "").strip()
-        if not author_email or not author_password:
-            return jsonify(
-                {"success": False, "data": {}, "error": "이메일과 패스워드를 입력하세요."}
-            ), 400
-        if (
-            comment.author_id is not None
-            or comment.author_email != author_email
-            or not comment.author_password_hash
-            or not check_password_hash(comment.author_password_hash, author_password)
-        ):
-            return jsonify(
-                {"success": False, "data": {}, "error": "이메일 또는 패스워드가 올바르지 않습니다."}
-            ), 401
+        err = verify_guest_auth(comment, data)
+        if err:
+            return err
 
     # 답글(children) 먼저 삭제
     replies = (
