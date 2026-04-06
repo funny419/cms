@@ -1,8 +1,8 @@
 ## 프로젝트 관리
 
 **GitHub Projects:** https://github.com/users/funny419/projects/1
-- Done (47개): 완료된 기능
-- Todo (2개): 미구현 기능
+- Done (88개): 완료된 기능
+- Todo (1개): 게스트북 (미래 로드맵)
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
 **관련 분석 문서** (`.claude/rules/` 폴더):
@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-02
-> 최근 완료: schema.py 도메인별 파일 분리 (models/ 10개 파일, Issue #21)
+> 마지막 업데이트: 2026-04-06
+> 최근 완료: BE/FE/DB 전체 리팩토링 (Issue #13~#27) + Playwright E2E 38개 TC 자동화
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO)
 
 ### 완료
@@ -48,6 +48,10 @@
 | 인프라 | Docker Watch(로컬) + Gunicorn 4 workers(프로덕션) + CI/CD |
 | **개발 도구** | **pre-commit 피드백 루프** — ruff(lint+autofix) → mypy → pytest → eslint. 실패 시 Claude 자가수정 트리거 (`scripts/pre-commit.sh`, `scripts/setup-hooks.sh`). ESLint staged files 버그 수정 완료. pytest 환경 구축 (conftest.py + TestConfig + 14개 테스트) |
 | **Claude Code 스킬** | **12개 프로젝트 특화 스킬** — `new-api-endpoint`, `db-migration`, `new-page`, `code-review`, `test-generation`, `dba-query`, `db-erd`, `api-docs`, `infra`, `debug`, `deploy`, `service-planning` |
+| **BE 리팩토링** | **Issue #13~#17 완료 (2026-04-06)**. `api/helpers.py` 신규(페이지네이션/응답/게스트인증 헬퍼), comments.py 게스트인증 중복 제거, get_post()/list_posts() 내부 함수 분해. Service Layer(P5) 장기 보류 확정. 커밋: 50a28c5(#14), helpers 일부 포함 |
+| **DB 리팩토링** | **Issue #18~#21 완료 (2026-04-06)**. `idx_comments_post_status_created`, `idx_post_tags_tag_id`, `idx_post_likes_user_id` 인덱스 3개 추가(커밋: 83c2b7f). `MAX_CATEGORY_DEPTH` → `models/constants.py` 이동. `schema.py` → `models/` 10개 파일 분리. User.set_password/check_password 이동 스킵(Flask 표준 관례) |
+| **FE 리팩토링** | **Issue #22~#27 완료 (2026-04-06)**. `useAuth.js`(#22, 2f4f9b1), `api/client.js`(#23, 898298b), `useFetch.js`(#24, 8b43ad4), `usePostEditor.js`(#25, a7b5f99), BlogLayout Props Drilling 해소(#26, b81bd24), BlogHome LAYOUTS 맵 패턴(#27, 0646dd0). Vitest `usePostEditor.test.jsx` 3개 TC |
+| **Playwright E2E** | **High 우선순위 38개 TC 전체 자동화 완료 (2026-04-06)**. 9개 spec 파일: admin/layout/access-control/auth-guard/series/stats/follow/admin-actions/misc. 커밋: 57214b2(환경), afa099d(7개), 63a27e5(+9개), 80829d8(+22개) |
 | **구독/이웃** | **`follows` 테이블 + 팔로우/언팔로우/팔로워목록/팔로잉목록 API + `/feed` 이웃 피드 페이지 + ProfileCard 팔로우 버튼 FE** |
 | **블로그 커스터마이제이션** | **`blog_title`, `blog_color`, `website_url`, `social_links` 컬럼 + `/my-blog/settings` 설정 페이지 (기본정보/디자인 탭) + ProfileCard 배너색상·SNS링크 반영** |
 | **블로그 레이아웃 (A/B/C/D)** | **`blog_layout` 컬럼 + `posts.thumbnail_url` 컬럼 + 레이아웃 선택 UI + BlogHome 4종 분기 (BlogLayoutDefault/Compact/Magazine/Photo)** |

@@ -146,6 +146,49 @@ docker exec -i cms_db mysql -u root -p<비밀번호> cmsdb < backup.sql
 
 ---
 
+## 🧪 테스트 실행
+
+### 백엔드 단위 테스트 (pytest)
+
+```bash
+# Docker 컨테이너 내부에서 실행
+docker compose exec backend pytest -v
+
+# 커버리지 포함
+docker compose exec backend pytest --cov=. --cov-report=term-missing
+```
+
+> **주의:** 테스트 DB로 MariaDB 사용 (`cmsdb_test`). SQLite 사용 금지.
+
+### 프론트엔드 컴포넌트 테스트 (Vitest)
+
+```bash
+cd frontend
+npm run test
+```
+
+### E2E 테스트 (Playwright)
+
+> **전제조건:** `docker compose up -d` 로 모든 컨테이너 실행 중이어야 함 (`http://localhost:5173` 접속 가능)
+
+```bash
+cd frontend
+
+# 헤드리스 모드 (CI/CD용)
+npm run test:e2e
+
+# 브라우저 표시 모드 (디버깅용)
+npm run test:e2e:headed
+
+# Playwright UI 모드 (대화형)
+npm run test:e2e:ui
+```
+
+**커버 범위:** High 우선순위 38개 TC 전체 자동화
+- 시리즈, 통계, 팔로우/피드, Admin 관리, 레이아웃, 접근 제어, 권한 검증
+
+---
+
 ## 🤝 기여 방법
 
 1. 이 저장소를 Fork합니다.

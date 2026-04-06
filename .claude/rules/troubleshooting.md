@@ -64,6 +64,16 @@
 - 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5)
 - `"opus"` 단독 지정은 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
 
+**Playwright E2E 테스트:**
+- 실행 전제: `docker compose up -d` + FE/BE 모두 정상 기동 상태 (`http://localhost:5173` 접속 가능)
+- `npm run test:e2e` 실행 위치: `frontend/` 디렉토리 (또는 `cd frontend && npx playwright test`)
+- `globalSetup.js`가 pw_editor 계정을 자동 생성하고 `.auth/` 디렉토리에 storageState 저장
+  - pw_editor 계정이 이미 존재하면 로그인만 재시도 (중복 오류 무시)
+- `.auth/` 디렉토리는 `.gitignore` 제외됨 — CI/CD 파이프라인에서는 globalSetup이 매번 재실행됨
+- `Page.goto` timeout 오류: `docker compose ps`로 모든 컨테이너 healthy 상태 확인 후 재실행
+- `AdminPosts` 디바운스 타이밍 이슈: UI 대신 API 레벨로 검증 (TC-A001 — 300ms debounce 우회)
+- `SeriesNav` N/M span 선택 충돌: 전역 Nav의 `이전`/`다음` 링크와 SeriesNav 충돌 → XPath로 `.series-nav` 내부 스코핑
+
 **팀 에이전트 작업 완료 보고 형식:**
 작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
 - **DB 변경**: 추가/수정된 테이블명 + 컬럼명 (예: `users.blog_layout VARCHAR(20) NULL`)

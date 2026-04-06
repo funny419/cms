@@ -470,11 +470,11 @@ P3(`_record_visit`, `_get_post_aggregates`, `_build_series_info`)와 P4(`_apply_
 
 | 단계 | 작업 | 대상 파일 | 난이도 | 효과 |
 |------|------|---------|--------|------|
-| **P1** | 공통 헬퍼 추출 (`api/helpers.py` 신규) | 전체 | 낮음 | DRY 즉시 해소 |
-| **P2** | `comments.py` 게스트 인증 중복 제거 | comments.py | 낮음 | 버그 전파 방지 |
-| **P3** | `get_post()` 내부 함수 분해 | posts.py | 중간 | SRP, 가독성 향상 |
-| **P4** | `list_posts()` 필터 함수 분리 | posts.py | 중간 | OCP, 테스트 용이성 |
-| **P5** | Service Layer 도입 (선택) | 전체 | 높음 | 구조적 분리 | ❌ 장기 보류 결정 (2026-04-06) — Blueprint + models/ 분리로 SRP 달성, SQLAlchemy 세션 분리 설계 부담 |
+| **P1** | 공통 헬퍼 추출 (`api/helpers.py` 신규) | 전체 | 낮음 | DRY 즉시 해소 | ✅ 완료 (2026-04-06) |
+| **P2** | `comments.py` 게스트 인증 중복 제거 | comments.py | 낮음 | 버그 전파 방지 | ✅ 완료 (커밋 50a28c5) |
+| **P3** | `get_post()` 내부 함수 분해 | posts.py | 중간 | SRP, 가독성 향상 | ✅ 완료 (2026-04-06) |
+| **P4** | `list_posts()` 필터 함수 분리 | posts.py | 중간 | OCP, 테스트 용이성 | ✅ 완료 (2026-04-06) |
+| **P5** | Service Layer 도입 (선택) | 전체 | 높음 | 구조적 분리 | ❌ 장기 보류 확정 (2026-04-06) — Blueprint + models/ 분리로 SRP 달성, SQLAlchemy 세션 분리 설계 부담 |
 
 ---
 
@@ -509,7 +509,7 @@ P3(`_record_visit`, `_get_post_aggregates`, `_build_series_info`)와 P4(`_apply_
 
 **회귀 방지 인프라 (이미 구축):**
 - pre-commit hook: ruff(lint+autofix) → mypy → pytest → eslint 자동 실행
-- 현재 테스트 현황: 311 passed, 전체 커버리지 75%
+- 현재 테스트 현황: pytest 통과 (커버리지 84%), Playwright E2E 38 TCs 전체 PASS (2026-04-06)
 
 ---
 

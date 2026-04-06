@@ -158,6 +158,17 @@ cms/
 │       │   ├── SeriesNav.test.jsx
 │       │   ├── ShareButtons.test.jsx
 │       │   └── usePostEditor.test.jsx  # usePostEditor 훅 테스트 3개 (리팩토링 FE-P3)
+│       └── test/e2e/                 # Playwright E2E 테스트 (High 우선순위 38개 TC 전체 커버)
+│           ├── globalSetup.js        # pw_editor 계정 생성 + admin/editor storageState 저장
+│           ├── admin.spec.js         # TC-A001~A003: Admin 포스트 관리
+│           ├── layout.spec.js        # TC-U022~U025: 블로그 레이아웃 4종
+│           ├── access-control.spec.js # TC-U043, U048, U049: 비로그인 접근 차단
+│           ├── auth-guard.spec.js    # TC-A007, A012, A014~A017: 권한/인증 검증
+│           ├── series.spec.js        # TC-U001~U003, U005: 포스트 시리즈
+│           ├── stats.spec.js         # TC-U007~U009: 블로그 통계
+│           ├── follow.spec.js        # TC-U031~U034, I002: 팔로우/피드
+│           ├── admin-actions.spec.js # TC-A005, A008, A009, A011, I004: Admin 액션
+│           └── misc.spec.js          # TC-U013, U026, U036, U042, I005: 기타
 │       └── pages/
 │           ├── admin/
 │           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+status필터+category필터+무한스크롤 — Sprint 2)
