@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyPosts, deletePost } from '../api/posts';
+import useInfiniteScroll from '../hooks/useInfiniteScroll';
 
 const STATUS_BADGE = {
   published: { label: '발행됨', style: { background: 'var(--accent-bg)', color: 'var(--accent-text)' } },
@@ -9,28 +10,25 @@ const STATUS_BADGE = {
 };
 
 export default function MyPosts() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const [deletedIds, setDeletedIds] = useState(new Set());
 
-  useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    getMyPosts(token).then((res) => {
-      if (res.success) setPosts(res.data);
-      else setError(res.error);
-      setLoading(false);
-    });
-  }, []);
+  const fetchFn = useCallback(
+    (page) => {
+      if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      return getMyPosts(token, page);
+    },
+    [token]
+  );
+  const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
+  const posts = items.filter((p) => !deletedIds.has(p.id));
 
   const handleDelete = async (id) => {
     const res = await deletePost(token, id);
-    if (res.success) setPosts((prev) => prev.filter((p) => p.id !== id));
+    if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
     else alert(res.error);
   };
-
-  if (loading) return <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>;
 
   return (
     <div className="page-content">
@@ -41,7 +39,7 @@ export default function MyPosts() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {posts.length === 0 ? (
+      {posts.length === 0 && !loading && !error ? (
         <div className="empty-state">
           <p style={{ fontSize: 32, marginBottom: 12 }}>✍️</p>
           <p>아직 작성한 글이 없습니다.</p>
@@ -90,6 +88,16 @@ export default function MyPosts() {
             );
           })}
         </ul>
+      )}
+
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      {loading && (
+        <div className="empty-state" style={{ marginTop: 24 }}>불러오는 중...</div>
+      )}
+      {!hasMore && posts.length > 0 && (
+        <div style={{ textAlign: 'center', color: 'var(--text-light)', fontSize: 13, padding: '24px 0' }}>
+          더 이상 글이 없습니다.
+        </div>
       )}
     </div>
   );

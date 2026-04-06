@@ -1,24 +1,32 @@
-from flask import Blueprint, request, jsonify
+from datetime import date
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
-from sqlalchemy import select, func
+from sqlalchemy import desc, func, insert, or_, select, text
+from sqlalchemy import distinct as sa_distinct
 from sqlalchemy.exc import IntegrityError
+
 from api.decorators import roles_required
-from models.schema import Post, User, Comment, PostLike
 from database import db
+from models.schema import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
 
 @posts_bp.route("", methods=["GET"])
 def list_posts() -> tuple:
-    """공개된 포스트 목록 조회 (작성자·조회수·댓글수·추천수 포함)."""
-    # JWT optional — 로그인 시 user_liked 계산
+    """공개된 포스트 목록 조회 (페이지네이션 + 검색 포함)."""
     try:
         verify_jwt_in_request(optional=True)
         raw_id = get_jwt_identity()
         current_user_id = int(raw_id) if raw_id else None
     except Exception:
         current_user_id = None
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+    q = request.args.get("q", "").strip()
 
     # 댓글수 서브쿼리 (approved 댓글만)
     comment_sq = (
@@ -37,48 +45,171 @@ def list_posts() -> tuple:
         .scalar_subquery()
     )
 
-    rows = db.session.execute(
-        select(Post, User.username.label("author_username"), comment_sq.label("comment_count"), like_sq.label("like_count"))
+    base_query = (
+        select(
+            Post,
+            User.username.label("author_username"),
+            comment_sq.label("comment_count"),
+            like_sq.label("like_count"),
+        )
         .outerjoin(User, Post.author_id == User.id)
         .where(Post.status == "published")
-        .order_by(Post.created_at.desc())
-    ).all()
+    )
+    total_query = select(func.count(Post.id)).where(Post.status == "published")
 
-    # 로그인 사용자의 추천 포스트 ID 집합 (쿼리 1회로 처리)
+    # visibility 조건 한 번 계산 (재사용)
+    _user = db.session.get(User, current_user_id) if current_user_id else None
+    if current_user_id is None:
+        _vis_cond = Post.visibility == "public"
+    elif _user and _user.role != "admin":
+        _vis_cond = or_(
+            Post.visibility == "public",
+            Post.visibility == "members_only",
+            (Post.visibility == "private") & (Post.author_id == current_user_id),
+        )
+    else:
+        _vis_cond = None  # admin: 전체 조회
+
+    if _vis_cond is not None:
+        base_query = base_query.where(_vis_cond)
+        total_query = total_query.where(_vis_cond)
+
+    if q:
+        ft_filter = text(
+            "MATCH(posts.title, posts.content, posts.excerpt) AGAINST(:q IN BOOLEAN MODE)"
+        ).bindparams(q=q)
+        base_query = base_query.where(ft_filter)
+        total_query = total_query.where(ft_filter)
+
+    category_id = request.args.get("category_id", type=int)
+    if category_id:
+        base_query = base_query.where(Post.category_id == category_id)
+        total_query = total_query.where(Post.category_id == category_id)
+
+    author_username = request.args.get("author", "").strip()
+    if author_username:
+        author_user = db.session.execute(
+            select(User).where(User.username == author_username)
+        ).scalar_one_or_none()
+        if author_user:
+            base_query = base_query.where(Post.author_id == author_user.id)
+            total_query = total_query.where(Post.author_id == author_user.id)
+        else:
+            # 없는 사용자 → 빈 결과
+            base_query = base_query.where(Post.author_id == -1)
+            total_query = total_query.where(Post.author_id == -1)
+
+    # tags 필터: ?tags=1,2,3 (OR 방식)
+    tags_param = request.args.get("tags", "").strip()
+    if tags_param:
+        tag_ids = [int(t) for t in tags_param.split(",") if t.isdigit()]
+        if tag_ids:
+            base_query = (
+                base_query.join(PostTag, PostTag.post_id == Post.id)
+                .where(PostTag.tag_id.in_(tag_ids))
+                .distinct()
+            )
+            # total_query 재구성 (tags JOIN 포함, category_id 조건 유지)
+            total_query = (
+                select(func.count(sa_distinct(Post.id)))
+                .where(Post.status == "published")
+                .join(PostTag, PostTag.post_id == Post.id)
+                .where(PostTag.tag_id.in_(tag_ids))
+            )
+            if _vis_cond is not None:
+                total_query = total_query.where(_vis_cond)
+            if category_id:
+                total_query = total_query.where(Post.category_id == category_id)
+
+    total: int = db.session.execute(total_query).scalar() or 0
+
+    if q:
+        score_col = text(
+            "MATCH(posts.title, posts.content, posts.excerpt) AGAINST(:q_sort IN BOOLEAN MODE)"
+        ).bindparams(q_sort=q)
+        ordered_query = base_query.order_by(desc(score_col), Post.created_at.desc())
+    else:
+        ordered_query = base_query.order_by(Post.created_at.desc())
+
+    rows = db.session.execute(ordered_query.offset(offset).limit(per_page)).all()
+
     liked_post_ids: set = set()
     if current_user_id:
         liked_post_ids = set(
-            db.session.execute(
-                select(PostLike.post_id).where(PostLike.user_id == current_user_id)
-            ).scalars().all()
+            db.session.execute(select(PostLike.post_id).where(PostLike.user_id == current_user_id))
+            .scalars()
+            .all()
         )
 
-    data = []
+    items = []
     for post, author_username, comment_count, like_count in rows:
         d = post.to_dict()
         d["author_username"] = author_username or "알 수 없음"
         d["comment_count"] = comment_count or 0
         d["like_count"] = like_count or 0
         d["user_liked"] = post.id in liked_post_ids
-        data.append(d)
+        items.append(d)
 
-    return jsonify({"success": True, "data": data, "error": ""}), 200
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": items,
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200
 
 
 @posts_bp.route("/mine", methods=["GET"])
 @jwt_required()
 def get_my_posts() -> tuple:
-    """로그인 유저의 모든 포스트 조회 (draft + published)."""
+    """로그인 유저의 모든 포스트 조회 (draft + published, 페이지네이션)."""
     current_user_id: int = int(get_jwt_identity())
     user: User | None = db.session.get(User, current_user_id)
-    if user and user.role == 'deactivated':
+    if user and user.role == "deactivated":
         return jsonify({"success": False, "data": {}, "error": "비활성화된 계정입니다."}), 403
-    posts = db.session.execute(
-        select(Post)
-        .where(Post.author_id == current_user_id)
-        .order_by(Post.created_at.desc())
-    ).scalars().all()
-    return jsonify({"success": True, "data": [p.to_dict() for p in posts], "error": ""}), 200
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
+    offset = (page - 1) * per_page
+
+    total: int = (
+        db.session.execute(
+            select(func.count(Post.id)).where(Post.author_id == current_user_id)
+        ).scalar()
+        or 0
+    )
+
+    posts = (
+        db.session.execute(
+            select(Post)
+            .where(Post.author_id == current_user_id)
+            .order_by(Post.created_at.desc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        .scalars()
+        .all()
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": [p.to_dict() for p in posts],
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200
 
 
 @posts_bp.route("/<int:post_id>", methods=["GET"])
@@ -101,21 +232,64 @@ def get_post(post_id: int) -> tuple:
     if not post:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
 
+    # visibility 접근 제어 (URL 직접 접근 보호)
+    if post.visibility == "members_only" and current_user_id is None:
+        return jsonify({"success": False, "data": {}, "error": "로그인이 필요합니다."}), 403
+    elif post.visibility == "private":
+        if current_user_id is None:
+            return jsonify({"success": False, "data": {}, "error": "접근 권한이 없습니다."}), 403
+        _viewer: User | None = db.session.get(User, current_user_id)
+        if _viewer and _viewer.role != "admin" and post.author_id != current_user_id:
+            return jsonify({"success": False, "data": {}, "error": "접근 권한이 없습니다."}), 403
+
     # view_count +1 (편집 페이지는 제외)
     if not skip_count:
         post.view_count += 1
-        db.session.flush()
+        try:
+            db.session.commit()  # view_count 먼저 커밋 (VisitLog 실패 영향 없도록)
+        except Exception:
+            db.session.rollback()
+        # VisitLog INSERT 별도 트랜잭션 (실패해도 view_count에 영향 없음)
+        try:
+            ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45]
+            referer = (request.headers.get("Referer") or "")[:500] or None
+            today = date.today()
+            already_visited = db.session.execute(
+                select(VisitLog).where(
+                    VisitLog.post_id == post.id,
+                    VisitLog.ip_address == ip,
+                    func.date(VisitLog.visited_at) == today,
+                )
+            ).scalar_one_or_none()
+            if not already_visited:
+                db.session.execute(
+                    insert(VisitLog).values(
+                        post_id=post.id,
+                        user_id=current_user_id,
+                        ip_address=ip,
+                        referer=referer,
+                    )
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # 집계 (같은 트랜잭션)
-    comment_count: int = db.session.execute(
-        select(func.count(Comment.id))
-        .where(Comment.post_id == post_id)
-        .where(Comment.status == "approved")
-    ).scalar() or 0
+    comment_count: int = (
+        db.session.execute(
+            select(func.count(Comment.id))
+            .where(Comment.post_id == post_id)
+            .where(Comment.status == "approved")
+        ).scalar()
+        or 0
+    )
 
-    like_count: int = db.session.execute(
-        select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
-    ).scalar() or 0
+    like_count: int = (
+        db.session.execute(
+            select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
+        ).scalar()
+        or 0
+    )
 
     user_liked: bool = False
     if current_user_id:
@@ -134,15 +308,45 @@ def get_post(post_id: int) -> tuple:
         if author:
             author_username = author.username
 
-    # skip_count=False일 때만 commit (view_count +1 반영)
-    if not skip_count:
-        db.session.commit()
+    # 시리즈 정보
+    series_info: dict | None = None
+    sp_entry: SeriesPost | None = (
+        db.session.execute(select(SeriesPost).where(SeriesPost.post_id == post_id))
+        .scalars()
+        .first()
+    )
+    if sp_entry:
+        s: Series = sp_entry.series
+        ordered_posts = sorted(s.series_posts, key=lambda x: x.order)
+        current_index = next((i for i, sp in enumerate(ordered_posts) if sp.post_id == post_id), 0)
+        total_in_series = len(ordered_posts)
+        prev_post: dict | None = None
+        next_post: dict | None = None
+        if current_index > 0:
+            prev_sp = ordered_posts[current_index - 1]
+            prev_post = {"id": prev_sp.post.id, "title": prev_sp.post.title}
+        if current_index < total_in_series - 1:
+            next_sp = ordered_posts[current_index + 1]
+            next_post = {"id": next_sp.post.id, "title": next_sp.post.title}
+        series_info = {
+            "id": s.id,
+            "title": s.title,
+            "posts": [
+                {"id": sp.post.id, "title": sp.post.title, "order": sp.order}
+                for sp in ordered_posts
+            ],
+            "current_index": current_index,
+            "total": total_in_series,
+            "prev_post": prev_post,
+            "next_post": next_post,
+        }
 
     d = post.to_dict()
     d["author_username"] = author_username
     d["comment_count"] = comment_count
     d["like_count"] = like_count
     d["user_liked"] = user_liked
+    d["series"] = series_info
     return jsonify({"success": True, "data": d, "error": ""}), 200
 
 
@@ -153,6 +357,11 @@ def create_post() -> tuple:
     if not data.get("title"):
         return jsonify({"success": False, "data": {}, "error": "title is required"}), 400
     author_id: int = int(get_jwt_identity())
+
+    # 유효성 검사
+    raw_format = data.get("content_format", "html")
+    content_format = raw_format if raw_format in ("html", "markdown") else "html"
+
     post = Post(
         title=data["title"],
         slug=data.get("slug", ""),
@@ -160,9 +369,18 @@ def create_post() -> tuple:
         excerpt=data.get("excerpt", ""),
         status=data.get("status", "draft"),
         post_type=data.get("post_type", "post"),
+        content_format=content_format,
+        visibility=data.get("visibility", "public"),
+        category_id=data.get("category_id"),
+        thumbnail_url=data.get("thumbnail_url"),
         author_id=author_id,
     )
     db.session.add(post)
+    db.session.flush()  # post.id 생성 (commit 전)
+    tag_ids: list = data.get("tags", [])
+    if tag_ids:
+        tags = db.session.execute(select(Tag).where(Tag.id.in_(tag_ids))).scalars().all()
+        post.tags.extend(tags)
     try:
         db.session.commit()
     except Exception:
@@ -179,12 +397,36 @@ def update_post(post_id: int) -> tuple:
     if not post:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
     user: User | None = db.session.get(User, current_user_id)
-    if user and user.role != 'admin' and post.author_id != current_user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인 글만 수정할 수 있습니다."}), 403
+    if user and user.role != "admin" and post.author_id != current_user_id:
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인 글만 수정할 수 있습니다."}
+        ), 403
     data: dict = request.get_json() or {}
-    for field in ("title", "slug", "content", "excerpt", "status", "post_type"):
+    for field in (
+        "title",
+        "slug",
+        "content",
+        "excerpt",
+        "status",
+        "post_type",
+        "content_format",
+        "visibility",
+        "category_id",
+        "thumbnail_url",
+    ):
         if field in data:
+            if field == "content_format" and data[field] not in ("html", "markdown"):
+                continue  # 유효하지 않은 값 무시
+            if field == "visibility" and data[field] not in ("public", "members_only", "private"):
+                continue  # 유효하지 않은 값 무시
             setattr(post, field, data[field])
+    if "tags" in data:
+        post.tags.clear()
+        if data["tags"]:
+            new_tags = (
+                db.session.execute(select(Tag).where(Tag.id.in_(data["tags"]))).scalars().all()
+            )
+            post.tags.extend(new_tags)
     try:
         db.session.commit()
     except Exception:
@@ -201,8 +443,10 @@ def delete_post(post_id: int) -> tuple:
     if not post:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404
     user: User | None = db.session.get(User, current_user_id)
-    if user and user.role != 'admin' and post.author_id != current_user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인 글만 삭제할 수 있습니다."}), 403
+    if user and user.role != "admin" and post.author_id != current_user_id:
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인 글만 삭제할 수 있습니다."}
+        ), 403
     db.session.delete(post)
     try:
         db.session.commit()
@@ -224,7 +468,9 @@ def like_post(post_id: int) -> tuple:
 
     # 본인 글 추천 불가
     if post.author_id == current_user_id:
-        return jsonify({"success": False, "data": {}, "error": "본인 글은 추천할 수 없습니다."}), 400
+        return jsonify(
+            {"success": False, "data": {}, "error": "본인 글은 추천할 수 없습니다."}
+        ), 400
 
     existing: PostLike | None = db.session.execute(
         select(PostLike)
@@ -246,8 +492,13 @@ def like_post(post_id: int) -> tuple:
         db.session.rollback()
         liked = True
 
-    like_count: int = db.session.execute(
-        select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
-    ).scalar() or 0
+    like_count: int = (
+        db.session.execute(
+            select(func.count(PostLike.id)).where(PostLike.post_id == post_id)
+        ).scalar()
+        or 0
+    )
 
-    return jsonify({"success": True, "data": {"liked": liked, "like_count": like_count}, "error": ""}), 200
+    return jsonify(
+        {"success": True, "data": {"liked": liked, "like_count": like_count}, "error": ""}
+    ), 200

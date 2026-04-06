@@ -1,0 +1,75 @@
+## 트러블슈팅
+
+**Docker 빌드:**
+- `SELF_SIGNED_CERT_IN_CHAIN`: 개발용 `frontend/Dockerfile`에 `npm config set strict-ssl false` 적용됨
+- `npm ci` 실패(lock 불일치): 개발용은 `npm install` 사용, `Dockerfile.prod`만 `npm ci` 사용
+- Gunicorn 500: `app:create_app()` 팩토리 문법 확인 → `docker exec cms_backend_prod python app.py`로 ImportError 확인
+- 프론트엔드 패키지 누락(`Failed to resolve import`): `docker compose build frontend && docker compose up -d frontend` — 이미지 재빌드로 해결. 이후에는 `docker compose up -d`만으로 자동 설치됨 (command에 `npm install` 포함)
+
+**API 연결:**
+- Docker 내부 API 호출 실패: `vite.config.js`의 `BACKEND_URL` 환경변수 확인
+- 업로드 이미지 로드 실패: `vite.config.js`의 `FILES_URL` 환경변수 확인 (`http://nginx-files:80`), `nginx-files` 컨테이너 실행 여부 확인
+- 테이블 없음 오류: `docker exec cms_backend_prod flask db upgrade` 실행
+- JWT "Subject must be a string": `create_access_token(identity=str(user.id))` 확인
+
+**프로덕션 마이그레이션 오류:**
+- `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
+- `Can't locate revision`: DB의 `alembic_version`이 존재하지 않는 마이그레이션 참조 → 서버에서 직접 DB 수정
+- `Unknown column`: 프로덕션 DB에 컬럼 누락 → `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` 실행 후 stamp
+- `Multiple head revisions`: 마이그레이션 히스토리가 분기됨 → `flask db heads`로 두 head 확인 후 merge migration 파일 생성 (`down_revision = ('head1', 'head2')`, `upgrade()/downgrade()` 모두 pass)
+
+**포스트 통계:**
+- 개발 환경(`<StrictMode>`)에서 포스트 상세 진입 시 view_count가 +2로 보이는 것은 정상 — React StrictMode가 useEffect를 2번 실행하는 개발 전용 동작. 프로덕션 빌드에서는 +1.
+
+**Markdown 에디터:**
+- `@uiw/react-md-editor` 다크모드: `data-color-mode={theme === 'dark' ? 'dark' : 'light'}` — `useTheme()` 훅으로 분기
+- Markdown 포스트 뷰어: `MDEditor.Markdown` 컴포넌트 사용 (`rehype-sanitize` XSS 방어 내장)
+- 포맷 잠금 정책: 한 번 Markdown으로 저장된 포스트는 UI에서 WYSIWYG 탭 비활성화 (DB `content_format` 컬럼 기준)
+
+**스킨 관련:**
+- 스킨 적용 안됨: `GET /api/settings` 응답에 `site_skin` 포함 여부 확인. `PUBLIC_KEYS`에 `site_skin` 있어야 함.
+- 스킨 CSS 미적용: `index.css`의 `[data-skin="forest"]:root` 선택자가 `html` 엘리먼트의 `data-skin` 속성과 매칭되는지 확인 (`SkinContext`가 `document.documentElement`에 속성 설정)
+
+**권한 관련:**
+- User 모델 DB 기본값(`default='subscriber'`)과 register API(`role='editor'`)가 다름 — 회원가입 API로 생성된 계정은 항상 editor. DB에 직접 삽입한 계정은 subscriber가 될 수 있어 PostEditor 접근 시 전체 글 페이지로 리다이렉트될 수 있음 → `UPDATE users SET role='editor' WHERE username='...'` 로 수정
+
+**pre-commit 훅:**
+- `pytest exit 5`: 테스트 파일 없음 — 정상 (pass로 처리됨)
+- Docker 컨테이너 미실행 시: 해당 언어 검사를 건너뜀 (오류 아님)
+- ruff 경로 오류(`No such file or directory: backend`): Docker 내부에서 경로는 `backend/`가 아닌 `.` (`/app` 루트) — `scripts/pre-commit.sh` 확인
+- 훅 미설치: `bash scripts/setup-hooks.sh` 실행 (새 클론 후 1회 필요)
+- ruff auto-fix 후 diff가 생김: 정상 — 수정된 파일이 자동 재스테이징되어 같이 커밋됨
+- **ESLint staged files 경로 오류 (커밋 0a034a10 수정)**: `No such file or directory: frontend/src/` — `scripts/pre-commit.sh` line 70에서 `sed 's|^frontend/||'`로 컨테이너 내부 경로(`/app`)로 변환하도록 수정. staged files만 lint하는 방식 적용.
+- **pytest + Flask-Migrate 충돌 (TestConfig)**: SQLite in-memory DB에서 `db_upgrade()` 실행 오류 — `app.py`의 `create_app()` 팩토리에서 `TESTING=True`일 때 `db.upgrade()` 스킵. `conftest.py`에서 `_db.create_all()`로 테이블 생성 (마이그레이션 파일 불필요). Flask-Migrate와 in-memory 테스트 DB 양립 불가.
+- **react-hooks/rules-of-hooks ESLint 에러 (useEffect + setState)**: 비동기 작업 중 unmount 시 setState 호출 제한 — `async/cancelled` 패턴으로 수정: `useEffect(() => { let cancelled = false; const fetchData = async () => { /*...*/ if (!cancelled) setState(...) }; return () => { cancelled = true } })`. BlogHome.jsx 등 비동기 페칭 컴포넌트에 적용.
+
+**Setup Wizard Phase 2:**
+- Wizard Step 1에서 DB 연결 실패 시 오류 코드 분류: `auth_failed`(비밀번호 틀림) / `host_unreachable`(호스트 미도달) / `db_not_found`(DB 없음 또는 권한 없음) / `invalid_url`(URL 형식 오류)
+- `db_not_found` vs `auth_failed` 혼동: MariaDB에서 존재하지 않는 DB 접근 시 권한 없는 사용자의 경우 `Access denied ... to database '...'` 오류 발생 → `to database` 키워드로 `db_not_found` 분류 (wizard_phase2.py:32-35)
+- Step 2 재시작 후 Step 3로 진행 안됨: `docker compose restart backend` 실행 후 "재시작 완료 — 새로고침" 버튼 클릭 필요. 새로고침 없이는 Step 2 유지됨
+- Step 3 마이그레이션 실패 (`already exists`): `wizard_phase2.py`에서 자동으로 `flask db stamp head` 후 재시도. 수동으로도 `docker compose exec backend flask db stamp head` 실행 가능
+- Step 3 마이그레이션 `Multiple head` 오류: 409 반환 → `docker compose exec backend flask db merge heads -m "merge"` 후 Wizard 재시도
+- `DB_ENV_WRITTEN=true` 환경변수 설정 후 Step 2 재실행 시 `already_written: true` 200 반환 (정상) — 재시작 전 중복 작성 방지 로직
+- Setup Wizard 완료 후에도 `/wizard`로 리다이렉트됨: admin 계정이 없거나 `.env`에 `WIZARD_COMPLETED=true` 미포함 → `POST /api/wizard/setup` 재실행 또는 직접 추가
+
+**팀 에이전트 (멀티 에이전트) 스폰:**
+- `API Error: 500 Invalid model: claude-opus-4-6` — Agent 도구의 `model` 파라미터에 `"opus"` 사용 시 발생. **`"opus"` 사용 금지.**
+- 팀원 스폰 시 반드시 `model: "sonnet"` 명시하거나 model 파라미터를 생략(부모 모델 상속)할 것.
+- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5)
+- `"opus"` 단독 지정은 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+
+**팀 에이전트 작업 완료 보고 형식:**
+작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
+- **DB 변경**: 추가/수정된 테이블명 + 컬럼명 (예: `users.blog_layout VARCHAR(20) NULL`)
+- **API 변경**: 추가/수정된 엔드포인트 + 요청/응답 필드 변경 (예: `GET /api/auth/users/:username` 응답에 `total_view_count` 추가)
+- **컴포넌트 변경**: 신규 생성/수정된 파일 경로 (예: `frontend/src/components/widgets/StatsWidget.jsx` 신규)
+- **커밋 해시**: 변경 커밋 ID
+
+예시 보고 형식:
+```
+[완료 보고]
+- DB: posts.thumbnail_url VARCHAR(500) NULL 추가 (마이그레이션: abc1234_add_thumbnail.py)
+- API: GET /api/posts 응답에 thumbnail_url 필드 추가
+- 컴포넌트: frontend/src/pages/BlogLayoutPhoto.jsx 신규, BlogHome.jsx 수정
+- 커밋: a1b2c3d
+```

@@ -1,23 +1,33 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from sqlalchemy import select
+
 from api.decorators import roles_required
-from models.schema import Option
 from database import db
+from models.schema import Option
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 
 # 공개 허용 키 목록
-PUBLIC_KEYS = ["site_title", "tagline", "site_url"]
+PUBLIC_KEYS = ["site_title", "tagline", "site_url", "site_skin"]
 
-ADMIN_ALLOWED_KEYS = {"site_title", "tagline", "site_url", "admin_email", "posts_per_page"}
+ADMIN_ALLOWED_KEYS = {
+    "site_title",
+    "tagline",
+    "site_url",
+    "admin_email",
+    "posts_per_page",
+    "site_skin",
+}
 
 
 @settings_bp.route("", methods=["GET"])
 def get_settings() -> tuple:
     """공개 사이트 설정 조회."""
-    options = db.session.execute(
-        select(Option).where(Option.option_name.in_(PUBLIC_KEYS))
-    ).scalars().all()
+    options = (
+        db.session.execute(select(Option).where(Option.option_name.in_(PUBLIC_KEYS)))
+        .scalars()
+        .all()
+    )
     data = {opt.option_name: opt.option_value for opt in options}
     return jsonify({"success": True, "data": data, "error": ""}), 200
 

@@ -9,3 +9,7 @@ cryptography
 werkzeug
 gunicorn
 Pillow>=10.0.0
+ruff
+mypy
+pytest
+python-slugify

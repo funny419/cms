@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPost, listPosts, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
+import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
+import SeriesNav from '../components/SeriesNav';
+import ShareButtons from '../components/ShareButtons';
+import TagCloud from '../components/widgets/TagCloud';
+import { useTheme } from '../context/ThemeContext';
 
 const getUser = () => {
   try { return JSON.parse(localStorage.getItem('user')); }
@@ -32,6 +37,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const user = getUser();
+  const { theme } = useTheme();
   const token = localStorage.getItem('token');
   const [likeCount, setLikeCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
@@ -57,7 +63,7 @@ export default function PostDetail() {
 
         if (listRes.success) {
           // created_at 내림차순 (최신 글이 앞)
-          const sorted = [...listRes.data].sort(
+          const sorted = [...listRes.data.items].sort(
             (a, b) => new Date(b.created_at) - new Date(a.created_at)
           );
           const idx = sorted.findIndex((p) => p.id === postRes.data.id);
@@ -174,14 +180,35 @@ export default function PostDetail() {
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: 28 }} />
 
-      {/* 본문 — Quill 렌더링 */}
-      <div className="ql-snow">
-        <div
-          className="ql-editor"
-          style={{ padding: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-h)' }}
-          dangerouslySetInnerHTML={{ __html: post.content || '' }}
-        />
-      </div>
+      {/* 본문 */}
+      {post.content_format === 'markdown' ? (
+        <div data-color-mode={theme === 'dark' ? 'dark' : 'light'} style={{ fontSize: 15, lineHeight: 1.8 }}>
+          <MDEditor.Markdown source={post.content || ''} />
+        </div>
+      ) : (
+        <div className="ql-snow">
+          <div
+            className="ql-editor"
+            style={{ padding: 0, fontSize: 15, lineHeight: 1.8, color: 'var(--text-h)' }}
+            dangerouslySetInnerHTML={{ __html: post.content || '' }}
+          />
+        </div>
+      )}
+
+      {/* 태그 */}
+      {post.tags && post.tags.length > 0 && (
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 8 }}>태그</p>
+          <TagCloud tags={post.tags} />
+        </div>
+      )}
+
+      {/* 시리즈 네비게이션 */}
+      {post.series && (
+        <SeriesNav series={post.series} currentPostId={post.id} />
+      )}
+
+      <ShareButtons title={post.title} />
 
       {/* 댓글 */}
       <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '40px 0 0' }} />

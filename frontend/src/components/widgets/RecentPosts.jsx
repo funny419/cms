@@ -7,7 +7,7 @@ export default function RecentPosts({ limit = 5 }) {
   useEffect(() => {
     listPosts().then((res) => {
       if (res.success) {
-        setPosts(res.data.slice(0, limit));
+        setPosts(res.data.items.slice(0, limit));
       }
     });
   }, [limit]);

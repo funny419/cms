@@ -1,18 +1,20 @@
 import os
 import uuid
-from flask import Blueprint, request, jsonify, current_app
+
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
-from sqlalchemy import select
 from PIL import Image
+from sqlalchemy import select
 from werkzeug.utils import secure_filename
+
 from api.decorators import roles_required
-from models.schema import Media
 from database import db
+from models.schema import Media
+from storage import UPLOAD_FOLDER, get_storage
 
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 THUMBNAIL_SIZE = (300, 300)
 
 
@@ -33,37 +35,44 @@ def upload_file() -> tuple:
     if not safe_name:
         return jsonify({"success": False, "data": {}, "error": "Invalid filename"}), 400
 
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    storage = get_storage()
     unique_filename = f"{uuid.uuid4().hex}_{safe_name}"
-    filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-    thumb_path = os.path.join(UPLOAD_FOLDER, f"thumb_{unique_filename}")
-    file.save(filepath)
 
-    # 썸네일 생성 (이미지 파일만)
-    try:
-        img = Image.open(filepath)
-        img.thumbnail(THUMBNAIL_SIZE)
-        img.save(thumb_path)
-    except Exception:
-        pass  # 썸네일 생성 실패해도 업로드 자체는 성공
+    # 파일 저장 → 공개 URL 반환
+    url = storage.save(file, unique_filename)
+
+    # 썸네일 생성 (로컬 경로가 있는 경우만)
+    thumb_url: str | None = None
+    local_path = storage.get_local_path(unique_filename)
+    if local_path and os.path.exists(local_path):
+        thumb_filename = f"thumb_{unique_filename}"
+        thumb_local_path = os.path.join(UPLOAD_FOLDER, thumb_filename)
+        try:
+            img = Image.open(local_path)
+            img.thumbnail(THUMBNAIL_SIZE)
+            img.save(thumb_local_path)
+            thumb_url = f"/uploads/{thumb_filename}"
+        except Exception:
+            pass  # 썸네일 실패해도 업로드 자체는 성공
+
+    file_size = os.path.getsize(local_path) if local_path and os.path.exists(local_path) else 0
 
     media = Media(
         filename=safe_name,
-        filepath=filepath,
+        filepath=url,  # 공개 URL 저장
         mimetype=file.mimetype,
-        size=os.path.getsize(filepath),
+        size=file_size,
         uploaded_by=int(get_jwt_identity()),
+        meta_data={"thumbnail_url": thumb_url} if thumb_url else None,
     )
     db.session.add(media)
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        if os.path.exists(thumb_path):
-            os.remove(thumb_path)
+        storage.delete(url)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
+
     return jsonify({"success": True, "data": media.to_dict(), "error": ""}), 201
 
 
