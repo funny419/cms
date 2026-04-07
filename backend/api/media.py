@@ -1,6 +1,7 @@
 import os
 import uuid
 
+import magic
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from PIL import Image
@@ -15,6 +16,7 @@ from storage import UPLOAD_FOLDER, get_storage
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 THUMBNAIL_SIZE = (300, 300)
 
 
@@ -30,6 +32,15 @@ def upload_file() -> tuple:
     file = request.files["file"]
     if not file.filename or not _allowed_file(file.filename):
         return jsonify({"success": False, "data": {}, "error": "Invalid file type"}), 400
+
+    # magic bytes 검증 (실제 파일 시그니처 확인)
+    header = file.read(1024)
+    file.seek(0)
+    detected_mime = magic.from_buffer(header, mime=True)
+    if detected_mime not in ALLOWED_MIME_TYPES:
+        return jsonify(
+            {"success": False, "data": {}, "error": "허용되지 않는 파일 형식입니다."}
+        ), 400
 
     safe_name = secure_filename(file.filename)
     if not safe_name:

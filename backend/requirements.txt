@@ -9,6 +9,8 @@ cryptography
 werkzeug
 gunicorn
 Pillow>=10.0.0
+python-magic
+flask-limiter
 ruff
 mypy
 pytest

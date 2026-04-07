@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
+from extensions import limiter
 from models import Comment, Follow, Post, User
 
 auth_bp = Blueprint("auth", __name__)
@@ -40,6 +41,7 @@ def register() -> tuple:
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login() -> tuple:
     data = request.get_json()
     if not data:

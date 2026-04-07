@@ -15,6 +15,7 @@ class TestConfig:
     STORAGE_BACKEND = "local"
     UPLOAD_FOLDER = "/tmp/cms_test_uploads"
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    RATELIMIT_ENABLED = False
 
 
 @pytest.fixture(scope="session")

@@ -6,7 +6,7 @@ from flask_migrate import upgrade as db_upgrade
 
 from config import DevelopmentConfig, ProductionConfig
 from database import db
-from extensions import jwt, migrate
+from extensions import jwt, limiter, migrate
 
 
 def create_app(config_class=None):
@@ -24,6 +24,7 @@ def create_app(config_class=None):
     CORS(app, origins=["http://localhost:5173"])
     migrate.init_app(app, db)
     jwt.init_app(app)
+    limiter.init_app(app)
 
     # 앱 시작 시 마이그레이션 자동 적용
     # 테이블이 이미 존재하는 경우(alembic_version 미설정) 경고만 출력하고 계속 진행
