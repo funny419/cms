@@ -26,7 +26,9 @@ export default function SetupWizard() {
   const [adminSubStep, setAdminSubStep] = useState(1); // Step 4: 1=계정, 2=사이트
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [migStatus, setMigStatus] = useState('idle'); // idle | running | success | failed
+  const [migStatus, setMigStatus] = useState(
+    () => localStorage.getItem('wizard_mig_done') === 'true' ? 'success' : 'idle'
+  ); // idle | running | success | failed
   const [migError, setMigError] = useState('');
 
   const [dbForm, setDbForm] = useState({ host: '', port: '3306', user: '', password: '', dbname: '' });
@@ -62,6 +64,7 @@ export default function SetupWizard() {
     (res) => {
       if (res.success) {
         setMigStatus('success');
+        localStorage.setItem('wizard_mig_done', 'true');
         setTimeout(() => { goToStep(4); }, 1200);
       } else {
         setMigStatus('failed');
@@ -127,6 +130,7 @@ export default function SetupWizard() {
       return;
     }
     localStorage.removeItem('wizard_step');
+    localStorage.removeItem('wizard_mig_done');
     goToStep(5);
   };
 
@@ -258,8 +262,17 @@ export default function SetupWizard() {
               </div>
             )}
             {migStatus === 'success' && (
-              <div style={{ ...styles.statusBox, color: '#22c55e' }}>
-                <span>✓ 마이그레이션 완료 — 다음 단계로 이동합니다.</span>
+              <div>
+                <div style={{ ...styles.statusBox, color: '#22c55e' }}>
+                  <span>✓ 마이그레이션 완료</span>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={styles.btn}
+                  onClick={() => goToStep(4)}
+                >
+                  다음 단계로
+                </button>
               </div>
             )}
             {migStatus === 'failed' && (
