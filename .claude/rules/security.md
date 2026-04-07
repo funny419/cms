@@ -16,7 +16,7 @@
 | 4 | #8 | 파일 업로드 크기 제한 없음 (DoS 위험) | LOW→P1 | 간단 | 완료 (commit 13dce39+bd640c4, 2026-04-07) | backend + infra |
 | 5 | #4 | 파일 업로드 MIME magic bytes 미검증 | MEDIUM | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend + frontend + writer |
 | 6 | #5 | Rate Limiting 없음 (로그인 브루트포스 노출) | LOW | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend (Flask-Limiter) |
-| 7 | #7 | X-Forwarded-For 헤더 조작 가능 (visit_logs 통계 오염) | LOW | 간단 | 미수정 | backend 또는 infra (미결정) |
+| 7 | #7 | X-Forwarded-For 헤더 조작 가능 (visit_logs 통계 오염) | LOW | 간단 | 완료 (commit 459b7b3, 2026-04-07) | backend |
 | 8 | #9 | `GET /api/media` editor 전체 미디어 조회 가능 | LOW→P1 | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend |
 | 9 | #6 | JWT 블랙리스트 없음 | LOW | 복잡 | 스팩아웃 확정 (2026-04-07) | — |
 
@@ -36,9 +36,9 @@
 - **#4** `python-magic` 도입, `media.py` magic bytes 검증 추가
 - **#5** Flask-Limiter 적용 — `POST /api/auth/login` 10 per minute 제한
 
-## P3 — 중기 처리 (#7)
+## P3 — 중기 처리 (#7) ✅ 완료 (commit 459b7b3, 2026-04-07)
 
-- **#7** IP 추출 로직 개선 또는 Nginx `real_ip_header` 설정
+- **#7** `get_client_ip()` 헬퍼 추가 — X-Real-IP 우선 사용, Nginx `real_ip_header` 설정은 기존에 이미 적용되어 있었음
 
 ## P4 — 스팩아웃 (#6)
 
