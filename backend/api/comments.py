@@ -173,9 +173,9 @@ def list_comments(post_id: int) -> tuple:
 
 
 @comments_bp.route("/<int:comment_id>/approve", methods=["PUT"])
-@roles_required("admin", "editor")
+@roles_required("admin")
 def approve_comment(comment_id: int) -> tuple:
-    """관리자/편집자 전용 — 댓글 승인."""
+    """관리자 전용 — 댓글 승인."""
     comment: Comment | None = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({"success": False, "data": {}, "error": "Not found"}), 404

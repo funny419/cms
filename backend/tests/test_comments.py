@@ -312,12 +312,13 @@ class TestApproveComment:
         assert res.status_code == 200
         assert res.get_json()["data"]["status"] == "approved"
 
-    def test_editor_can_approve(self, client, app, editor_headers):
+    def test_editor_cannot_approve(self, client, app, editor_headers):
+        """editor는 댓글 승인 불가 (admin 전용)."""
         with app.app_context():
             post_id, _ = make_post_and_user(app, "appr2")
             comment_id = make_guest_comment(app, post_id)
         res = client.put(f"/api/comments/{comment_id}/approve", headers=editor_headers)
-        assert res.status_code == 200
+        assert res.status_code == 403
 
     def test_approve_not_found(self, client, admin_headers):
         res = client.put("/api/comments/99999/approve", headers=admin_headers)

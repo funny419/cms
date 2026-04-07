@@ -13,6 +13,7 @@ class Config:
     """Base Configuration"""
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-prod")
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB
 
     # Database
     # MariaDB Connector/J 사용 권장 (pymysql)

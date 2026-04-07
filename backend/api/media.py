@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from api.decorators import roles_required
 from database import db
-from models import Media
+from models import Media, User
 from storage import UPLOAD_FOLDER, get_storage
 
 media_bp = Blueprint("media", __name__, url_prefix="/api/media")
@@ -79,5 +79,12 @@ def upload_file() -> tuple:
 @media_bp.route("", methods=["GET"])
 @roles_required("admin", "editor")
 def list_media() -> tuple:
-    items = db.session.execute(select(Media)).scalars().all()
+    user_id = int(get_jwt_identity())
+    viewer: User | None = db.session.get(User, user_id)
+    if viewer and viewer.role == "admin":
+        items = db.session.execute(select(Media)).scalars().all()
+    else:
+        items = (
+            db.session.execute(select(Media).where(Media.uploaded_by == user_id)).scalars().all()
+        )
     return jsonify({"success": True, "data": [m.to_dict() for m in items], "error": ""}), 200

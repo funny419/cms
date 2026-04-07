@@ -230,6 +230,14 @@ def get_user_profile(username: str) -> tuple:
     )
 
     d = user.to_dict()
+    # 본인 또는 admin이 아닌 경우 email 제거
+    is_owner = viewer_id is not None and viewer_id == user.id
+    is_admin_viewer = False
+    if not is_owner and viewer_id is not None:
+        viewer = db.session.get(User, viewer_id)
+        is_admin_viewer = viewer is not None and viewer.role == "admin"
+    if not is_owner and not is_admin_viewer:
+        d.pop("email", None)
     d["post_count"] = post_count
     d["follower_count"] = follower_count
     d["following_count"] = following_count
