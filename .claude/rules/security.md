@@ -14,8 +14,8 @@
 | 2 | #2 | 댓글 승인 권한 과다 (`approve_comment` editor도 가능, API 스펙은 admin 전용) | MEDIUM | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend + frontend + writer |
 | 3 | #3 | Wizard `/migrate` 완료 후 미차단 (프로덕션 DB 재마이그레이션 위험) | MEDIUM | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend + frontend + writer |
 | 4 | #8 | 파일 업로드 크기 제한 없음 (DoS 위험) | LOW→P1 | 간단 | 완료 (commit 13dce39+bd640c4, 2026-04-07) | backend + infra |
-| 5 | #4 | 파일 업로드 MIME magic bytes 미검증 | MEDIUM | 보통 | 미수정 | backend + frontend + writer |
-| 6 | #5 | Rate Limiting 없음 (로그인 브루트포스 노출) | LOW | 보통 | 미수정 | backend (Flask-Limiter) |
+| 5 | #4 | 파일 업로드 MIME magic bytes 미검증 | MEDIUM | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend + frontend + writer |
+| 6 | #5 | Rate Limiting 없음 (로그인 브루트포스 노출) | LOW | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend (Flask-Limiter) |
 | 7 | #7 | X-Forwarded-For 헤더 조작 가능 (visit_logs 통계 오염) | LOW | 간단 | 미수정 | backend 또는 infra (미결정) |
 | 8 | #9 | `GET /api/media` editor 전체 미디어 조회 가능 | LOW→P1 | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend |
 | 9 | #6 | JWT 블랙리스트 없음 | LOW | 복잡 | 스팩아웃 확정 (2026-04-07) | — |
@@ -31,10 +31,10 @@
 - **#8** `app.py` — `MAX_CONTENT_LENGTH` 설정 + Nginx `client_max_body_size`
 - **#9** `GET /api/media` — **정책 확정**: admin = 전체 조회, editor = 본인 업로드(`uploaded_by == 현재 유저`)만 조회. `media.py` 쿼리에 권한 분기 추가 (P3→P1 격상)
 
-## P2 — 단기 처리 (#4, #5)
+## P2 — 단기 처리 (#4, #5) ✅ 완료 (commit 31c3cbf, 2026-04-07)
 
-- **#4** `python-magic` 또는 `imghdr` 도입, `media.py` magic bytes 검증 추가
-- **#5** Rate Limiting — **Flask-Limiter (backend 레이어) 확정** (`flask-limiter` 패키지 도입, 로그인 엔드포인트 우선 적용)
+- **#4** `python-magic` 도입, `media.py` magic bytes 검증 추가
+- **#5** Flask-Limiter 적용 — `POST /api/auth/login` 10 per minute 제한
 
 ## P3 — 중기 처리 (#7)
 
