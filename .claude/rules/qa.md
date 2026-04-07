@@ -2,7 +2,7 @@
 
 **최종 업데이트:** 2026-04-01
 **작성자:** planner-2 (팀원 의견 취합)
-**참조 파일:** `docs/qa/tc_sprint3.md` (인덱스), `tc_user.md`, `tc_admin.md`, `tc_integration.md`
+**참조 파일:** `docs/qa/tc_sprint3.md` (인덱스), `tc_user.md`, `tc_admin.md`, `tc_integration.md`, `tc_wizard.md`
 
 ---
 

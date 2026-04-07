@@ -46,7 +46,6 @@
 - 훅 미설치: `bash scripts/setup-hooks.sh` 실행 (새 클론 후 1회 필요)
 - ruff auto-fix 후 diff가 생김: 정상 — 수정된 파일이 자동 재스테이징되어 같이 커밋됨
 - **ESLint staged files 경로 오류 (커밋 0a034a10 수정)**: `No such file or directory: frontend/src/` — `scripts/pre-commit.sh` line 70에서 `sed 's|^frontend/||'`로 컨테이너 내부 경로(`/app`)로 변환하도록 수정. staged files만 lint하는 방식 적용.
-- **pytest + Flask-Migrate 충돌 (TestConfig)**: SQLite in-memory DB에서 `db_upgrade()` 실행 오류 — `app.py`의 `create_app()` 팩토리에서 `TESTING=True`일 때 `db.upgrade()` 스킵. `conftest.py`에서 `_db.create_all()`로 테이블 생성 (마이그레이션 파일 불필요). Flask-Migrate와 in-memory 테스트 DB 양립 불가.
 - **react-hooks/rules-of-hooks ESLint 에러 (useEffect + setState)**: 비동기 작업 중 unmount 시 setState 호출 제한 — `async/cancelled` 패턴으로 수정: `useEffect(() => { let cancelled = false; const fetchData = async () => { /*...*/ if (!cancelled) setState(...) }; return () => { cancelled = true } })`. BlogHome.jsx 등 비동기 페칭 컴포넌트에 적용.
 
 **Setup Wizard Phase 2:**
@@ -59,10 +58,11 @@
 - Setup Wizard 완료 후에도 `/wizard`로 리다이렉트됨: admin 계정이 없거나 `.env`에 `WIZARD_COMPLETED=true` 미포함 → `POST /api/wizard/setup` 재실행 또는 직접 추가
 
 **팀 에이전트 (멀티 에이전트) 스폰:**
-- `API Error: 500 Invalid model: claude-opus-4-6` — Agent 도구의 `model` 파라미터에 `"opus"` 사용 시 발생. **`"opus"` 사용 금지.**
-- 팀원 스폰 시 반드시 `model: "sonnet"` 명시하거나 model 파라미터를 생략(부모 모델 상속)할 것.
-- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5)
-- `"opus"` 단독 지정은 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+- `API Error: 500 Invalid model: claude-opus-4-6` — `"opus"` 명시 또는 model 파라미터 **생략** 시 모두 발생. **생략도 금지.**
+- **⚠️ 반드시 `model: "sonnet"` 명시할 것 — 생략하면 claude-opus-4-6이 기본값으로 설정되어 500 에러 발생**
+- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5-20251001)
+- `"opus"` 단독 지정 및 model 생략 모두 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+- **올바른 스폰 예시**: `Agent(subagent_type: "general-purpose", model: "sonnet", team_name: "...", name: "...")`
 
 **Playwright E2E 테스트:**
 - 실행 전제: `docker compose up -d` + FE/BE 모두 정상 기동 상태 (`http://localhost:5173` 접속 가능)

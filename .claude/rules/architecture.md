@@ -75,16 +75,19 @@ cms/
 │   ├── api/
 │   │   ├── admin.py             # Admin 대시보드 API (검색/필터/페이지네이션 포함)
 │   │   ├── auth.py              # 인증
+│   │   ├── categories.py        # 카테고리 CRUD API (계층형 3단, Sprint 2)
 │   │   ├── comments.py          # 댓글 + 스팸 필터
 │   │   ├── decorators.py        # roles_required 데코레이터
+│   │   ├── feeds.py             # RSS 2.0 피드 (`/blog/:username/feed.xml`)
+│   │   ├── follows.py           # 팔로우/언팔로우/팔로워/팔로잉 + 이웃 피드 API
+│   │   ├── helpers.py           # 공통 헬퍼 (페이지네이션/응답/게스트인증, BE 리팩토링 Issue #14)
 │   │   ├── media.py             # 파일 업로드 + 썸네일 (storage.py 통해 저장)
 │   │   ├── menus.py             # 동적 메뉴
 │   │   ├── posts.py             # 포스트 CRUD + 소유권 + 검색(q) + 페이지네이션
-│   │   ├── settings.py          # 사이트 설정 (site_skin 포함)
-│   │   ├── follows.py           # 팔로우/언팔로우/팔로워/팔로잉 + 이웃 피드 API
-│   │   ├── feeds.py             # RSS 2.0 피드 (`/blog/:username/feed.xml`)
 │   │   ├── series.py            # 포스트 시리즈 CRUD + 시리즈-포스트 연결 API
+│   │   ├── settings.py          # 사이트 설정 (site_skin 포함)
 │   │   ├── stats.py             # 블로그 통계 + Admin 통계 API
+│   │   ├── tags.py              # 태그 CRUD API (Sprint 2)
 │   │   ├── wizard.py            # Setup Wizard Phase 1 (GET /api/wizard/status, POST /api/wizard/setup)
 │   │   └── wizard_phase2.py     # Setup Wizard Phase 2 (POST /api/wizard/db-test, /env, /migrate)
 │   ├── migrations/              # Flask-Migrate (반드시 git 커밋)
@@ -191,7 +194,7 @@ cms/
 │           └── SetupWizard.jsx  # Setup Wizard 5단계 UI (DB연결→재시작→마이그레이션→계정→완료)
 ├── docs/
 │   ├── superpowers/             # 설계 스펙 및 구현 계획서
-│   ├── qa/                      # QA 테스트 케이스 (tc_sprint3.md 인덱스, tc_user.md, tc_admin.md, tc_integration.md)
+│   ├── qa/                      # QA 테스트 케이스 (tc_sprint3.md 인덱스, tc_user.md, tc_admin.md, tc_integration.md, tc_wizard.md)
 │   ├── INSTALL.md               # 설치 가이드 (Setup Wizard 5단계 포함)
 │   ├── INFRA_ANALYSIS_REPORT.md
 │   └── 멀티유저블로그_UX기획_분석보고서.md
@@ -224,7 +227,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-04-02 (models/ 도메인별 분리 반영 — Issue #21)
+> 마지막 업데이트: 2026-04-06 (인덱스 3개 추가 — Issue #18, api/ 파일 목록 동기화)
 
 ### 테이블 요약
 
@@ -396,7 +399,7 @@ created_at: DateTime server_default=now()
 - `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
 - `posts`: `ix_posts_author_id` (author_id) — stats/feed 쿼리 최적화 (추가: 2026-04-01, commit a5a52cc)
 - `comments`: `idx_comments_post_status_created` (post_id, status, created_at) — 댓글 목록 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
-- `post_tags`: (tag_id) — 태그별 포스트 조회 최적화 / `idx_post_likes_user_id` (user_id) — 좋아요 집계 최적화 (추가: 2026-04-06, commit 83c2b7f)
+- `post_tags`: `idx_post_tags_tag_id` (tag_id) — 태그별 포스트 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `categories`: (parent_id, order), slug
 - `post_likes`: `idx_post_likes_user_id` (user_id) — 좋아요 집계 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `follows`: `idx_follows_following_id` (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01, commit a5a52cc)
@@ -428,7 +431,7 @@ created_at: DateTime server_default=now()
 | `3c1734bf86e6_create_visit_logs_table.py` | visit_logs 테이블 생성 (Phase 3 Stage 1) | ✅ |
 | `79e90ed73d8d_create_series_and_series_posts_tables.py` | series, series_posts 테이블 생성 (Phase 3 Stage 2) | ✅ |
 | `c6ba37f921ea_add_idx_posts_author_id_follows_.py` | ix_posts_author_id + idx_follows_following_id 인덱스 추가 (성능 개선) | ✅ |
-| `5c4b3411ca67_add_comments_post_tags_post_likes_indexes.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
+| `5c4b3411ca67_add_indexes_for_comments_post_tags_post_.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
 
 ### 주의사항
 
