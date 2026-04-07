@@ -2,8 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(docker compose:*)",
+      "Bash(docker:*)",
       "Bash(git:*)",
       "Bash(gh:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
       "Bash(bash scripts/pre-commit.sh)",
       "Bash(bash scripts/setup-hooks.sh)"
     ]
