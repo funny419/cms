@@ -9,6 +9,18 @@ if TYPE_CHECKING:
     from models import Comment
 
 
+def get_client_ip() -> str:
+    """클라이언트 IP 추출 — 조작 불가 순서로 우선순위 적용.
+
+    1. X-Real-IP: Nginx가 설정한 신뢰 가능한 헤더
+    2. request.remote_addr: 직접 연결 IP (조작 불가)
+    """
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()[:45]
+    return (request.remote_addr or "unknown")[:45]
+
+
 def get_pagination_params() -> tuple[int, int, int]:
     """페이지네이션 파라미터 추출 — page, per_page, offset."""
     page = max(1, request.args.get("page", 1, type=int) or 1)

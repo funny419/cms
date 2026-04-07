@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
-from api.helpers import get_pagination_params
+from api.helpers import get_client_ip, get_pagination_params
 from database import db
 from models import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
@@ -249,7 +249,7 @@ def get_post(post_id: int) -> tuple:
             db.session.rollback()
         # VisitLog INSERT 별도 트랜잭션 (실패해도 view_count에 영향 없음)
         try:
-            ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45]
+            ip = get_client_ip()
             referer = (request.headers.get("Referer") or "")[:500] or None
             today = date.today()
             already_visited = db.session.execute(
