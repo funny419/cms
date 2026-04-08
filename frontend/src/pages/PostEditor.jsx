@@ -33,10 +33,14 @@ export default function PostEditor() {
   const quillImageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg,image/png,image/gif,image/webp';
     input.onchange = async () => {
       const file = input.files[0];
       if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        setError('이미지 크기가 10MB를 초과합니다.');
+        return;
+      }
       setImageUploading(true);
       setError('');
       const res = await uploadMedia(token, file);
@@ -72,6 +76,10 @@ export default function PostEditor() {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = '';
+    if (file.size > 10 * 1024 * 1024) {
+      setError('이미지 크기가 10MB를 초과합니다.');
+      return;
+    }
     setImageUploading(true);
     setError('');
     const res = await uploadMedia(token, file);
@@ -199,7 +207,7 @@ export default function PostEditor() {
               🖼 이미지 삽입
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 style={{ display: 'none' }}
                 disabled={imageUploading}
                 onChange={handleMarkdownImageUpload}
