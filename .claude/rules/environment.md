@@ -64,6 +64,22 @@ bash scripts/setup-hooks.sh
 > - 예시: `"mysql+pymysql://funnycms:funnycms@db:3306/cmsdb_test"`
 > - 테스트 DB(`cmsdb_test`)는 `docker compose exec db mariadb -u root -p -e "CREATE DATABASE IF NOT EXISTS cmsdb_test;"` 로 생성
 > - `clean_db` fixture는 각 테스트 후 테이블 데이터 DELETE (FK 순서 역순)
+>
+> ⛔ **픽스처에서 `create_app()` 재호출 금지:**
+> 별도 픽스처(예: `rl_client`)에서 `create_app()`을 재호출하면 새 앱 인스턴스가 TestConfig를 무시하고 기본 Config로 기동 → **운영 DB에 접속하여 test DB 오염** 발생.
+> - 올바른 패턴: `conftest.py`의 `app` 픽스처를 의존성으로 받아 `app.test_client()` 사용
+> ```python
+> # ❌ 금지
+> @pytest.fixture
+> def rl_client():
+>     app = create_app()  # TestConfig 아님 — 운영 DB 오염 위험
+>     return app.test_client()
+>
+> # ✅ 올바른 패턴
+> @pytest.fixture
+> def rl_client(app):  # conftest app 픽스처 재사용
+>     return app.test_client()
+> ```
 
 **수동 실행:**
 ```bash

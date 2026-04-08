@@ -22,6 +22,7 @@
 - 기본 동작: HTML 반환 → FE/E2E에서 JSON 파싱 오류 발생
 - 해결: `app.py`에 `@app.errorhandler(RateLimitExceeded)` 등록하여 JSON 응답 반환 (커밋: fa1fc0c)
 - 테스트 환경: `TestConfig.RATELIMIT_ENABLED = False` 설정으로 rate limit 비활성화
+- **`rl_client` 픽스처에서 `create_app()` 재호출 시 test DB 오염**: 새 앱 인스턴스가 TestConfig를 무시하고 운영 DB에 접속 → `conftest.py`의 `app` 픽스처를 의존성으로 받아 `app.test_client()` 재사용해야 함 (environment.md pytest 정책 참조)
 
 **프로덕션 마이그레이션 오류:**
 - `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
