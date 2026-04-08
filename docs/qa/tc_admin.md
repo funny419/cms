@@ -2,7 +2,7 @@
 
 **대상:** admin 계정
 **작성일:** 2026-03-31
-**총 TC:** 17개
+**총 TC:** 20개
 **환경:** http://localhost:5173 (FE), http://localhost:5000 (BE)
 
 ---
@@ -184,4 +184,73 @@
 - **테스트 단계**:
   1. editor2 토큰으로 `GET /api/blog/editor1/stats` 호출
 - **기대 결과**: 403 Forbidden 반환 (본인 통계만 조회 가능)
+- **우선순위**: High
+
+---
+
+## 7. 보안 검증
+
+### TC-A018 MIME 위장 파일 업로드 차단
+- **전제조건**: editor 로그인, 파일 업로드 권한 보유
+- **테스트 단계**:
+  ```bash
+  TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"editor1","password":"pass123"}' \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['access_token'])")
+
+  # .txt 파일 내용을 image/jpeg Content-Type으로 위장하여 업로드
+  curl -s -X POST http://localhost:5000/api/media \
+    -H "Authorization: Bearer $TOKEN" \
+    -F "file=@/tmp/fake.txt;type=image/jpeg"
+  ```
+  - 사전 준비: `echo "not an image" > /tmp/fake.txt`
+- **기대 결과**: HTTP 400 반환, 파일 저장 안됨
+  - 응답: `{ "success": false, "error": "허용되지 않는 파일 형식입니다." }` (또는 유사 메시지)
+  - `backend/uploads/` 디렉토리에 파일 없음 확인
+- **비고**: `python-magic` 기반 magic bytes 검증 (commit 31c3cbf 구현). `Content-Type` 헤더가 아닌 실제 파일 내용으로 판별
+- **우선순위**: High
+
+### TC-A019 파일 크기 제한 초과 업로드 차단
+- **전제조건**: editor 로그인
+- **테스트 단계**:
+  1. **BE 직접 검증**:
+     ```bash
+     TOKEN=$(curl -s -X POST http://localhost:5000/api/auth/login \
+       -H "Content-Type: application/json" \
+       -d '{"username":"editor1","password":"pass123"}' \
+       | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['access_token'])")
+
+     # 11MB 더미 파일 생성 후 업로드 시도
+     dd if=/dev/zero bs=1024 count=11264 > /tmp/big_file.jpg 2>/dev/null
+     curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:5000/api/media \
+       -H "Authorization: Bearer $TOKEN" \
+       -F "file=@/tmp/big_file.jpg;type=image/jpeg"
+     ```
+  2. **FE 검증** (브라우저):
+     - PostEditor → 이미지 업로드 버튼 → 10MB 초과 파일 선택
+     - 업로드 버튼 클릭 전 에러 메시지 확인
+- **기대 결과**:
+  - BE: HTTP 413 (Request Entity Too Large) 반환
+  - FE: 파일 선택 직후 "파일 크기는 10MB를 초과할 수 없습니다" (또는 유사) 에러 메시지 표시, API 호출 없음
+- **비고**: `config.py MAX_CONTENT_LENGTH=10MB` + Nginx `client_max_body_size 10m` (commit 13dce39/bd640c4 구현). FE 클라이언트 검증은 commit 524f030 구현
+- **우선순위**: High
+
+### TC-A020 Rate Limiting — 로그인 브루트포스 차단
+- **전제조건**: 없음 (비로그인)
+- **테스트 단계**:
+  ```bash
+  # 11회 연속 로그인 시도 (10회까지는 401, 11회째는 429)
+  for i in $(seq 1 11); do
+    CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:5000/api/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"username":"wronguser","password":"wrongpass"}')
+    echo "Request $i: $CODE"
+  done
+  ```
+- **기대 결과**:
+  - 1~10회: HTTP 401 반환 (잘못된 인증 정보)
+  - 11회째: HTTP 429 반환
+  - ⚠️ **BUG-7 (미수정)**: 현재 429 응답이 HTML 형식 (`<!doctype html>...`) — JSON `{"success": false, "error": "Too Many Requests"}` 형식으로 수정 필요
+- **비고**: Flask-Limiter `10/minute` 적용 (commit 31c3cbf 구현). E2E 테스트 실행 시 병렬 워커로 인한 rate limit 조기 발동 현상 확인됨 (BUG-7 관련)
 - **우선순위**: High

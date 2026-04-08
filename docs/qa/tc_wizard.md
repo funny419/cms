@@ -1,8 +1,8 @@
 # Setup Wizard TC (tc_wizard.md)
 
-**대상:** Setup Wizard 초기 설치 플로우 (TC-W001~TC-W012)
+**대상:** Setup Wizard 초기 설치 플로우 (TC-W001~TC-W013)
 **작성일:** 2026-04-01
-**총 TC:** 12개
+**총 TC:** 13개
 **환경:** http://localhost:5173 (FE), http://localhost:5000 (BE)
 
 ---
@@ -183,3 +183,18 @@
   3. `http://localhost:5173/wizard` 재접속
 - **기대 결과:** localStorage에 저장된 step(3 이후)으로 복원됨 (Step 1부터 재시작하지 않음)
 - **우선순위:** Low
+
+---
+
+## 7. 보안 검증
+
+### TC-W013 Wizard 마이그레이션 재실행 차단 (완료 후)
+- **전제조건:** Wizard 완료 상태 (`WIZARD_COMPLETED=true` 환경변수 설정됨)
+- **테스트 단계:**
+  ```bash
+  curl -s -X POST http://localhost:5000/api/wizard/migrate
+  ```
+- **기대 결과:** HTTP 409 반환, `{ "success": false, "data": {}, "error": "Wizard already completed." }`
+  - 프로덕션 DB에 재마이그레이션 실행되지 않음
+- **비고**: `wizard_phase2.py` `run_migration()`에 `WIZARD_COMPLETED` 환경변수 체크 추가 (commit bd640c4 구현). 완료 전(미설정 상태)에서는 정상 200 반환 (TC-W008 참조)
+- **우선순위:** High

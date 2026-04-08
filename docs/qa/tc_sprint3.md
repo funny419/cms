@@ -4,7 +4,7 @@
 **작성자:** QA
 **대상 브랜치:** dev
 **환경:** http://localhost:5173 (FE), http://localhost:5000 (BE API)
-**총 TC:** 88개 (사용자 50 + 어드민 17 + 통합 9 + 위저드 12)
+**총 TC:** 92개 (사용자 50 + 어드민 20 + 통합 9 + 위저드 13)
 
 ---
 
@@ -13,9 +13,9 @@
 | 파일 | 대상 | TC 수 | TC 범위 |
 |------|------|-------|---------|
 | [tc_user.md](tc_user.md) | editor / visitor (비로그인) | 50개 | TC-U001 ~ TC-U050 |
-| [tc_admin.md](tc_admin.md) | admin | 17개 | TC-A001 ~ TC-A017 |
+| [tc_admin.md](tc_admin.md) | admin | 20개 | TC-A001 ~ TC-A020 |
 | [tc_integration.md](tc_integration.md) | 크로스 롤 통합 시나리오 | 9개 | TC-I001 ~ TC-I009 |
-| [tc_wizard.md](tc_wizard.md) | Setup Wizard 초기 설치 플로우 | 12개 | TC-W001 ~ TC-W012 |
+| [tc_wizard.md](tc_wizard.md) | Setup Wizard 초기 설치 플로우 | 13개 | TC-W001 ~ TC-W013 |
 
 ---
 
@@ -86,6 +86,10 @@
 | TC-W010 | TC-W010 | Setup 완료 후 재요청 → 409 |
 | TC-W011 | TC-W011 | 비밀번호 8자 미만 Setup 요청 → 400 |
 | TC-W012 | TC-W012 | Docker 재시작 후 FE step 복원 (localStorage) |
+| — | TC-A018 | MIME 위장 파일 업로드 차단 (보안 #4, 2026-04-08 추가) |
+| — | TC-A019 | 파일 크기 제한 초과 업로드 차단 (보안 #8, 2026-04-08 추가) |
+| — | TC-A020 | Rate Limiting 로그인 브루트포스 차단 (보안 #5, 2026-04-08 추가) |
+| — | TC-W013 | Wizard 마이그레이션 재실행 차단 (보안 #3, 2026-04-08 추가) |
 
 ---
 
@@ -99,3 +103,4 @@
 | BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 완료 (commit 6baed90, QA PASS 2026-04-01) | TC-U012 |
 | BUG-5: VisitLog DB UNIQUE 미구현 | LOW | 의도적 결정 | TC-U013, TC-I007 |
 | BUG-6: 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | TC-U004 |
+| BUG-7: Flask-Limiter 429 응답 HTML 반환 — `{"success":false,"error":"Too Many Requests"}` JSON 형식으로 수정 필요. E2E 병렬 워커 rate limit 조기 발동 문제도 연관 | HIGH | 미수정 | TC-A020 |
