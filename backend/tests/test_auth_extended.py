@@ -1,5 +1,7 @@
 """auth.py 미커버 엔드포인트 추가 테스트."""
 
+import pytest
+
 from database import db as _db
 
 
@@ -270,3 +272,51 @@ class TestGetUserProfileFollowStatus:
         res = client.get("/api/auth/users/editor_user", headers=editor_headers)
         assert res.status_code == 200
         assert res.get_json()["data"]["is_following"] is False
+
+
+# ─── POST /api/auth/login — Rate Limiting (#5) ───────────────────────────────
+
+
+class TestLoginRateLimit:
+    """#5 Flask-Limiter — 로그인 10회 초과 시 429 반환."""
+
+    @pytest.fixture
+    def rl_client(self):
+        """RATELIMIT_ENABLED=True로 초기화된 전용 앱 클라이언트."""
+        from app import create_app
+        from extensions import limiter
+
+        class RateLimitConfig:
+            TESTING = True
+            SQLALCHEMY_DATABASE_URI = "mysql+pymysql://funnycms:dev_app_password@db:3306/cmsdb_test"
+            SQLALCHEMY_ENGINE_OPTIONS = {"execution_options": {"isolation_level": "READ COMMITTED"}}
+            JWT_SECRET_KEY = "test-secret-key"
+            JWT_ACCESS_TOKEN_EXPIRES = False
+            SQLALCHEMY_TRACK_MODIFICATIONS = False
+            SECRET_KEY = "test-secret"
+            STORAGE_BACKEND = "local"
+            UPLOAD_FOLDER = "/tmp/cms_test_uploads"
+            MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+            RATELIMIT_ENABLED = True
+            RATELIMIT_STORAGE_URI = "memory://"
+
+        rl_app = create_app(RateLimitConfig)
+        yield rl_app.test_client()
+
+        # 정리: limiter 비활성화 + 카운터 초기화
+        limiter.enabled = False
+        try:
+            limiter._storage.reset()
+        except Exception:
+            pass
+
+    def test_login_rate_limit_429(self, rl_client):
+        """11회 연속 로그인 시도 → 10/min 초과 → 429 반환."""
+        last_res = None
+        for _ in range(11):
+            last_res = rl_client.post(
+                "/api/auth/login",
+                json={"username": "nonexistent", "password": "wrong"},
+            )
+        assert last_res is not None
+        assert last_res.status_code == 429
