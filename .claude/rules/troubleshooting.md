@@ -18,6 +18,11 @@
 - 테이블 없음 오류: `docker exec cms_backend_prod flask db upgrade` 실행
 - JWT "Subject must be a string": `create_access_token(identity=str(user.id))` 확인
 
+**Flask-Limiter 429 응답:**
+- 기본 동작: HTML 반환 → FE/E2E에서 JSON 파싱 오류 발생
+- 해결: `app.py`에 `@app.errorhandler(RateLimitExceeded)` 등록하여 JSON 응답 반환 (커밋: fa1fc0c)
+- 테스트 환경: `TestConfig.RATELIMIT_ENABLED = False` 설정으로 rate limit 비활성화
+
 **프로덕션 마이그레이션 오류:**
 - `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
 - `Can't locate revision`: DB의 `alembic_version`이 존재하지 않는 마이그레이션 참조 → 서버에서 직접 DB 수정
@@ -73,6 +78,7 @@
 - `Page.goto` timeout 오류: `docker compose ps`로 모든 컨테이너 healthy 상태 확인 후 재실행
 - `AdminPosts` 디바운스 타이밍 이슈: UI 대신 API 레벨로 검증 (TC-A001 — 300ms debounce 우회)
 - `SeriesNav` N/M span 선택 충돌: 전역 Nav의 `이전`/`다음` 링크와 SeriesNav 충돌 → XPath로 `.series-nav` 내부 스코핑
+- **E2E 병렬 실행 시 Rate Limit 발동**: 다수 spec 파일이 `getToken()`으로 직접 로그인 호출 → 10/min 초과. 해결: `globalSetup.js`의 storageState 활용(`readFileSync` 기반 `getTokenFromStorageState`). `.auth/` 디렉토리에 admin.json, editor.json, editor2.json 저장 (커밋: 0b5fe25)
 
 **팀 에이전트 작업 완료 보고 형식:**
 작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
