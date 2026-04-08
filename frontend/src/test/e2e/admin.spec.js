@@ -95,21 +95,23 @@ test('TC-A002: admin 포스트 상태 필터 draft/published', async ({ page }) 
   try {
     await page.goto('/admin/posts');
 
-    // draft 필터 선택 — waitForResponse로 API 응답 완료 대기
+    // draft 필터 선택 — waitForResponse 후 networkidle로 React 렌더링까지 대기
     const statusSelect = page.locator('select').first();
     const draftResp = page.waitForResponse((r) => r.url().includes('/api/admin/posts') && r.url().includes('status=draft'));
     await statusSelect.selectOption('draft');
     await draftResp;
+    await page.waitForLoadState('networkidle');
 
-    await expect(page.getByText('Draft Post E2E')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Draft Post E2E')).toBeVisible({ timeout: 8000 });
     await expect(page.getByText('Published Post E2E')).not.toBeVisible();
 
     // published 필터 선택
     const publishedResp = page.waitForResponse((r) => r.url().includes('/api/admin/posts') && r.url().includes('status=published'));
     await statusSelect.selectOption('published');
     await publishedResp;
+    await page.waitForLoadState('networkidle');
 
-    await expect(page.getByText('Published Post E2E')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Published Post E2E')).toBeVisible({ timeout: 8000 });
     await expect(page.getByText('Draft Post E2E')).not.toBeVisible();
   } finally {
     await deletePost(adminToken, draftId);

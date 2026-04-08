@@ -209,6 +209,7 @@
   - 응답: `{ "success": false, "error": "허용되지 않는 파일 형식입니다." }` (또는 유사 메시지)
   - `backend/uploads/` 디렉토리에 파일 없음 확인
 - **비고**: `python-magic` 기반 magic bytes 검증 (commit 31c3cbf 구현). `Content-Type` 헤더가 아닌 실제 파일 내용으로 판별
+- **검증 결과**: 수동 확인 완료 (2026-04-08) — 400 반환, 파일 저장 안됨 확인
 - **우선순위**: High
 
 ### TC-A019 파일 크기 제한 초과 업로드 차단
@@ -234,6 +235,7 @@
   - BE: HTTP 413 (Request Entity Too Large) 반환
   - FE: 파일 선택 직후 "파일 크기는 10MB를 초과할 수 없습니다" (또는 유사) 에러 메시지 표시, API 호출 없음
 - **비고**: `config.py MAX_CONTENT_LENGTH=10MB` + Nginx `client_max_body_size 10m` (commit 13dce39/bd640c4 구현). FE 클라이언트 검증은 commit 524f030 구현
+- **검증 결과**: 수동 확인 완료 (2026-04-08) — BE 413 반환, FE 에러 메시지 표시 확인
 - **우선순위**: High
 
 ### TC-A020 Rate Limiting — 로그인 브루트포스 차단
@@ -252,5 +254,6 @@
   - 1~10회: HTTP 401 반환 (잘못된 인증 정보)
   - 11회째: HTTP 429 반환
   - ⚠️ **BUG-7 (미수정)**: 현재 429 응답이 HTML 형식 (`<!doctype html>...`) — JSON `{"success": false, "error": "Too Many Requests"}` 형식으로 수정 필요
-- **비고**: Flask-Limiter `10/minute` 적용 (commit 31c3cbf 구현). E2E 테스트 실행 시 병렬 워커로 인한 rate limit 조기 발동 현상 확인됨 (BUG-7 관련)
+- **비고**: Flask-Limiter `10/minute` 적용 (commit 31c3cbf 구현). BUG-7 수정(commit fa1fc0c): 429 응답 HTML → JSON 변환. E2E storageState 패턴 교체(commit 0b5fe25)로 rate limit 조기 발동 해소
+- **검증 결과**: 수동 확인 완료 (2026-04-08) — 11회째 429 JSON 응답 확인
 - **우선순위**: High

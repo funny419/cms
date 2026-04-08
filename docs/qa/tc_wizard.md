@@ -197,4 +197,5 @@
 - **기대 결과:** HTTP 409 반환, `{ "success": false, "data": {}, "error": "Wizard already completed." }`
   - 프로덕션 DB에 재마이그레이션 실행되지 않음
 - **비고**: `wizard_phase2.py` `run_migration()`에 `WIZARD_COMPLETED` 환경변수 체크 추가 (commit bd640c4 구현). 완료 전(미설정 상태)에서는 정상 200 반환 (TC-W008 참조)
+- **검증 결과**: 수동 확인 완료 (2026-04-08) — WIZARD_COMPLETED=true 상태에서 409 반환 확인
 - **우선순위:** High
