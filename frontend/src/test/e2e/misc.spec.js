@@ -6,8 +6,15 @@
  * TC-U042: BUG-3 수정 검증 — 포스트 다중 시리즈 추가 후 GET /api/posts/:id 정상
  * TC-I005: Magazine 레이아웃 설정 후 비로그인 방문자 확인
  */
+import { readFileSync } from 'fs';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { AUTH_PATHS, EDITOR } from './globalSetup.js';
+
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
+}
 
 const API_BASE = 'http://localhost:5000';
 
@@ -17,13 +24,8 @@ let editorToken = null;
 test.use({ storageState: AUTH_PATHS.editor });
 
 test.beforeAll(async () => {
-  const ctx = await playwrightRequest.newContext();
-  const loginRes = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username: EDITOR.username, password: EDITOR.password },
-  });
-  const { data } = await loginRes.json();
-  editorToken = data.access_token;
-  await ctx.dispose();
+  // storageState에서 토큰 추출 (login API 호출 없음)
+  editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
 });
 
 // ─────────────────────────────────────────────

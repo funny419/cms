@@ -10,10 +10,12 @@ const FE_BASE = 'http://localhost:5173';
 // 계정 정보 — dev DB 실계정
 export const ADMIN = { username: 'testuser', password: 'admin1234' };
 export const EDITOR = { username: 'pw_editor', password: 'pwpass123!' };
+export const EDITOR2 = { username: 'pw_editor2', email: 'pw_editor2@test.com', password: 'pwpass456!' };
 
 export const AUTH_PATHS = {
   admin: path.join(__dirname, '.auth/admin.json'),
   editor: path.join(__dirname, '.auth/editor.json'),
+  editor2: path.join(__dirname, '.auth/editor2.json'),
 };
 
 async function saveStorageState(browser, username, password, statePath) {
@@ -58,10 +60,18 @@ export default async function globalSetup() {
     }),
   }).catch(() => {});
 
+  // pw_editor2 계정 없으면 생성 (이미 있으면 무시)
+  await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(EDITOR2),
+  }).catch(() => {});
+
   const browser = await chromium.launch();
 
   await saveStorageState(browser, ADMIN.username, ADMIN.password, AUTH_PATHS.admin);
   await saveStorageState(browser, EDITOR.username, EDITOR.password, AUTH_PATHS.editor);
+  await saveStorageState(browser, EDITOR2.username, EDITOR2.password, AUTH_PATHS.editor2);
 
   await browser.close();
 }

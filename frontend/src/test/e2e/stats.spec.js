@@ -4,12 +4,17 @@
  * TC-U008: period 필터 전환 (7일/30일/90일)
  * TC-U009: 타인 통계 접근 차단 → 403
  */
-import { test, expect, request as playwrightRequest } from '@playwright/test';
+import { readFileSync } from 'fs';
+import { test, expect } from '@playwright/test';
 import { AUTH_PATHS, EDITOR } from './globalSetup.js';
 
 const API_BASE = 'http://localhost:5000';
 
-const EDITOR2 = { username: 'pw_editor2', password: 'pwpass456!' };
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
+}
 
 // editor storageState 사용 (TC-U007, U008)
 test.use({ storageState: AUTH_PATHS.editor });
@@ -66,13 +71,7 @@ test('TC-U008: period 필터 7일/30일/90일 전환 확인', async ({ page }) =
 // TC-U009: 타인 통계 접근 차단 → 403
 // ─────────────────────────────────────────────
 test('TC-U009: editor2 토큰으로 editor1 통계 API → 403', async ({ request }) => {
-  const ctx = await playwrightRequest.newContext();
-  const loginRes = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username: EDITOR2.username, password: EDITOR2.password },
-  });
-  const { data } = await loginRes.json();
-  const editor2Token = data.access_token;
-  await ctx.dispose();
+  const editor2Token = getTokenFromStorageState(AUTH_PATHS.editor2);
 
   const res = await request.get(`${API_BASE}/api/blog/${EDITOR.username}/stats`, {
     headers: { Authorization: `Bearer ${editor2Token}` },

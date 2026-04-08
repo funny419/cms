@@ -7,45 +7,27 @@
  * TC-A016: 비인증 블로그 stats API → 401
  * TC-A017: editor2 토큰으로 editor1 stats API → 403
  */
+import { readFileSync } from 'fs';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
-import { ADMIN, EDITOR } from './globalSetup.js';
+import { ADMIN, AUTH_PATHS, EDITOR } from './globalSetup.js';
 
 const API_BASE = 'http://localhost:5000';
 
-const EDITOR2 = {
-  username: 'pw_editor2',
-  email: 'pw_editor2@test.com',
-  password: 'pwpass456!',
-};
-
 /**
- * 헬퍼: API 토큰 발급
+ * 헬퍼: storageState 파일에서 JWT 토큰 추출 (login API 호출 없음)
  */
-async function getToken(username, password) {
-  const ctx = await playwrightRequest.newContext();
-  const res = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username, password },
-  });
-  const json = await res.json();
-  await ctx.dispose();
-  return json.data.access_token;
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
 }
-
-test.beforeAll(async () => {
-  // pw_editor2 계정 생성 (이미 있으면 무시)
-  await fetch(`${API_BASE}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(EDITOR2),
-  }).catch(() => {});
-});
 
 // ─────────────────────────────────────────────
 // TC-A007: editor → admin 전용 API → 403
 // ─────────────────────────────────────────────
 test('TC-A007: editor 토큰으로 admin 전용 API → 403', async ({ request }) => {
-  const editorToken = await getToken(EDITOR.username, EDITOR.password);
-  const adminToken = await getToken(ADMIN.username, ADMIN.password);
+  const editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
+  const adminToken = getTokenFromStorageState(AUTH_PATHS.admin);
 
   // admin 자신의 ID 조회
   const meCtx = await playwrightRequest.newContext();
@@ -81,8 +63,8 @@ test('TC-A007: editor 토큰으로 admin 전용 API → 403', async ({ request }
 // TC-A012: deactivated 계정 기존 JWT → 403
 // ─────────────────────────────────────────────
 test('TC-A012: deactivated 계정 기존 JWT → 403', async ({ request }) => {
-  const adminToken = await getToken(ADMIN.username, ADMIN.password);
-  const editorToken = await getToken(EDITOR.username, EDITOR.password);
+  const adminToken = getTokenFromStorageState(AUTH_PATHS.admin);
+  const editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
 
   // editor 자신의 ID 조회
   const meCtx = await playwrightRequest.newContext();
@@ -121,7 +103,7 @@ test('TC-A012: deactivated 계정 기존 JWT → 403', async ({ request }) => {
 // TC-A014: editor 토큰으로 admin stats → 403
 // ─────────────────────────────────────────────
 test('TC-A014: editor 토큰으로 admin stats API → 403', async ({ request }) => {
-  const editorToken = await getToken(EDITOR.username, EDITOR.password);
+  const editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
   const res = await request.get(`${API_BASE}/api/admin/stats/${EDITOR.username}`, {
     headers: { Authorization: `Bearer ${editorToken}` },
   });
@@ -132,8 +114,8 @@ test('TC-A014: editor 토큰으로 admin stats API → 403', async ({ request })
 // TC-A015: editor2가 editor1 포스트 삭제 시도 → 403
 // ─────────────────────────────────────────────
 test('TC-A015: editor2 토큰으로 editor1 포스트 삭제 → 403', async ({ request }) => {
-  const editorToken = await getToken(EDITOR.username, EDITOR.password);
-  const editor2Token = await getToken(EDITOR2.username, EDITOR2.password);
+  const editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
+  const editor2Token = getTokenFromStorageState(AUTH_PATHS.editor2);
 
   // editor1이 포스트 생성
   const ctx = await playwrightRequest.newContext();
@@ -176,7 +158,7 @@ test('TC-A016: 비인증 블로그 stats API → 401', async ({ request }) => {
 // TC-A017: editor2 토큰으로 editor1 stats → 403
 // ─────────────────────────────────────────────
 test('TC-A017: editor2 토큰으로 editor1 stats API → 403', async ({ request }) => {
-  const editor2Token = await getToken(EDITOR2.username, EDITOR2.password);
+  const editor2Token = getTokenFromStorageState(AUTH_PATHS.editor2);
   const res = await request.get(`${API_BASE}/api/blog/${EDITOR.username}/stats`, {
     headers: { Authorization: `Bearer ${editor2Token}` },
   });

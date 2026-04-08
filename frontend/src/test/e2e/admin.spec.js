@@ -4,6 +4,7 @@
  * TC-A002: 포스트 목록 상태 필터 (draft/published)
  * TC-A003: Admin — 타인 포스트 강제 삭제 (API)
  */
+import { readFileSync } from 'fs';
 import { test, expect, request } from '@playwright/test';
 import { AUTH_PATHS, ADMIN, EDITOR } from './globalSetup.js';
 
@@ -13,16 +14,12 @@ const API_BASE = 'http://localhost:5000';
 test.use({ storageState: AUTH_PATHS.admin });
 
 /**
- * 헬퍼: API 토큰 발급
+ * 헬퍼: storageState 파일에서 JWT 토큰 추출 (login API 호출 없음)
  */
-async function getToken(username, password) {
-  const ctx = await request.newContext();
-  const res = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username, password },
-  });
-  const json = await res.json();
-  await ctx.dispose();
-  return json.data.access_token;
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
 }
 
 /**
@@ -59,7 +56,7 @@ async function deletePost(token, postId) {
 // TC-A001: 포스트 목록 키워드 검색
 // ─────────────────────────────────────────────
 test('TC-A001: admin 포스트 목록 키워드 검색 (API)', async ({ request }) => {
-  const adminToken = await getToken(ADMIN.username, ADMIN.password);
+  const adminToken = getTokenFromStorageState(AUTH_PATHS.admin);
   const postId = await createPost(adminToken, { title: 'Flask Tutorial', status: 'published' });
 
   try {
@@ -91,7 +88,7 @@ test('TC-A001: admin 포스트 목록 키워드 검색 (API)', async ({ request 
 // TC-A002: 포스트 목록 상태 필터
 // ─────────────────────────────────────────────
 test('TC-A002: admin 포스트 상태 필터 draft/published', async ({ page }) => {
-  const adminToken = await getToken(ADMIN.username, ADMIN.password);
+  const adminToken = getTokenFromStorageState(AUTH_PATHS.admin);
   const draftId = await createPost(adminToken, { title: 'Draft Post E2E', status: 'draft' });
   const publishedId = await createPost(adminToken, { title: 'Published Post E2E', status: 'published' });
 
@@ -124,8 +121,8 @@ test('TC-A002: admin 포스트 상태 필터 draft/published', async ({ page }) 
 // TC-A003: Admin — 타인 포스트 강제 삭제 (API)
 // ─────────────────────────────────────────────
 test('TC-A003: admin이 editor 포스트 강제 삭제 (API)', async ({ request }) => {
-  const adminToken = await getToken(ADMIN.username, ADMIN.password);
-  const editorToken = await getToken(EDITOR.username, EDITOR.password);
+  const adminToken = getTokenFromStorageState(AUTH_PATHS.admin);
+  const editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
 
   // editor 포스트 생성
   const editorPostId = await createPost(editorToken, { title: 'Editor Post To Delete', status: 'published' });

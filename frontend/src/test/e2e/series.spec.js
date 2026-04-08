@@ -5,12 +5,17 @@
  * TC-U003: SeriesNav 이전/다음 탐색 (브라우저)
  * TC-U005: 타인 시리즈 수정/삭제 → 403
  */
+import { readFileSync } from 'fs';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { AUTH_PATHS, EDITOR } from './globalSetup.js';
 
 const API_BASE = 'http://localhost:5000';
 
-const EDITOR2 = { username: 'pw_editor2', password: 'pwpass456!' };
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
+}
 
 let editorToken = null;
 let editor2Token = null;
@@ -21,20 +26,11 @@ let postIds = [];
 test.use({ storageState: AUTH_PATHS.editor });
 
 test.beforeAll(async () => {
+  // storageState에서 토큰 추출 (login API 호출 없음)
+  editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
+  editor2Token = getTokenFromStorageState(AUTH_PATHS.editor2);
+
   const ctx = await playwrightRequest.newContext();
-
-  // 토큰 발급
-  const loginRes = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username: EDITOR.username, password: EDITOR.password },
-  });
-  const { data: ld } = await loginRes.json();
-  editorToken = ld.access_token;
-
-  const login2Res = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username: EDITOR2.username, password: EDITOR2.password },
-  });
-  const { data: ld2 } = await login2Res.json();
-  editor2Token = ld2.access_token;
 
   // 포스트 3개 생성
   for (let i = 1; i <= 3; i++) {

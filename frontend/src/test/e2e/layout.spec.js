@@ -5,8 +5,15 @@
  * TC-U024: 레이아웃 Photo (C) 적용 — grid 컨테이너 표시
  * TC-U025: 레이아웃 설정 유지 (새로고침)
  */
+import { readFileSync } from 'fs';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { AUTH_PATHS, EDITOR } from './globalSetup.js';
+
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
+}
 
 const API_BASE = 'http://localhost:5000';
 const EDITOR_BLOG = `/blog/${EDITOR.username}`;
@@ -19,15 +26,11 @@ let testPostId = null;
 test.use({ storageState: AUTH_PATHS.editor });
 
 test.beforeAll(async () => {
-  // editor 토큰 발급
-  const ctx = await playwrightRequest.newContext();
-  const loginRes = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username: EDITOR.username, password: EDITOR.password },
-  });
-  const { data } = await loginRes.json();
-  editorToken = data.access_token;
+  // storageState에서 토큰 추출 (login API 호출 없음)
+  editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
 
   // 레이아웃 검증용 포스트 생성 (Magazine/Photo 레이아웃은 포스트 필요)
+  const ctx = await playwrightRequest.newContext();
   const postRes = await ctx.post(`${API_BASE}/api/posts`, {
     headers: { Authorization: `Bearer ${editorToken}` },
     data: {

@@ -6,29 +6,24 @@
  * TC-U034: 피드 — private 포스트 미노출
  * TC-I002: 팔로우 후 피드 visibility 필터 (public+members_only 노출, private 미노출)
  */
+import { readFileSync } from 'fs';
 import { test, expect, request as playwrightRequest } from '@playwright/test';
-import { EDITOR } from './globalSetup.js';
+import { AUTH_PATHS, EDITOR } from './globalSetup.js';
 
 const API_BASE = 'http://localhost:5000';
-
-const EDITOR2 = { username: 'pw_editor2', password: 'pwpass456!' };
 
 let editorToken = null;
 let editor2Token = null;
 
-async function getToken(username, password) {
-  const ctx = await playwrightRequest.newContext();
-  const res = await ctx.post(`${API_BASE}/api/auth/login`, {
-    data: { username, password },
-  });
-  const json = await res.json();
-  await ctx.dispose();
-  return json.data.access_token;
+function getTokenFromStorageState(authPath) {
+  const state = JSON.parse(readFileSync(authPath, 'utf8'));
+  const ls = state.origins?.[0]?.localStorage ?? [];
+  return ls.find((x) => x.name === 'token')?.value;
 }
 
 test.beforeAll(async () => {
-  editorToken = await getToken(EDITOR.username, EDITOR.password);
-  editor2Token = await getToken(EDITOR2.username, EDITOR2.password);
+  editorToken = getTokenFromStorageState(AUTH_PATHS.editor);
+  editor2Token = getTokenFromStorageState(AUTH_PATHS.editor2);
 
   // 혹시 남아있는 팔로우 관계 정리
   await fetch(`${API_BASE}/api/users/${EDITOR.username}/follow`, {
