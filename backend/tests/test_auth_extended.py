@@ -320,3 +320,7 @@ class TestLoginRateLimit:
             )
         assert last_res is not None
         assert last_res.status_code == 429
+        body = last_res.get_json()
+        assert body is not None, "429 응답이 JSON이어야 합니다 (HTML 불가)"
+        assert body["success"] is False
+        assert "error" in body

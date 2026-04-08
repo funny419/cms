@@ -36,6 +36,13 @@ def create_app(config_class=None):
                 print(f"[WARNING] DB migration skipped: {e}")
                 print("[WARNING] Run 'flask db stamp head' on the server to fix this.")
 
+    # Rate Limit 초과 시 JSON 응답 (기본값 HTML → API 포맷으로 변환)
+    from flask_limiter.errors import RateLimitExceeded
+
+    @app.errorhandler(RateLimitExceeded)
+    def handle_rate_limit(e: RateLimitExceeded) -> tuple:
+        return jsonify({"success": False, "data": {}, "error": "Too Many Requests"}), 429
+
     # 기본 라우트 (Health Check)
     @app.route("/health")
     def health_check():
