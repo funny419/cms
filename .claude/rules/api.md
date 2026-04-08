@@ -27,7 +27,7 @@
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `POST /api/auth/register` | 공개 | 회원가입. 요청: `username`, `email`, `password`. 생성 role: editor |
-| `POST /api/auth/login` | 공개 | 로그인. 요청: `username`, `password`. 응답: `access_token`, `user` |
+| `POST /api/auth/login` | 공개 | 로그인. 요청: `username`, `password`. 응답: `access_token`, `user`. **Rate Limit: 10회/분** 초과 시 429 반환 (Flask-Limiter, 2026-04-07) |
 | `GET /api/auth/me` | 로그인 | 현재 사용자 조회. 응답: id, username, email, role, bio, avatar_url, blog_title, blog_color, website_url, social_links, blog_layout, banner_image_url, created_at |
 | `PUT /api/auth/me` | 로그인 | 프로필 수정. 요청: username, email, bio, avatar_url, blog_title, blog_color(#rrggbb 형식), website_url, social_links(JSON), blog_layout(default\|compact\|magazine\|photo), banner_image_url |
 | `GET /api/auth/users/:username` | 공개 | 유저 블로그 프로필 조회. 응답: User 전체 필드 + post_count, follower_count, following_count, is_following(선택적JWT), total_view_count, total_comment_count. **비로그인 접근 시 email 필드 제외** (보안 수정 2026-04-07, commit bd640c4). 404: 없음/비활성화된 사용자 |
@@ -75,7 +75,7 @@
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `GET /api/media` | editor/admin | 미디어 목록 (응답: `url`, `thumbnail_url` 포함). admin=전체 조회, editor=본인 업로드만 조회 (보안 수정 2026-04-07, commit bd640c4) |
-| `POST /api/media` | editor/admin | 파일 업로드. 응답: `{ url: "/uploads/...", thumbnail_url: "/uploads/thumb_..." }` |
+| `POST /api/media` | editor/admin | 파일 업로드. 허용 MIME: image/jpeg, image/png, image/gif, image/webp (magic bytes 검증, 2026-04-07). 10MB 초과 시 413. 응답: `{ url: "/uploads/...", thumbnail_url: "/uploads/thumb_..." }` |
 
 ### 어드민 API
 
