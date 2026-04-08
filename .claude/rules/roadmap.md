@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-07
-> 최근 완료: 보안 이슈 9개 전체 처리 (P1~P3 수정 + P6 스팩아웃 확정)
+> 마지막 업데이트: 2026-04-08
+> 최근 완료: 보안 테스트 보강 + PostEditor 파일 검증 + 인덱스 마이그레이션 2개 + BUG-7 수정
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
@@ -65,6 +65,10 @@
 | **Setup Wizard (Phase 1+2)** | **Phase 1: `GET /api/wizard/status` + `POST /api/wizard/setup`. Phase 2: `POST /api/wizard/db-test` (4종 오류 분류) + `POST /api/wizard/env` (.env 동적 생성, chmod 0o600) + `POST /api/wizard/migrate` (already exists→stamp+retry, Multiple head→409). FE: SetupWizard.jsx 5단계 + localStorage step 복원. docker-compose.yml: depends_on service_started+required:false. 커밋: 7024855(P1), 3a3f3ae(docker), d3a28bd(BE), 7cfd47d(FE)** |
 | **모델 파일 도메인별 분리** | **`models/schema.py` 단일 480줄 파일 → `models/` 디렉토리 10개 파일 분리 (Issue #21). base.py/user.py/post.py/comment.py/media.py/category.py/tag.py/series.py/option.py/constants.py + __init__.py re-export. 커밋: d02d633, 68bbc24** |
 | **보안 강화** | **보안 이슈 9개 전체 처리 (2026-04-07). P1: #1 이메일 노출 제거, #2 댓글 승인 권한(admin 전용), #3 Wizard /migrate 차단, #8 파일 업로드 크기 제한, #9 미디어 조회 권한 분리(admin=전체/editor=본인). P2: #4 MIME magic bytes 검증(python-magic), #5 Flask-Limiter(POST /login 10/min). P3: #7 get_client_ip() X-Real-IP 우선 사용. #6 JWT 블랙리스트 스팩아웃 확정. 커밋: bd640c4/13dce39/31c3cbf/459b7b3** |
+| **보안 테스트 보강** | **pytest 319→327개 (+8). Flask-Limiter/MIME/IP추출/미디어권한 통합 테스트 추가. 커밋: 776bc16** |
+| **PostEditor 파일 검증** | **파일 input accept 속성 + 10MB 클라이언트 사이드 크기 제한 추가. 커밋: 524f030** |
+| **DB 인덱스 추가** | **visit_logs.idx_visit_logs_visited_at + posts.idx_posts_status_visibility_created 복합 인덱스. 마이그레이션: 5d92b5bbdf0c. 커밋: e9d5398** |
+| **BUG-7 수정** | **Flask-Limiter 429 HTML 응답 → JSON 변환 (BE: fa1fc0c). E2E getToken→storageState 교체로 rate limit 조기 발동 방지 (E2E: 0b5fe25). 37 passed** |
 
 ### 미구현
 

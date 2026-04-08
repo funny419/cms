@@ -103,4 +103,4 @@
 | BUG-4: VisitLog 예외 시 view_count 롤백 | LOW | 완료 (commit 6baed90, QA PASS 2026-04-01) | TC-U012 |
 | BUG-5: VisitLog DB UNIQUE 미구현 | LOW | 의도적 결정 | TC-U013, TC-I007 |
 | BUG-6: 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | TC-U004 |
-| BUG-7: Flask-Limiter 429 응답 HTML 반환 — `{"success":false,"error":"Too Many Requests"}` JSON 형식으로 수정 필요. E2E 병렬 워커 rate limit 조기 발동 문제도 연관 | HIGH | 미수정 | TC-A020 |
+| BUG-7: Flask-Limiter 429 응답 HTML 반환 — `{"success":false,"error":"Too Many Requests"}` JSON 형식으로 수정 필요. E2E 병렬 워커 rate limit 조기 발동 문제도 연관 | HIGH | 완료 (commit fa1fc0c BE + 0b5fe25 E2E, 2026-04-08) | TC-A020 |
