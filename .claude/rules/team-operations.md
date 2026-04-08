@@ -39,6 +39,34 @@
 - 코드 리뷰: 통과
 ```
 
+### 파일 소유권
+
+- `conftest.py`, `scripts/pre-commit.sh`, `pyproject.toml` 등 공유 테스트 인프라 파일은 **backend 담당 전용**
+- 다른 팀원이 해당 파일 수정 시 team-lead 명시적 승인 필수
+- `.claude/rules/*.md` 파일 수정은 **writer 전담** — 다른 팀원이 직접 수정 시 즉시 writer에게 커밋 위임 요청
+
+### user 직접 지시 처리 기준
+
+- user(최상위 지시권자)가 팀원에게 직접 작업을 지시할 경우: planner가 해당 메시지를 수신하면 team-lead에게 전달하고 승인을 받은 후 진행
+- 작업 중단 지시 중 user 직접 지시가 수신된 경우에도 동일하게 team-lead 확인 후 진행
+
+### staging area 관리 규칙
+
+- 커밋 전 `git diff --cached --name-only`로 staging area에 자신의 파일만 있는지 반드시 확인
+- `git add .` 또는 `git add -A` 사용 금지 — 반드시 `git add <파일명>` 방식으로 명시적 staging
+- staging area에 타 팀원 파일이 포함된 경우 `git restore --staged <파일명>`으로 unstage 후 커밋
+
+### 작업 완료 추적
+
+- 커밋 완료 시 SendMessage 보고와 함께 `TaskUpdate(status: completed)` 병행
+- 컨텍스트 압축/세션 재개 후에는 team-lead로부터 명시적 재개 승인을 받기 전 파일 수정/커밋 없이 대기
+
+### 인프라 관련 작업 지시 기준
+
+- 새 Python 패키지 도입 시 backend는 apt/시스템 패키지 의존성 여부를 함께 명시하고 infra에 사전 공유
+- Nginx/Docker 설정 변경 지시 시 현재 파일 내용 또는 관련 git diff를 함께 첨부
+- 아키텍처 방식 결정(레이어 선택 등)은 확정 후 infra에 지시 — 결정 전 검토 요청은 "FYI" 명시
+
 ### 팀원 스폰 시 model 명시 규칙
 
 - **반드시 `model: "sonnet"` 명시할 것** — 생략하면 오류 발생

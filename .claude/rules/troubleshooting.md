@@ -24,6 +24,47 @@
 - 테스트 환경: `TestConfig.RATELIMIT_ENABLED = False` 설정으로 rate limit 비활성화
 - **`rl_client` 픽스처에서 `create_app()` 재호출 시 test DB 오염**: 새 앱 인스턴스가 TestConfig를 무시하고 운영 DB에 접속 → `conftest.py`의 `app` 픽스처를 의존성으로 받아 `app.test_client()` 재사용해야 함 (environment.md pytest 정책 참조)
 
+**pytest DB 격리 표준 (clean_db fixture 정책):**
+- `DELETE FROM` 사용 금지 — auto_increment 미리셋으로 FK 위반 위험 있음
+- `TRUNCATE TABLE` 사용 (auto_increment 리셋 + 속도 빠름)
+- FK_CHECKS=0 설정 후 TRUNCATE → FK_CHECKS=1 복원 순서 필수
+- raw connection 또는 SQLAlchemy `text()` 방식으로 실행
+
+**app.app_context() 중첩 금지:**
+- `app(scope=session)` 픽스처가 이미 context를 열고 있으면 개별 테스트/픽스처에서 `with app.app_context():` 재사용 금지
+- 불가피하게 중첩이 필요한 경우 주석으로 이유 명시 필수
+
+**cmsdb_test 단일 프로세스 규칙:**
+- pytest 실행 전 `pgrep pytest`로 기존 프로세스 확인 필수
+- 백그라운드 pytest 실행 중 새 실행 시작 금지 (`-n auto` 병렬 옵션 금지)
+- 테스트 DB 직접 조작 스크립트(`docker compose exec backend python3 -c "..."`) 사용 금지
+
+**cmsdb_test 메타데이터 락 데드락 (cms_db CPU 폭주):**
+- **증상**: `docker stats cms_db`에서 CPU 100% 이상 지속, `SHOW FULL PROCESSLIST`에서 `Waiting for table metadata lock` / `Waiting for schema metadata lock` 세션 다수
+- **원인**: pytest를 동시에 여러 프로세스로 실행하거나, 이전 테스트 세션이 비정상 종료되어 열린 트랜잭션/커넥션이 남아 `DROP TABLE`/`DROP DATABASE` 체인 데드락 발생
+- **DB 락 데드락 발생 시 처리 순서:**
+  1. `docker compose exec db mariadb -u root -p` → `SHOW FULL PROCESSLIST;`로 락 확인
+  2. `KILL <process_id>;`로 미종료 트랜잭션 해제
+  3. 완전 초기화: `DROP DATABASE cmsdb_test; CREATE DATABASE cmsdb_test;`
+  4. pytest 단일 프로세스로 재실행
+  ```bash
+  # 락 대기 세션 확인
+  docker compose exec db mariadb -u root -p -e "SHOW FULL PROCESSLIST;"
+  # 막힌 세션 ID 개별 종료 (예: ID 2150, 2151)
+  docker compose exec db mariadb -u root -p -e "KILL 2150; KILL 2151;"
+  # CPU 정상화 확인
+  docker stats cms_db --no-stream
+  ```
+
+**마이그레이션 + 인덱스 추가 커밋 체크리스트:**
+1. DB 완전 초기화 후 pytest 1회 실행 → 전체 passed 확인
+2. pytest 2회 연속 실행 → 동일 결과 확인 (재현 안정성 검증)
+3. 두 번 모두 통과 후 commit
+
+**pre-commit 실패 에스컬레이션 기준:**
+- 동일 오류로 2회 이상 실패 시 → 독자 해결 금지, team-lead에게 즉시 보고
+- 공유 인프라 파일(`conftest.py` 등) 수정은 team-lead 명시적 승인 후에만 허용
+
 **프로덕션 마이그레이션 오류:**
 - `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
 - `Can't locate revision`: DB의 `alembic_version`이 존재하지 않는 마이그레이션 참조 → 서버에서 직접 DB 수정
@@ -80,6 +121,21 @@
 - `AdminPosts` 디바운스 타이밍 이슈: UI 대신 API 레벨로 검증 (TC-A001 — 300ms debounce 우회)
 - `SeriesNav` N/M span 선택 충돌: 전역 Nav의 `이전`/`다음` 링크와 SeriesNav 충돌 → XPath로 `.series-nav` 내부 스코핑
 - **E2E 병렬 실행 시 Rate Limit 발동**: 다수 spec 파일이 `getToken()`으로 직접 로그인 호출 → 10/min 초과. 해결: `globalSetup.js`의 storageState 활용(`readFileSync` 기반 `getTokenFromStorageState`). `.auth/` 디렉토리에 admin.json, editor.json, editor2.json 저장 (커밋: 0b5fe25)
+- **E2E 타이밍 보장 패턴 표준**: `waitForResponse` 단독 사용 금지 — 아래 패턴으로 통일
+  ```javascript
+  await someResponse;
+  await page.waitForLoadState('networkidle');
+  await expect(element).toBeVisible({ timeout: 8000 });
+  ```
+- **E2E 코드 패턴 변경 시 사전 grep 필수**: 수정 전 대상 파일 전체 확인
+  ```bash
+  grep -r "패턴명" frontend/src/test/e2e/
+  ```
+- **E2E 파일 커밋 전 ESLint 사전 검증**:
+  ```bash
+  docker compose exec frontend npx eslint src/test/e2e/<파일명>.js
+  ```
+  E2E 파일에서 `Buffer` 대신 `Uint8Array` 사용 관례 확립 (ESLint 브라우저 환경 호환)
 
 **팀 에이전트 작업 완료 보고 형식:**
 작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
