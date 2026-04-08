@@ -93,7 +93,7 @@ docker compose exec db mariadb -u funnycms -pfunnycms cmsdb \
 
 ### 현재 이슈 목록
 
-> **최종 업데이트:** 2026-04-01 (tc_sprint3.md 기준 동기화)
+> **최종 업데이트:** 2026-04-08 (BUG-7 완료 반영)
 
 | BUG | 심각도 | 상태 | 설명 |
 |-----|--------|------|------|
@@ -103,6 +103,7 @@ docker compose exec db mariadb -u funnycms -pfunnycms cmsdb \
 | BUG-4 | LOW | 완료 (commit 6baed90, QA PASS 2026-04-01) | VisitLog 예외 시 view_count만 증가하는 롤백 문제 |
 | BUG-5 | LOW | 의도적 결정 | VisitLog DB UNIQUE 미구현 — BE 레벨 중복 방지로 대체 |
 | BUG-6 | MEDIUM | 완료 (commit 176cef6, QA PASS 2026-04-01) | 시리즈 라우트 미등록 (`/blog/:username/series/:slug` App.jsx 누락) |
+| BUG-7 | HIGH | 완료 (commit fa1fc0c+0b5fe25, QA PASS 2026-04-08) | Flask-Limiter 429 응답 HTML 반환 → JSON 변환 + E2E storageState 패턴 교체 |
 
 ---
 
