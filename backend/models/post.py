@@ -41,7 +41,11 @@ class Post(Base):
     )
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    __table_args__ = (Index("ix_posts_author_id", "author_id"),)
+    __table_args__ = (
+        Index("ix_posts_author_id", "author_id"),
+        Index("idx_posts_status_visibility_created", "status", "visibility", "created_at"),
+        Index("ft_posts_search", "title", "content", "excerpt", mysql_prefix="FULLTEXT"),
+    )
 
     author: Mapped["User"] = relationship(back_populates="posts")
     category: Mapped[Optional["Category"]] = relationship("Category", back_populates="posts")
@@ -117,4 +121,7 @@ class VisitLog(Base):
     visited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     referer: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    __table_args__ = (Index("idx_visit_post_time", "post_id", "visited_at"),)
+    __table_args__ = (
+        Index("idx_visit_post_time", "post_id", "visited_at"),
+        Index("idx_visit_logs_visited_at", "visited_at"),
+    )
