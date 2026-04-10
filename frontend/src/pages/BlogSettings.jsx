@@ -15,7 +15,7 @@ const TAB_DESIGN = 'design';
 
 export default function BlogSettings() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user: authUser } = useAuth();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +94,7 @@ export default function BlogSettings() {
     if (res.success) {
       setUser(res.data);
       try {
-        const stored = JSON.parse(localStorage.getItem('user') || '{}');
+        const stored = authUser || {};
         localStorage.setItem('user', JSON.stringify({ ...stored, ...res.data }));
       } catch {} // eslint-disable-line no-empty
       setMessage('저장됐습니다.');

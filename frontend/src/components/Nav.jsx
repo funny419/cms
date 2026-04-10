@@ -5,11 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 export default function Nav() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    logout();
     navigate('/login');
   };
 

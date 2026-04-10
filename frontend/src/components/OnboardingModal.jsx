@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function OnboardingModal() {
-  const [show, setShow] = useState(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const done = localStorage.getItem('onboarding_done');
-      return !!(user && user.role === 'editor' && !done && !user.bio && !user.avatar_url);
-    } catch {
-      return false;
-    }
-  });
+  const { user } = useAuth();
+  const done = localStorage.getItem('onboarding_done');
+  const [show, setShow] = useState(
+    !!(user && user.role === 'editor' && !done && !user.bio && !user.avatar_url)
+  );
   const navigate = useNavigate();
 
   if (!show) return null;

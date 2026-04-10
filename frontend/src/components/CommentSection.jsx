@@ -1,6 +1,7 @@
 // frontend/src/components/CommentSection.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { listComments, createComment, updateComment, deleteComment } from '../api/comments';
 
 function formatDate(iso) {
@@ -364,7 +365,7 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
 export default function CommentSection({ postId, user }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   useEffect(() => {
     const load = async () => {

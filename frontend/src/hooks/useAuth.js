@@ -4,5 +4,9 @@ export function useAuth() {
     try { return JSON.parse(localStorage.getItem('user')); }
     catch { return null; }
   })();
-  return { token, user, isLoggedIn: Boolean(token) };
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
+  return { token, user, isLoggedIn: Boolean(token), logout };
 }
