@@ -24,7 +24,7 @@ class Post(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    slug: Mapped[str] = mapped_column(String(255), index=True)
+    slug: Mapped[str] = mapped_column(String(255), unique=True)
     content: Mapped[Optional[str]] = mapped_column(Text)
     excerpt: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="draft")
