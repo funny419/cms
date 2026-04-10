@@ -32,6 +32,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/blog': {
+        target: backendUrl,
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })
