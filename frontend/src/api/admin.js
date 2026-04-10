@@ -18,9 +18,12 @@ export const adminListPosts = async (token, page = 1, perPage = 20, q = '', stat
   }
 };
 
-export const adminListUsers = async (token) => {
+export const adminListUsers = async (token, page = 1, perPage = 20) => {
   try {
-    const response = await axios.get(`${BASE_URL}/users`, { headers: authHeader(token) });
+    const response = await axios.get(`${BASE_URL}/users`, {
+      headers: authHeader(token),
+      params: { page, per_page: perPage },
+    });
     return response.data;
   } catch (error) {
     return { success: false, error: error.response?.data?.error || 'Failed to fetch users.' };
