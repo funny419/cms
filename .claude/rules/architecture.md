@@ -405,6 +405,7 @@ created_at: DateTime server_default=now()
 - `follows`: `idx_follows_following_id` (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01, commit a5a52cc)
 - `visit_logs`: `idx_visit_logs_visited_at` (visited_at) — 통계 날짜 범위 필터 최적화 (추가: 2026-04-08)
 - `posts`: `idx_posts_status_visibility_created` (status, visibility, created_at DESC) — 목록 조회 복합 인덱스 (추가: 2026-04-08)
+- `series_posts`: `idx_series_posts_post_id` (post_id) — 포스트가 속한 시리즈 역방향 조회 최적화 (추가: 2026-04-10)
 
 **Fulltext 인덱스 (검색):**
 - `posts`: FULLTEXT(title, excerpt, content) — `MATCH ... AGAINST` 쿼리용
@@ -435,6 +436,7 @@ created_at: DateTime server_default=now()
 | `c6ba37f921ea_add_idx_posts_author_id_follows_.py` | ix_posts_author_id + idx_follows_following_id 인덱스 추가 (성능 개선) | ✅ |
 | `5c4b3411ca67_add_indexes_for_comments_post_tags_post_.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
 | `5d92b5bbdf0c_add_indexes_visit_logs_posts.py` | visit_logs.visited_at + posts 복합 인덱스(status, visibility, created_at DESC) 추가 | ✅ |
+| `5523ceeb393f_add_idx_series_posts_post_id.py` | series_posts.post_id 인덱스 추가 (no-op, DB에 이미 적용됨) | ✅ |
 
 ### 주의사항
 

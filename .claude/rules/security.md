@@ -14,7 +14,7 @@
 | 2 | #2 | 댓글 승인 권한 과다 (`approve_comment` editor도 가능, API 스펙은 admin 전용) | MEDIUM | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend + frontend + writer |
 | 3 | #3 | Wizard `/migrate` 완료 후 미차단 (프로덕션 DB 재마이그레이션 위험) | MEDIUM | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend + frontend + writer |
 | 4 | #8 | 파일 업로드 크기 제한 없음 (DoS 위험) | LOW→P1 | 간단 | 완료 (commit 13dce39+bd640c4, 2026-04-07) | backend + infra |
-| 5 | #4 | 파일 업로드 MIME magic bytes 미검증 | MEDIUM | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend + frontend + writer |
+| 5 | #4 | 파일 업로드 MIME magic bytes 미검증 | MEDIUM | 보통 | 완료 (commit 7df59e3, 2026-04-10) — detected_mime 저장, Nginx X-Content-Type-Options nosniff 추가 | backend + frontend + writer |
 | 6 | #5 | Rate Limiting 없음 (로그인 브루트포스 노출) | LOW | 보통 | 완료 (commit 31c3cbf, 2026-04-07) | backend (Flask-Limiter) |
 | 7 | #7 | X-Forwarded-For 헤더 조작 가능 (visit_logs 통계 오염) | LOW | 간단 | 완료 (commit 459b7b3, 2026-04-07) | backend |
 | 8 | #9 | `GET /api/media` editor 전체 미디어 조회 가능 | LOW→P1 | 간단 | 완료 (commit bd640c4, 2026-04-07) | backend |
@@ -33,7 +33,7 @@
 
 ## P2 — 단기 처리 (#4, #5) ✅ 완료 (commit 31c3cbf, 2026-04-07)
 
-- **#4** `python-magic` 도입, `media.py` magic bytes 검증 추가
+- **#4** `python-magic` 도입, `media.py` magic bytes 검증 + `detected_mime` 컬럼 저장. Nginx `X-Content-Type-Options: nosniff` 헤더 추가 (commit 7df59e3, 2026-04-10)
 - **#5** Flask-Limiter 적용 — `POST /api/auth/login` 10 per minute 제한
 
 ## P3 — 중기 처리 (#7) ✅ 완료 (commit 459b7b3, 2026-04-07)

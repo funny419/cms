@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-09
-> 최근 완료: troubleshooting.md + team-operations.md 정책 업데이트 (회고 반영)
+> 마지막 업데이트: 2026-04-10
+> 최근 완료: conftest.py TRUNCATE+FK_CHECKS 테스트 안정화 (8130a86) + media.py detected_mime 저장 + Nginx nosniff (7df59e3) + series_posts.post_id 인덱스 마이그레이션 (0f2501f)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
