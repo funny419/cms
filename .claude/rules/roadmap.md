@@ -1,7 +1,7 @@
 ## 프로젝트 관리
 
 **GitHub Projects:** https://github.com/users/funny419/projects/1
-- Done (88개): 완료된 기능
+- Done (93개): 완료된 기능
 - Todo (1개): 게스트북 (미래 로드맵)
 - 기능 추가/완료 시 상태 업데이트 필요 (`gh project item-edit` 또는 웹 UI)
 
@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-08
-> 최근 완료: 보안 테스트 보강 + PostEditor 파일 검증 + 인덱스 마이그레이션 2개 + BUG-7 수정
+> 마지막 업데이트: 2026-04-09
+> 최근 완료: troubleshooting.md + team-operations.md 정책 업데이트 (회고 반영)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
@@ -69,6 +69,7 @@
 | **PostEditor 파일 검증** | **파일 input accept 속성 + 10MB 클라이언트 사이드 크기 제한 추가. 커밋: 524f030** |
 | **DB 인덱스 추가** | **visit_logs.idx_visit_logs_visited_at + posts.idx_posts_status_visibility_created 복합 인덱스. 마이그레이션: 5d92b5bbdf0c. 커밋: e9d5398** |
 | **BUG-7 수정** | **Flask-Limiter 429 HTML 응답 → JSON 변환 (BE: fa1fc0c). E2E getToken→storageState 교체로 rate limit 조기 발동 방지 (E2E: 0b5fe25). 37 passed** |
+| **운영 정책 문서화** | **troubleshooting.md 8개 항목 추가 (pytest DB격리/TRUNCATE 표준, E2E 타이밍 패턴, pre-commit 에스컬레이션) + team-operations.md 6개 항목 추가 (파일 소유권/스테이징/세션재개/인프라규칙). 커밋: 0ef1ea0** |
 
 ### 미구현
 
