@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from app import create_app  # noqa: E402
@@ -45,6 +47,15 @@ def clean_db(app):
             _db.session.execute(_db.text(f"TRUNCATE TABLE `{table.name}`"))
         _db.session.execute(_db.text("SET FOREIGN_KEY_CHECKS = 1"))
         _db.session.commit()
+
+
+@pytest.fixture(autouse=True)
+def cleanup_uploads():
+    yield
+    uploads_dir = Path("/app/uploads")
+    for f in uploads_dir.iterdir():
+        if f.is_file() and f.name != ".gitkeep":
+            f.unlink()
 
 
 @pytest.fixture(scope="function")
