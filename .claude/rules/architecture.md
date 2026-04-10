@@ -227,7 +227,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-04-08 (인덱스 2개 추가 — visit_logs.visited_at, posts 복합 인덱스)
+> 마지막 업데이트: 2026-04-10 (posts.slug UNIQUE 제약 추가 — #30)
 
 ### 테이블 요약
 
@@ -274,7 +274,7 @@ created_at: DateTime server_default=now()
 id: int (PK)
 author_id: int FK nullable (마이그레이션 d56f01212789에서 nullable 변경)
 title: str(255) NOT NULL
-slug: str(255) INDEX NOT NULL
+slug: str(255) UNIQUE NOT NULL (uq_posts_slug, 마이그레이션 bd7da55c — #30)
 content: Text nullable
 excerpt: Text nullable
 status: str(20) default='draft' [draft, published, scheduled]
@@ -396,7 +396,7 @@ created_at: DateTime server_default=now()
 ### 인덱스 설계
 
 **주요 인덱스:**
-- `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
+- `posts`: `uq_posts_slug` UNIQUE 인덱스 (slug, #30 — 2026-04-10, bd7da55c), (category_id, status) 복합 인덱스 (Sprint 2)
 - `posts`: `ix_posts_author_id` (author_id) — stats/feed 쿼리 최적화 (추가: 2026-04-01, commit a5a52cc)
 - `comments`: `idx_comments_post_status_created` (post_id, status, created_at) — 댓글 목록 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `post_tags`: `idx_post_tags_tag_id` (tag_id) — 태그별 포스트 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
@@ -437,6 +437,7 @@ created_at: DateTime server_default=now()
 | `5c4b3411ca67_add_indexes_for_comments_post_tags_post_.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
 | `5d92b5bbdf0c_add_indexes_visit_logs_posts.py` | visit_logs.visited_at + posts 복합 인덱스(status, visibility, created_at DESC) 추가 | ✅ |
 | `5523ceeb393f_add_idx_series_posts_post_id.py` | series_posts.post_id 인덱스 추가 (no-op, DB에 이미 적용됨) | ✅ |
+| `bd7da55c642e_add_unique_constraint_to_posts_slug.py` | posts.slug UNIQUE 제약 추가 (빈 slug post-{id} 정규화 후 uq_posts_slug 생성, #30) | ✅ |
 
 ### 주의사항
 

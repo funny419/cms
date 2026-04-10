@@ -18,8 +18,8 @@
 | `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가) — `content_format`, `visibility`, `category_id`, `tags[]` 포함. **visibility 접근 제어**: private 글은 작성자/admin만 조회 가능 |
 | `POST /api/posts/:id/like` | editor/admin | 추천 토글 (본인 글 불가, 1인 1추천) |
 | `GET /api/posts/mine` | 로그인 | 내 글 전체. 파라미터: `?page=1&per_page=20` |
-| `POST /api/posts` | editor/admin | 글 작성. 요청: `title`, `content`, `excerpt`, `slug`, `status`, `post_type`, `content_format` ('html'\|'markdown'), `visibility` ('public'\|'members_only'\|'private'), `category_id`, `tags: [id, ...]` |
-| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사). 요청 필드 동일 |
+| `POST /api/posts` | editor/admin | 글 작성. 요청: `title`, `content`, `excerpt`, `slug`, `status`, `post_type`, `content_format` ('html'\|'markdown'), `visibility` ('public'\|'members_only'\|'private'), `category_id`, `tags: [id, ...]`. slug 중복 시 409 |
+| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사). 요청 필드 동일. slug 중복 시 409 (자기 자신 제외) |
 | `DELETE /api/posts/:id` | 소유자/admin | 삭제 (소유권 검사) |
 
 ### 인증 & 사용자 API
@@ -82,7 +82,7 @@
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `GET /api/admin/posts` | admin | 전체 포스트 관리. 파라미터: `?page=1&per_page=20&q=검색어&status=published` (status 필터 포함) |
-| `GET /api/admin/users` | admin | 전체 회원 목록 (deactivated 포함) |
+| `GET /api/admin/users` | admin | 전체 회원 목록 (deactivated 포함). 파라미터: `?page=1&per_page=20`. 응답: `{ items, total, page, per_page, has_more }` |
 | `GET /api/admin/users/:id/posts` | admin | 특정 회원의 포스트 전체 조회 |
 | `GET /api/admin/comments` | admin | 전체 댓글 목록 (post_title 포함). 파라미터: `?page=1&per_page=20&status=pending\|approved\|spam` |
 | `PUT /api/admin/comments/:id/approve` | admin | 게스트 댓글 승인 (pending → approved) |

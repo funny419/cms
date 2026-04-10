@@ -16,7 +16,7 @@
 ## 구현 현황
 
 > 마지막 업데이트: 2026-04-10
-> 최근 완료: conftest.py TRUNCATE+FK_CHECKS 테스트 안정화 (8130a86) + media.py detected_mime 저장 + Nginx nosniff (7df59e3) + series_posts.post_id 인덱스 마이그레이션 (0f2501f)
+> 최근 완료: #29 RSS 피드 nginx/vite 라우팅 수정 (fdfdb58, e86cecb) + #30 posts.slug UNIQUE 제약 + slug 중복 409 (ed5c206, e5d7d13) + #66 AdminUsers 페이지네이션+인피니트스크롤 (2eef8e9, bfe1250) + #31 list_posts N+1 → GROUP BY 단일 쿼리 (37dd1a6)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
@@ -29,7 +29,7 @@
 | 포스트 에디터 이미지 | WYSIWYG: 툴바 이미지 버튼 → 파일 업로드 → Quill에 삽입. Markdown: "🖼 이미지 삽입" 버튼 → `![이미지](url)` 추가 |
 | 포스트 통계 | 조회수(view_count) + 댓글수 + 추천수 — PostList/PostDetail에 표시 |
 | 포스트 추천 | 로그인 사용자 추천/취소 토글, 본인 글 추천 불가, 1인 1추천(DB UniqueConstraint) |
-| 페이지네이션 | Offset 기반 + 인피니트 스크롤 — PostList/MyPosts/AdminPosts/AdminComments 4개 페이지, `useInfiniteScroll` 공통 훅 |
+| 페이지네이션 | Offset 기반 + 인피니트 스크롤 — PostList/MyPosts/AdminPosts/AdminComments/AdminUsers 5개 페이지, `useInfiniteScroll` 공통 훅 |
 | 포스트 검색/필터 | PostList — 제목 키워드 검색(`?q=`, 300ms 디바운스), AdminPosts — 제목 검색 + 상태 필터 |
 | 개인 블로그 | `/my-posts` — 내 글 전체(draft+published), 편집/삭제 |
 | 미디어 | 파일 업로드 + Pillow 썸네일(300×300) + uuid 파일명 + path traversal 방어. `StorageBackend` 추상화 |
@@ -70,6 +70,10 @@
 | **DB 인덱스 추가** | **visit_logs.idx_visit_logs_visited_at + posts.idx_posts_status_visibility_created 복합 인덱스. 마이그레이션: 5d92b5bbdf0c. 커밋: e9d5398** |
 | **BUG-7 수정** | **Flask-Limiter 429 HTML 응답 → JSON 변환 (BE: fa1fc0c). E2E getToken→storageState 교체로 rate limit 조기 발동 방지 (E2E: 0b5fe25). 37 passed** |
 | **운영 정책 문서화** | **troubleshooting.md 8개 항목 추가 (pytest DB격리/TRUNCATE 표준, E2E 타이밍 패턴, pre-commit 에스컬레이션) + team-operations.md 6개 항목 추가 (파일 소유권/스테이징/세션재개/인프라규칙). 커밋: 0ef1ea0** |
+| **RSS 피드 라우팅 수정 (#29)** | **프로덕션 Nginx + 개발 Vite dev server에서 `/blog/:username/feed.xml` → BE 프록시 누락 수정. RSS 리더에 HTML 반환되던 문제 해소. 커밋: fdfdb58(nginx), e86cecb(vite)** |
+| **posts.slug UNIQUE 제약 (#30)** | **`posts.slug` 컬럼 INDEX → UNIQUE 변경 + 마이그레이션(bd7da55c). `POST/PUT /api/posts` slug 중복 시 409 반환 (자기 자신 제외 체크). 커밋: ed5c206(DB), e5d7d13(API)** |
+| **AdminUsers 페이지네이션 (#66)** | **`GET /api/admin/users` 페이지네이션 적용 — 응답 포맷 flat list → `{ items, total, page, per_page, has_more }`. AdminUsers.jsx useInfiniteScroll 훅 적용 + useAuth() 통일. 커밋: 2eef8e9(BE), bfe1250(FE)** |
+| **list_posts N+1 쿼리 개선 (#31)** | **`list_posts()` 포스트 목록 조회 시 N+1 문제 해소 — comment_sq/like_sq scalar_subquery → `outerjoin + GROUP BY` 단일 쿼리. 포스트 20개 기준 추가 쿼리 40회 → 0회. 커밋: 37dd1a6** |
 
 ### 미구현
 
