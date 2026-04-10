@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
-from sqlalchemy import desc, func, insert, or_, select, text
+from sqlalchemy import desc, func, insert, or_, select, text, update
 from sqlalchemy import distinct as sa_distinct
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -231,10 +231,12 @@ def get_post(post_id: int) -> tuple:
         if _viewer and _viewer.role != "admin" and post.author_id != current_user_id:
             return jsonify({"success": False, "data": {}, "error": "접근 권한이 없습니다."}), 403
 
-    # view_count +1 (편집 페이지는 제외)
+    # view_count +1 (편집 페이지는 제외, atomic UPDATE)
     if not skip_count:
-        post.view_count += 1
         try:
+            db.session.execute(
+                update(Post).where(Post.id == post.id).values(view_count=Post.view_count + 1)
+            )
             db.session.commit()  # view_count 먼저 커밋 (VisitLog 실패 영향 없도록)
         except Exception:
             db.session.rollback()
