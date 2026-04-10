@@ -371,6 +371,9 @@ def create_post() -> tuple:
             return error_response("이미 사용 중인 slug입니다.", 409)
 
     # 유효성 검사
+    VALID_STATUS = {"draft", "published", "scheduled"}
+    if data.get("status") and data["status"] not in VALID_STATUS:
+        return error_response("유효하지 않은 status 값입니다.", 400)
     raw_format = data.get("content_format", "html")
     content_format = raw_format if raw_format in ("html", "markdown") else "html"
 
@@ -437,6 +440,8 @@ def update_post(post_id: int) -> tuple:
         "thumbnail_url",
     ):
         if field in data:
+            if field == "status" and data[field] not in ("draft", "published", "scheduled"):
+                continue  # 유효하지 않은 값 무시
             if field == "content_format" and data[field] not in ("html", "markdown"):
                 continue  # 유효하지 않은 값 무시
             if field == "visibility" and data[field] not in ("public", "members_only", "private"):
