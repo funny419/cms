@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required, verify_jwt_in_request
@@ -242,12 +242,16 @@ def get_post(post_id: int) -> tuple:
         try:
             ip = get_client_ip()
             referer = (request.headers.get("Referer") or "")[:500] or None
-            today = date.today()
+            today_start = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            tomorrow_start = today_start + timedelta(days=1)
             already_visited = db.session.execute(
                 select(VisitLog).where(
                     VisitLog.post_id == post.id,
                     VisitLog.ip_address == ip,
-                    func.date(VisitLog.visited_at) == today,
+                    VisitLog.visited_at >= today_start,
+                    VisitLog.visited_at < tomorrow_start,
                 )
             ).scalar_one_or_none()
             if not already_visited:
