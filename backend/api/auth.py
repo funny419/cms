@@ -16,10 +16,15 @@ auth_bp = Blueprint("auth", __name__)
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
 def register() -> tuple:
     data = request.get_json()
     if not data or not data.get("username") or not data.get("email") or not data.get("password"):
         return jsonify({"success": False, "data": {}, "error": "Missing required fields"}), 400
+    if len(data["password"]) < 8:
+        return jsonify(
+            {"success": False, "data": {}, "error": "비밀번호는 8자 이상이어야 합니다."}
+        ), 400
     if db.session.execute(
         select(User).where(User.username == data["username"])
     ).scalar_one_or_none():

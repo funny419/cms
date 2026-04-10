@@ -25,7 +25,7 @@ class TestRegister:
             json={
                 "username": "newuser1",
                 "email": "newuser1@test.com",
-                "password": "pass123",
+                "password": "pass1234",
             },
         )
         assert res.status_code == 201
@@ -43,7 +43,7 @@ class TestRegister:
             json={
                 "username": "dupuser",
                 "email": "new@test.com",
-                "password": "pass",
+                "password": "pass1234",
             },
         )
         assert res.status_code == 400
@@ -57,7 +57,7 @@ class TestRegister:
             json={
                 "username": "newname",
                 "email": "emaildup@test.com",
-                "password": "pass",
+                "password": "pass1234",
             },
         )
         assert res.status_code == 400
