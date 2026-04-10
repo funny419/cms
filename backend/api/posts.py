@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
-from api.helpers import get_client_ip, get_pagination_params
+from api.helpers import error_response, get_client_ip, get_pagination_params
 from database import db
 from models import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
 
@@ -364,6 +364,15 @@ def create_post() -> tuple:
         return jsonify({"success": False, "data": {}, "error": "title is required"}), 400
     author_id: int = int(get_jwt_identity())
 
+    # slug 중복 체크
+    slug: str = data.get("slug", "") or ""
+    if slug:
+        existing_slug: Post | None = db.session.execute(
+            select(Post).where(Post.slug == slug)
+        ).scalar_one_or_none()
+        if existing_slug:
+            return error_response("이미 사용 중인 slug입니다.", 409)
+
     # 유효성 검사
     raw_format = data.get("content_format", "html")
     content_format = raw_format if raw_format in ("html", "markdown") else "html"
@@ -408,6 +417,16 @@ def update_post(post_id: int) -> tuple:
             {"success": False, "data": {}, "error": "본인 글만 수정할 수 있습니다."}
         ), 403
     data: dict = request.get_json() or {}
+
+    # slug 중복 체크 (자기 자신 제외)
+    new_slug: str = data.get("slug", "") or ""
+    if new_slug:
+        conflict: Post | None = db.session.execute(
+            select(Post).where(Post.slug == new_slug, Post.id != post_id)
+        ).scalar_one_or_none()
+        if conflict:
+            return error_response("이미 사용 중인 slug입니다.", 409)
+
     for field in (
         "title",
         "slug",
