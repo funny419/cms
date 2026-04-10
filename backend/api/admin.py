@@ -98,9 +98,29 @@ def admin_reject_comment(comment_id: int) -> tuple:
 @admin_bp.route("/users", methods=["GET"])
 @roles_required("admin")
 def admin_list_users() -> tuple:
-    """전체 회원 목록 (deactivated 포함)."""
-    users = db.session.execute(select(User)).scalars().all()
-    return jsonify({"success": True, "data": [u.to_dict() for u in users], "error": ""}), 200
+    """전체 회원 목록 (deactivated 포함, 페이지네이션)."""
+    page, per_page, offset = get_pagination_params()
+    total: int = db.session.execute(select(func.count(User.id))).scalar() or 0
+    users = (
+        db.session.execute(
+            select(User).order_by(User.created_at.desc()).offset(offset).limit(per_page)
+        )
+        .scalars()
+        .all()
+    )
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": [u.to_dict() for u in users],
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200
 
 
 @admin_bp.route("/users/<int:user_id>/role", methods=["PUT"])

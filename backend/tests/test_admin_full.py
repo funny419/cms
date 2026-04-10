@@ -108,8 +108,15 @@ class TestAdminListUsers:
         assert res.status_code == 200
         data = res.get_json()
         assert data["success"] is True
+        payload = data["data"]
+        assert "items" in payload
+        assert "total" in payload
+        assert "page" in payload
+        assert "per_page" in payload
+        assert "has_more" in payload
         # admin_user fixture 포함하여 최소 3명
-        assert len(data["data"]) >= 3
+        assert payload["total"] >= 3
+        assert len(payload["items"]) >= 3
 
     def test_requires_admin(self, client, editor_headers):
         res = client.get("/api/admin/users", headers=editor_headers)
