@@ -21,7 +21,7 @@ def get_token(client, username):
     return res.get_json()["data"]["access_token"]
 
 
-def make_post(author_id):
+def make_post(author_id, visibility="public"):
     from models import Post
 
     post = Post(
@@ -29,6 +29,7 @@ def make_post(author_id):
         slug=uuid.uuid4().hex[:8],
         author_id=author_id,
         status="published",
+        visibility=visibility,
     )
     _db.session.add(post)
     _db.session.commit()
@@ -294,6 +295,66 @@ def test_reorder_series_posts(client, app):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
+
+
+def test_add_other_users_post_to_series_forbidden(client, app):
+    """editor는 타인 포스트를 시리즈에 추가할 수 없다 → 403."""
+    with app.app_context():
+        uid, uname = make_user("editor")
+        other_uid, _ = make_user("editor")
+        other_post_id = make_post(other_uid)
+    token = get_token(client, uname)
+
+    create_res = client.post(
+        "/api/series", json={"title": "Own Series"}, headers={"Authorization": f"Bearer {token}"}
+    )
+    series_id = create_res.get_json()["data"]["id"]
+
+    res = client.post(
+        f"/api/series/{series_id}/posts",
+        json={"post_id": other_post_id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+    assert res.get_json()["error"] == "접근 권한이 없는 포스트입니다."
+
+
+def test_add_private_post_to_series_forbidden(client, app):
+    """editor는 자신의 private 포스트도 시리즈에 추가할 수 없다 → 403."""
+    with app.app_context():
+        uid, uname = make_user("editor")
+        private_post_id = make_post(uid, visibility="private")
+    token = get_token(client, uname)
+
+    create_res = client.post(
+        "/api/series", json={"title": "Private Test"}, headers={"Authorization": f"Bearer {token}"}
+    )
+    series_id = create_res.get_json()["data"]["id"]
+
+    res = client.post(
+        f"/api/series/{series_id}/posts",
+        json={"post_id": private_post_id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 403
+    assert res.get_json()["error"] == "접근 권한이 없는 포스트입니다."
+
+
+def test_admin_can_add_any_post_to_series(client, app, admin_headers):
+    """admin은 타인의 private 포스트도 시리즈에 추가할 수 있다."""
+    with app.app_context():
+        other_uid, _ = make_user("editor")
+        private_post_id = make_post(other_uid, visibility="private")
+
+    create_res = client.post("/api/series", json={"title": "Admin Series"}, headers=admin_headers)
+    series_id = create_res.get_json()["data"]["id"]
+
+    res = client.post(
+        f"/api/series/{series_id}/posts",
+        json={"post_id": private_post_id},
+        headers=admin_headers,
+    )
+    assert res.status_code == 201
 
 
 # ────────────────────────────── GET /api/posts/:id series 임베드 ──────────────────────────────
