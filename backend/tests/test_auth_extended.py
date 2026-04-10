@@ -63,6 +63,19 @@ class TestRegister:
         assert res.status_code == 400
         assert "Email already exists" in res.get_json()["error"]
 
+    def test_register_password_too_short(self, client):
+        """7자 비밀번호로 register 시 400 반환 (#45)."""
+        res = client.post(
+            "/api/auth/register",
+            json={
+                "username": "shortpwuser",
+                "email": "shortpw@test.com",
+                "password": "pass123",  # 7자 — 8자 미만
+            },
+        )
+        assert res.status_code == 400
+        assert "8자" in res.get_json()["error"]
+
 
 # ─── POST /api/auth/login ─────────────────────────────────────────────────────
 
