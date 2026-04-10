@@ -71,7 +71,7 @@ def upload_file() -> tuple:
     media = Media(
         filename=safe_name,
         filepath=url,  # 공개 URL 저장
-        mimetype=file.mimetype,
+        mimetype=detected_mime,
         size=file_size,
         uploaded_by=int(get_jwt_identity()),
         meta_data={"thumbnail_url": thumb_url} if thumb_url else None,
