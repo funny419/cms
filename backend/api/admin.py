@@ -246,7 +246,7 @@ def admin_list_comments() -> tuple:
     rows = db.session.execute(query.offset(offset).limit(per_page)).all()
     items = []
     for comment, post_title in rows:
-        d = comment.to_dict()
+        d = comment.to_admin_dict()
         d["post_title"] = post_title
         items.append(d)
 

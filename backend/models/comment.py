@@ -41,11 +41,16 @@ class Comment(Base):
             "author_id": self.author_id,
             "parent_id": self.parent_id,
             "author_name": self.author_name,
-            "author_email": self.author_email,
             "content": self.content,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+    def to_admin_dict(self) -> dict:
+        """어드민 전용 — author_email 포함."""
+        d = self.to_dict()
+        d["author_email"] = self.author_email
+        return d
 
     post: Mapped["Post"] = relationship(back_populates="comments")
     author: Mapped[Optional["User"]] = relationship(back_populates="comments")
