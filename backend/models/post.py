@@ -124,4 +124,5 @@ class VisitLog(Base):
     __table_args__ = (
         Index("idx_visit_post_time", "post_id", "visited_at"),
         Index("idx_visit_logs_visited_at", "visited_at"),
+        Index("idx_visit_logs_post_ip_time", "post_id", "ip_address", "visited_at"),
     )
