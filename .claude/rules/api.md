@@ -70,6 +70,15 @@
 | `GET /api/settings` | 공개 | 사이트 설정 조회 (`site_title`, `site_skin` 등) |
 | `PUT /api/settings` | admin | 사이트 설정 수정 (`site_skin` 포함) |
 
+### 메뉴 API
+
+| 엔드포인트 | 권한 | 설명 |
+|-----------|------|------|
+| `GET /api/menus` | 공개 | 전체 메뉴 목록 조회. 응답: `[{id, name, location}]` |
+| `GET /api/menus/:id/items` | 공개 | 메뉴 아이템 목록 조회 (order 순 정렬). 응답: `[{id, title, url, parent_id, order}]`. 404: 메뉴 없음 |
+| `POST /api/menus` | admin | 메뉴 생성. 요청: `name`(필수), `location`(선택). 응답: `{id, name, location}` |
+| `POST /api/menus/:id/items` | admin | 메뉴 아이템 추가. 요청: `title`(필수), `url`(필수), `parent_id`(선택), `order`(선택, 기본 0). 404: 메뉴 없음 |
+
 ### 미디어 API
 
 | 엔드포인트 | 권한 | 설명 |
