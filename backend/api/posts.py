@@ -344,12 +344,39 @@ def get_post(post_id: int) -> tuple:
             "next_post": next_post,
         }
 
+    # prev/next 포스트 (created_at 기준, 전체 published+public)
+    _pub_public = (Post.status == "published") & (Post.visibility == "public")
+    nav_prev_row = db.session.execute(
+        select(Post.id, Post.title, Post.slug)
+        .where(_pub_public, Post.created_at < post.created_at)
+        .order_by(Post.created_at.desc())
+        .limit(1)
+    ).first()
+    nav_next_row = db.session.execute(
+        select(Post.id, Post.title, Post.slug)
+        .where(_pub_public, Post.created_at > post.created_at)
+        .order_by(Post.created_at.asc())
+        .limit(1)
+    ).first()
+    nav_prev: dict | None = (
+        {"id": nav_prev_row.id, "title": nav_prev_row.title, "slug": nav_prev_row.slug}
+        if nav_prev_row
+        else None
+    )
+    nav_next: dict | None = (
+        {"id": nav_next_row.id, "title": nav_next_row.title, "slug": nav_next_row.slug}
+        if nav_next_row
+        else None
+    )
+
     d = post.to_dict()
     d["author_username"] = author_username
     d["comment_count"] = comment_count
     d["like_count"] = like_count
     d["user_liked"] = user_liked
     d["series"] = series_info
+    d["prev_post"] = nav_prev
+    d["next_post"] = nav_next
     return jsonify({"success": True, "data": d, "error": ""}), 200
 
 
