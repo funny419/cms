@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (
     create_access_token,
@@ -12,6 +14,7 @@ from database import db
 from extensions import limiter
 from models import Comment, Follow, Post, User
 
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 
 
@@ -41,7 +44,7 @@ def register() -> tuple:
         ), 201
     except Exception as e:
         db.session.rollback()
-        print(e)
+        logger.error(e, exc_info=True)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
 
 
@@ -131,7 +134,7 @@ def update_me() -> tuple:
         return jsonify({"success": True, "data": user.to_dict(), "error": ""}), 200
     except Exception as e:
         db.session.rollback()
-        print(e)
+        logger.error(e, exc_info=True)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
 
 
