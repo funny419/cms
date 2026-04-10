@@ -39,12 +39,11 @@ def clean_db(app):
     with app.app_context():
         yield
         _db.session.rollback()
-        # comments 자기참조 FK(parent_id) 때문에 자식 댓글 먼저 NULL 처리 후 삭제
-        _db.session.execute(
-            _db.text("UPDATE comments SET parent_id = NULL WHERE parent_id IS NOT NULL")
-        )
-        for table in reversed(_db.metadata.sorted_tables):
-            _db.session.execute(table.delete())
+        # FK 체크 비활성화 후 TRUNCATE (auto_increment 리셋)
+        _db.session.execute(_db.text("SET FOREIGN_KEY_CHECKS = 0"))
+        for table in _db.metadata.sorted_tables:
+            _db.session.execute(_db.text(f"TRUNCATE TABLE `{table.name}`"))
+        _db.session.execute(_db.text("SET FOREIGN_KEY_CHECKS = 1"))
         _db.session.commit()
 
 
