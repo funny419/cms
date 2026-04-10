@@ -10,7 +10,18 @@ from sqlalchemy.orm import selectinload
 from api.decorators import roles_required
 from api.helpers import error_response, get_client_ip, get_pagination_params
 from database import db
-from models import Comment, Post, PostLike, PostTag, Series, SeriesPost, Tag, User, VisitLog
+from models import (
+    Category,
+    Comment,
+    Post,
+    PostLike,
+    PostTag,
+    Series,
+    SeriesPost,
+    Tag,
+    User,
+    VisitLog,
+)
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api/posts")
 
@@ -401,6 +412,9 @@ def create_post() -> tuple:
     VALID_STATUS = {"draft", "published", "scheduled"}
     if data.get("status") and data["status"] not in VALID_STATUS:
         return error_response("유효하지 않은 status 값입니다.", 400)
+    category_id = data.get("category_id")
+    if category_id and not db.session.get(Category, category_id):
+        return error_response("존재하지 않는 카테고리입니다.", 400)
     raw_format = data.get("content_format", "html")
     content_format = raw_format if raw_format in ("html", "markdown") else "html"
 
@@ -453,6 +467,11 @@ def update_post(post_id: int) -> tuple:
         ).scalar_one_or_none()
         if conflict:
             return error_response("이미 사용 중인 slug입니다.", 409)
+
+    # category_id 유효성 검증
+    new_category_id = data.get("category_id")
+    if new_category_id and not db.session.get(Category, new_category_id):
+        return error_response("존재하지 않는 카테고리입니다.", 400)
 
     for field in (
         "title",
