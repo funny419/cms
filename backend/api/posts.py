@@ -28,32 +28,22 @@ def list_posts() -> tuple:
     page, per_page, offset = get_pagination_params()
     q = request.args.get("q", "").strip()
 
-    # 댓글수 서브쿼리 (approved 댓글만)
-    comment_sq = (
-        select(func.count(Comment.id))
-        .where(Comment.post_id == Post.id)
-        .where(Comment.status == "approved")
-        .correlate(Post)
-        .scalar_subquery()
-    )
-
-    # 추천수 서브쿼리
-    like_sq = (
-        select(func.count(PostLike.id))
-        .where(PostLike.post_id == Post.id)
-        .correlate(Post)
-        .scalar_subquery()
-    )
+    # GROUP BY + LEFT JOIN으로 단일 쿼리 집계 (N+1 제거)
+    comment_count = func.count(sa_distinct(Comment.id)).label("comment_count")
+    like_count = func.count(sa_distinct(PostLike.id)).label("like_count")
 
     base_query = (
         select(
             Post,
             User.username.label("author_username"),
-            comment_sq.label("comment_count"),
-            like_sq.label("like_count"),
+            comment_count,
+            like_count,
         )
         .outerjoin(User, Post.author_id == User.id)
+        .outerjoin(Comment, (Comment.post_id == Post.id) & (Comment.status == "approved"))
+        .outerjoin(PostLike, PostLike.post_id == Post.id)
         .where(Post.status == "published")
+        .group_by(Post.id)
     )
     total_query = select(func.count(Post.id)).where(Post.status == "published")
 
@@ -105,9 +95,10 @@ def list_posts() -> tuple:
         tag_ids = [int(t) for t in tags_param.split(",") if t.isdigit()]
         if tag_ids:
             base_query = (
-                base_query.join(PostTag, PostTag.post_id == Post.id)
-                .where(PostTag.tag_id.in_(tag_ids))
-                .distinct()
+                base_query.join(PostTag, PostTag.post_id == Post.id).where(
+                    PostTag.tag_id.in_(tag_ids)
+                )
+                # GROUP BY Post.id로 중복 제거 — .distinct() 불필요
             )
             # total_query 재구성 (tags JOIN 포함, category_id 조건 유지)
             total_query = (
