@@ -56,4 +56,5 @@ class SeriesPost(Base):
     __table_args__ = (
         UniqueConstraint("series_id", "post_id", name="uq_series_post"),
         Index("idx_series_post_order", "series_id", "order"),
+        Index("idx_series_posts_post_id", "post_id"),
     )
