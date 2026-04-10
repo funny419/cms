@@ -8,9 +8,11 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// 게스트 이메일을 localStorage에서 관리
+// 게스트 정보를 localStorage에서 관리
 const getGuestEmail = () => localStorage.getItem('guest_email') || '';
 const setGuestEmail = (email) => localStorage.setItem('guest_email', email);
+const getGuestName = () => localStorage.getItem('guest_name') || '';
+const setGuestName = (name) => localStorage.setItem('guest_name', name);
 
 // ─── 댓글 작성 폼 ─────────────────────────────────────────────
 function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
@@ -37,7 +39,10 @@ function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
     const res = await createComment(token, postId, data);
     setSubmitting(false);
     if (res.success) {
-      if (!isLoggedIn) setGuestEmail(authorEmail.trim());
+      if (!isLoggedIn) {
+        setGuestEmail(authorEmail.trim());
+        setGuestName(authorName.trim());
+      }
       setContent('');
       setAuthorPassword('');
       onSuccess(res.data);
@@ -101,7 +106,7 @@ function EditForm({ comment, token, onSuccess, onCancel }) {
 
     const data = isLoggedIn
       ? { content: content.trim() }
-      : { content: content.trim(), author_email: comment.author_email, author_password: password };
+      : { content: content.trim(), author_email: getGuestEmail(), author_password: password };
 
     const res = await updateComment(token, comment.id, data);
     setSubmitting(false);
@@ -146,7 +151,7 @@ function GuestDeleteForm({ comment, onSuccess, onCancel }) {
     setSubmitting(true);
     setError('');
     const res = await deleteComment(null, comment.id,
-      { author_email: comment.author_email, author_password: password });
+      { author_email: getGuestEmail(), author_password: password });
     setSubmitting(false);
     if (res.success) onSuccess();
     else setError(res.error);
@@ -171,10 +176,11 @@ function ReplyItem({ reply, token, user, onRefresh }) {
   const [deleteMode, setDeleteMode] = useState(false);
 
   const guestEmail = getGuestEmail();
+  const guestName = getGuestName();
   const isLoggedIn = !!token && !!user;
   const isOwner = isLoggedIn
     ? (user.role === 'admin' || reply.author_id === user.id)
-    : (reply.author_id === null && reply.author_email === guestEmail && guestEmail !== '');
+    : (reply.author_id === null && guestEmail !== '' && reply.author_name === guestName);
 
   const handleLoggedInDelete = async () => {
     if (!window.confirm('답글을 삭제할까요?')) return;
@@ -244,12 +250,13 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
   const [deleteMode, setDeleteMode] = useState(false);
 
   const guestEmail = getGuestEmail();
+  const guestName = getGuestName();
   const isLoggedIn = !!token && !!user;
 
   // 본인 댓글 여부
   const isOwner = isLoggedIn
     ? (user.role === 'admin' || comment.author_id === user.id)
-    : (comment.author_id === null && comment.author_email === guestEmail && guestEmail !== '');
+    : (comment.author_id === null && guestEmail !== '' && comment.author_name === guestName);
 
   const handleLoggedInDelete = async () => {
     if (!window.confirm('댓글을 삭제할까요?')) return;
