@@ -57,12 +57,21 @@ function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
     <form onSubmit={handleSubmit}>
       {!isLoggedIn && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-          <input className="form-input" placeholder="이름 *" value={authorName}
-            onChange={(e) => setAuthorName(e.target.value)} required />
-          <input className="form-input" type="email" placeholder="이메일 *" value={authorEmail}
-            onChange={(e) => setAuthorEmail(e.target.value)} required />
-          <input className="form-input" type="password" placeholder="패스워드 * (수정/삭제에 사용)" value={authorPassword}
-            onChange={(e) => setAuthorPassword(e.target.value)} required />
+          <div>
+            <label htmlFor="guest-name" style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>이름</label>
+            <input id="guest-name" className="form-input" placeholder="이름 *" value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)} required />
+          </div>
+          <div>
+            <label htmlFor="guest-email" style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>이메일</label>
+            <input id="guest-email" className="form-input" type="email" placeholder="이메일 *" value={authorEmail}
+              onChange={(e) => setAuthorEmail(e.target.value)} required />
+          </div>
+          <div>
+            <label htmlFor="guest-password" style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>패스워드</label>
+            <input id="guest-password" className="form-input" type="password" placeholder="패스워드 * (수정/삭제에 사용)" value={authorPassword}
+              onChange={(e) => setAuthorPassword(e.target.value)} required />
+          </div>
         </div>
       )}
       <textarea

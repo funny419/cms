@@ -56,6 +56,9 @@ export default function Feed() {
               key={post.id}
               className="post-item"
               onClick={() => navigate(`/posts/${post.id}`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`/posts/${post.id}`)}
+              role="button"
+              tabIndex={0}
               style={{ cursor: 'pointer' }}
             >
               <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 4 }}>

@@ -98,6 +98,9 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
                   key={post.id}
                   className="post-item"
                   onClick={() => navigate(`/posts/${post.id}`)}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/posts/${post.id}`)}
+                  role="button"
+                  tabIndex={0}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="post-title">

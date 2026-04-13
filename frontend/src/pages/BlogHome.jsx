@@ -118,8 +118,11 @@ export default function BlogHome() {
               <div
                 key={s.id}
                 className="card"
+                role="button"
+                tabIndex={0}
                 style={{ padding: '16px', cursor: 'pointer' }}
                 onClick={() => navigate(`/blog/${username}/series/${s.slug || s.id}`)}
+                onKeyDown={(e) => e.key === 'Enter' && navigate(`/blog/${username}/series/${s.slug || s.id}`)}
               >
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6, color: 'var(--text-h)' }}>
                   {s.title}
