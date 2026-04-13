@@ -23,11 +23,12 @@ export default function AdminPosts() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const [isSearching, setIsSearching] = useState(false);
   const { toast, showToast, dismissToast } = useToast();
 
   // 300ms 디바운스
   useEffect(() => {
-    const timer = setTimeout(() => setQ(inputQ.trim()), 300);
+    const timer = setTimeout(() => { setQ(inputQ.trim()); setIsSearching(false); }, 300);
     return () => clearTimeout(timer);
   }, [inputQ]);
 
@@ -69,15 +70,26 @@ export default function AdminPosts() {
       <h1 className="page-heading" style={{ marginBottom: 16 }}>포스트 관리</h1>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <input
-          type="text"
-          className="form-input"
-          aria-label="검색"
-          placeholder="제목으로 검색..."
-          value={inputQ}
-          onChange={(e) => setInputQ(e.target.value)}
-          style={{ flex: 1, maxWidth: 300 }}
-        />
+        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
+          <input
+            type="text"
+            className="form-input"
+            aria-label="검색"
+            placeholder="제목으로 검색..."
+            value={inputQ}
+            onChange={(e) => { setInputQ(e.target.value); setIsSearching(true); }}
+            style={{ width: '100%', paddingRight: isSearching ? 32 : undefined }}
+          />
+          {isSearching && (
+            <span style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              width: 14, height: 14, border: '2px solid var(--border)',
+              borderTopColor: 'var(--accent)', borderRadius: '50%',
+              display: 'inline-block',
+              animation: 'spin 0.7s linear infinite',
+            }} />
+          )}
+        </div>
         <select
           className="form-input"
           value={status}

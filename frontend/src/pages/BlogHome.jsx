@@ -18,6 +18,7 @@ export default function BlogHome() {
 
   const [profile, setProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState('');
   const [seriesList, setSeriesList] = useState([]);
@@ -47,9 +48,11 @@ export default function BlogHome() {
 
   const handleFollow = async () => {
     if (!token) { navigate('/login'); return; }
+    setFollowLoading(true);
     const res = isFollowing
       ? await unfollowUser(token, username)
       : await followUser(token, username);
+    setFollowLoading(false);
     if (res.success) {
       setIsFollowing(res.data.following);
       setProfile((prev) => ({
@@ -96,6 +99,7 @@ export default function BlogHome() {
         onFollow={handleFollow}
         isFollowing={isFollowing}
         isOwnBlog={isOwnBlog}
+        followLoading={followLoading}
       />
 
       <StatsWidget profile={profile} />

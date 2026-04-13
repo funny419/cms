@@ -44,6 +44,7 @@ export default function Statistics() {
   const [stats, setStats] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [periodLoading, setPeriodLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -55,7 +56,8 @@ export default function Statistics() {
     if (!token || !user) return;
     let cancelled = false;
     const load = async () => {
-      setLoading(true);
+      if (stats) setPeriodLoading(true); // 재조회 시 오버레이
+      else setLoading(true);
       const [statsRes, profileRes] = await Promise.all([
         getMyStats(token, user.username, period),
         getUserProfile(user.username),
@@ -65,10 +67,11 @@ export default function Statistics() {
       else setError(statsRes.error);
       if (profileRes.success) setProfile(profileRes.data);
       setLoading(false);
+      setPeriodLoading(false);
     };
     load();
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return null;
 
@@ -114,7 +117,21 @@ export default function Statistics() {
       <StatsWidget profile={summaryProfile} />
 
       {/* 일별 조회수 차트 */}
-      <div className="card" style={{ padding: 20, marginBottom: 24 }}>
+      <div className="card" style={{ padding: 20, marginBottom: 24, position: 'relative' }}>
+        {periodLoading && (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 'var(--radius)',
+            background: 'rgba(var(--bg-rgb, 255,255,255), 0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1,
+          }}>
+            <span style={{
+              width: 20, height: 20, border: '2px solid var(--border)',
+              borderTopColor: 'var(--accent)', borderRadius: '50%',
+              display: 'inline-block', animation: 'spin 0.7s linear infinite',
+            }} />
+          </div>
+        )}
         <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, color: 'var(--text-h)' }}>
           일별 조회수
         </h2>
