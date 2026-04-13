@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SkinProvider, useSkin } from './context/SkinContext';
@@ -25,7 +25,10 @@ import AdminComments from './pages/admin/AdminComments';
 import AdminSettings from './pages/admin/AdminSettings';
 import { getSettings } from './api/settings';
 import { getWizardStatus } from './api/wizard';
+import { setGlobalToast } from './api/client';
 import { useFetch } from './hooks/useFetch';
+import useToast from './hooks/useToast';
+import Toast from './components/Toast';
 
 // Router 내부에서 wizard status 체크 + 라우팅 처리
 function AppContent() {
@@ -35,6 +38,12 @@ function AppContent() {
   // /wizard 경로에서는 처음부터 checked=true (무한 리다이렉트 방지)
   const [wizardChecked, setWizardChecked] = useState(() => location.pathname === '/wizard');
   const [wizardDbConnected, setWizardDbConnected] = useState(true);
+  const { toast, showToast, dismissToast } = useToast();
+
+  useEffect(() => {
+    setGlobalToast(showToast);
+    return () => setGlobalToast(null);
+  }, [showToast]);
 
   useFetch(
     getSettings,
@@ -59,6 +68,7 @@ function AppContent() {
 
   return (
     <>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       <Nav />
       <OnboardingModal />
       <Routes>

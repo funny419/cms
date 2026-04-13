@@ -25,7 +25,7 @@ export default function PostEditor() {
 
   const {
     isEdit, form, setForm,
-    loading, saving, draftSaved, error, setError,
+    loading, saving, draftSaved, error, setError, slugError,
     availableTags, token, user,
     handleChange, handleSave, handleCancel,
   } = usePostEditor();
@@ -52,8 +52,8 @@ export default function PostEditor() {
           quill.insertEmbed(range.index, 'image', res.data.url);
           quill.setSelection(range.index + 1);
         }
-      } else {
-        setError(res.error || '이미지 업로드에 실패했습니다.');
+      } else if (res.error) {
+        setError(res.error);
       }
     };
     input.click();
@@ -87,8 +87,8 @@ export default function PostEditor() {
     if (res.success) {
       const mdSyntax = `\n![이미지](${res.data.url})\n`;
       setForm((prev) => ({ ...prev, content: prev.content + mdSyntax }));
-    } else {
-      setError(res.error || '이미지 업로드에 실패했습니다.');
+    } else if (res.error) {
+      setError(res.error);
     }
   };
 
@@ -262,7 +262,11 @@ export default function PostEditor() {
             value={form.slug}
             onChange={handleChange}
             placeholder="url-slug"
+            style={slugError ? { borderColor: 'var(--danger)' } : undefined}
           />
+          {slugError && (
+            <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>{slugError}</p>
+          )}
         </div>
         <div>
           <label className="form-label">타입</label>

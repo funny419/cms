@@ -17,6 +17,7 @@ export default function PostDetail() {
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [membersOnly, setMembersOnly] = useState(false);
   const { token, user } = useAuth();
   const { theme } = useTheme();
   const [likeCount, setLikeCount] = useState(0);
@@ -31,7 +32,11 @@ export default function PostDetail() {
         if (cancelled) return;
 
         if (!postRes.success) {
-          setError('포스트를 찾을 수 없습니다.');
+          if (postRes.status === 403) {
+            setMembersOnly(true);
+          } else {
+            setError('포스트를 찾을 수 없습니다.');
+          }
           setLoading(false);
           return;
         }
@@ -65,6 +70,13 @@ export default function PostDetail() {
 
   if (loading) return (
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
+  );
+
+  if (membersOnly) return (
+    <div className="page-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+      <p style={{ fontSize: 16, color: 'var(--text)', marginBottom: 16 }}>이 글은 로그인 후 읽을 수 있습니다.</p>
+      <Link to="/login" className="btn btn-primary">로그인하기</Link>
+    </div>
   );
 
   if (error) return (

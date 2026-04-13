@@ -34,6 +34,7 @@ export function usePostEditor() {
   const [saving, setSaving] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [error, setError] = useState('');
+  const [slugError, setSlugError] = useState('');
   const [availableTags, setAvailableTags] = useState([]);
 
   // 권한 확인 + 편집 모드 포스트 로딩
@@ -93,6 +94,7 @@ export function usePostEditor() {
     }
     setSaving(true);
     setError('');
+    setSlugError('');
     const payload = { ...form, status, tags: form.tags.map((t) => t.id) };
     const result = isEdit
       ? await updatePost(token, id, payload)
@@ -101,6 +103,8 @@ export function usePostEditor() {
     if (result.success) {
       localStorage.removeItem(DRAFT_KEY);
       navigate(`/posts/${result.data.id}`);
+    } else if (result.status === 409) {
+      setSlugError('이미 사용 중인 URL 슬러그입니다.');
     } else {
       setError(result.error || '저장에 실패했습니다.');
     }
@@ -112,7 +116,7 @@ export function usePostEditor() {
 
   return {
     id, isEdit, form, setForm,
-    loading, saving, draftSaved, error, setError,
+    loading, saving, draftSaved, error, setError, slugError,
     availableTags, token, user,
     handleChange, handleSave, handleCancel,
   };
