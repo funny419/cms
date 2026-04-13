@@ -161,11 +161,10 @@ def get_feed() -> tuple:
 
     page, per_page, offset = get_pagination_params()
 
-    following_sq = select(Follow.following_id).where(Follow.follower_id == current_user_id)
-
     base = (
         select(Post)
-        .where(Post.author_id.in_(following_sq))
+        .join(Follow, Follow.following_id == Post.author_id)
+        .where(Follow.follower_id == current_user_id)
         .where(Post.status == "published")
         .where(
             or_(
