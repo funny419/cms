@@ -54,6 +54,8 @@ class User(Base):
         "Series", back_populates="author", cascade="all, delete-orphan"
     )
 
+    __table_args__ = (Index("idx_users_role", "role"),)
+
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
 
