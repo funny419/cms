@@ -76,6 +76,7 @@ export default function AdminComments() {
       {comments.length === 0 && !loading && !error ? (
         <div className="empty-state"><p>등록된 댓글이 없습니다.</p></div>
       ) : (
+        <div className="table-wrapper">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -144,6 +145,7 @@ export default function AdminComments() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div ref={sentinelRef} style={{ height: 1 }} />

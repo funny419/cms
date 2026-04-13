@@ -127,6 +127,7 @@ export default function AdminUsers() {
         </div>
       )}
 
+      <div className="table-wrapper">
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -214,6 +215,7 @@ export default function AdminUsers() {
           })}
         </tbody>
       </table>
+      </div>
 
       <div ref={sentinelRef} style={{ height: 1 }} />
       {loading && <div className="empty-state" style={{ marginTop: 24 }}>불러오는 중...</div>}

@@ -89,6 +89,7 @@ export default function AdminPosts() {
           <p>{q || status ? '검색 결과가 없습니다.' : '포스트가 없습니다.'}</p>
         </div>
       ) : (
+        <div className="table-wrapper">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -133,6 +134,7 @@ export default function AdminPosts() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div ref={sentinelRef} style={{ height: 1 }} />

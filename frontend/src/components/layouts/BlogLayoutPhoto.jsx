@@ -51,13 +51,7 @@ export default function BlogLayoutPhoto({ posts, loading, hasMore, sentinelRef, 
 
   return (
     <>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <div className="photo-grid">
         {posts.map((post) => (
           <PhotoCard key={post.id} post={post} accentColor={accentColor} />
         ))}

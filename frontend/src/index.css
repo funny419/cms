@@ -450,6 +450,16 @@ a:hover { text-decoration: underline; }
 .sidebar-layout { display: flex; }
 .sidebar-aside { width: 160px; flex-shrink: 0; }
 
+/* ── Admin table overflow ── */
+.table-wrapper { overflow-x: auto; }
+
+/* ── Blog photo grid ── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
 /* ── Comment guest form grid ── */
 .guest-form-grid {
   display: grid;
@@ -499,4 +509,5 @@ a:hover { text-decoration: underline; }
    ════════════════════════════════════════ */
 @media (max-width: 480px) {
   .guest-form-grid { grid-template-columns: 1fr; }
+  .photo-grid { grid-template-columns: 1fr; }
 }
