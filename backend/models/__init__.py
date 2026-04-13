@@ -4,7 +4,7 @@ models 패키지 — 전체 ORM 모델 re-export (Alembic 자동 감지용)
 도메인별 파일 구조:
   base.py        — Base(DeclarativeBase)
   user.py        — User, Follow
-  post.py        — Post, PostMeta, PostLike, VisitLog
+  post.py        — Post, PostLike, VisitLog
   comment.py     — Comment
   media.py       — Media
   category.py    — Category
@@ -20,7 +20,7 @@ from models.comment import Comment
 from models.constants import MAX_CATEGORY_DEPTH
 from models.media import Media
 from models.option import Menu, MenuItem, Option
-from models.post import Post, PostLike, PostMeta, VisitLog
+from models.post import Post, PostLike, VisitLog
 from models.series import Series, SeriesPost
 from models.tag import PostTag, Tag
 from models.user import Follow, User
@@ -30,7 +30,6 @@ __all__ = [
     "User",
     "Follow",
     "Post",
-    "PostMeta",
     "PostLike",
     "VisitLog",
     "Comment",

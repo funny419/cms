@@ -53,9 +53,6 @@ class Post(Base):
 
     author: Mapped["User"] = relationship(back_populates="posts")
     category: Mapped[Optional["Category"]] = relationship("Category", back_populates="posts")
-    metas: Mapped[List["PostMeta"]] = relationship(
-        back_populates="post", cascade="all, delete-orphan"
-    )
     comments: Mapped[List["Comment"]] = relationship(back_populates="post")
     tags: Mapped[List["Tag"]] = relationship("Tag", secondary="post_tags", back_populates="posts")
 
@@ -78,19 +75,6 @@ class Post(Base):
             "tags": [{"id": t.id, "name": t.name, "slug": t.slug} for t in self.tags],
             "thumbnail_url": self.thumbnail_url,
         }
-
-
-class PostMeta(Base):
-    """포스트별 확장 데이터 (Custom Fields)"""
-
-    __tablename__ = "post_meta"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), nullable=False)
-    meta_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    meta_value: Mapped[Optional[str]] = mapped_column(Text)
-
-    post: Mapped["Post"] = relationship(back_populates="metas")
 
 
 class PostLike(Base):
