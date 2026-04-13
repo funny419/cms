@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Keep python from buffering stdout and stderr
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update && apt-get install -y libmagic1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libmagic1 curl && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
