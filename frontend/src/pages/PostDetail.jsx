@@ -37,9 +37,11 @@ export default function PostDetail() {
   const [liking, setLiking] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       try {
         const postRes = await getPost(id, token);
+        if (cancelled) return;
 
         if (!postRes.success) {
           setError('포스트를 찾을 수 없습니다.');
@@ -52,12 +54,15 @@ export default function PostDetail() {
         setUserLiked(postRes.data.user_liked ?? false);
         setLoading(false);
       } catch {
-        setError('포스트를 불러오는 중 오류가 발생했습니다.');
-        setLoading(false);
+        if (!cancelled) {
+          setError('포스트를 불러오는 중 오류가 발생했습니다.');
+          setLoading(false);
+        }
       }
     };
 
     load();
+    return () => { cancelled = true; };
   }, [id, token]);
 
   const handleLike = async () => {
