@@ -68,6 +68,26 @@ class TestMimeValidation:
         res = _upload(client, {}, _make_jpeg(), "photo.jpg")
         assert res.status_code == 401
 
+    def test_upload_response_has_magic_based_mimetype(self, client, editor_headers):
+        """정상 JPEG 업로드 → 응답 data.mimetype이 magic bytes 기반 값(image/jpeg) 포함 확인 (#42).
+        detected_mime은 DB mimetype 컬럼에 저장되며 to_dict()에서 'mimetype' 키로 반환됨."""
+        res = _upload(client, editor_headers, _make_jpeg(), "photo.jpg")
+        assert res.status_code == 201
+        data = res.get_json()["data"]
+        assert "mimetype" in data
+        assert data["mimetype"] == "image/jpeg"
+
+    def test_fake_jpg_with_explicit_image_content_type_rejected(self, client, editor_headers):
+        """텍스트 내용 + filename=fake.jpg + content_type=image/jpeg 위장 → magic bytes 불일치 → 400/415 (#42).
+        클라이언트가 Content-Type을 image/jpeg로 속여도 magic bytes 검증으로 차단됨."""
+        res = client.post(
+            "/api/media",
+            data={"file": (io.BytesIO(b"This is not an image"), "fake.jpg", "image/jpeg")},
+            content_type="multipart/form-data",
+            headers=editor_headers,
+        )
+        assert res.status_code in (400, 415)
+
 
 # ─── #9 GET /api/media 조회 권한 분리 ─────────────────────────────────────────
 
