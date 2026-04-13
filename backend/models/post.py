@@ -27,15 +27,19 @@ class Post(Base):
     slug: Mapped[str] = mapped_column(String(255), unique=True)
     content: Mapped[Optional[str]] = mapped_column(Text)
     excerpt: Mapped[Optional[str]] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), default="draft")
-    post_type: Mapped[str] = mapped_column(String(20), default="post")
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
+    post_type: Mapped[str] = mapped_column(String(20), default="post", server_default="post")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), onupdate=func.now()
     )
-    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    content_format: Mapped[str] = mapped_column(String(10), default="html", nullable=False)
-    visibility: Mapped[str] = mapped_column(String(20), default="public", nullable=False)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    content_format: Mapped[str] = mapped_column(
+        String(10), default="html", server_default="html", nullable=False
+    )
+    visibility: Mapped[str] = mapped_column(
+        String(20), default="public", server_default="public", nullable=False
+    )
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
