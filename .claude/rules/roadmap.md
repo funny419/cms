@@ -87,6 +87,7 @@
 |------|---------|
 | 포스트 예약 발행 | APScheduler + Gunicorn 4 workers 중복 실행 문제. Redis 없이 분산 락 불가. 구현 비용 대비 사용 빈도 낮음 |
 | 알림 시스템 (Socket.IO) | Gunicorn sync → eventlet/gevent 교체 필요. Redis 없이 멀티워커 브로드캐스트 불가. 아키텍처 전면 교체 수준 부담 |
+| `post_meta` 테이블 (#50) | 실제 사용하는 API/기능 없음. meta_key/meta_value 자유형 구조 대신 필요 시 전용 컬럼으로 대체. 2026-04-13 확정 |
 
 ---
 

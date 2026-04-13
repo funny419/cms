@@ -240,7 +240,7 @@ cms/
 | `post_tags` | Post-Tag 연결 | post_id(FK), tag_id(FK) | Post, Tag |
 | `comments` | 댓글 | id(PK), post_id(FK), author_id(FK, nullable), content, status | Post, User, Comment(계층형) |
 | `post_likes` | 추천 | id(PK), post_id(FK), user_id(FK) | Post, User |
-| `post_meta` | 포스트 메타데이터 | id(PK), post_id(FK), meta_key, meta_value | Post |
+| ~~`post_meta`~~ | ~~포스트 메타데이터~~ | ~~id(PK), post_id(FK), meta_key, meta_value~~ | ~~Post~~ — **스팩아웃 (#50)** |
 | `media` | 파일 메타데이터 | id(PK), uploaded_by(FK), filename, filepath, size | User |
 | `options` | 전역 설정 | id(PK), option_name, option_value | (단일 행) |
 | `menus` / `menu_items` | 네비게이션 메뉴 | menu_id, parent_id(자기참조) | (계층형) |
