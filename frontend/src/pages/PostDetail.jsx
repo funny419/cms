@@ -9,20 +9,7 @@ import ShareButtons from '../components/ShareButtons';
 import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
-const STATUS_BADGE = {
-  published: {
-    label: '발행됨',
-    style: { background: 'var(--accent-bg)', color: 'var(--accent-text)' },
-  },
-  draft: {
-    label: '임시저장',
-    style: { background: 'var(--bg-subtle)', color: 'var(--text-light)' },
-  },
-  scheduled: {
-    label: '예약됨',
-    style: { background: '#fef3c7', color: '#92400e' },
-  },
-};
+import { STATUS_BADGE } from '../constants/postStatus';
 
 export default function PostDetail() {
   const { id } = useParams();
