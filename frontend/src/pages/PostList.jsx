@@ -55,8 +55,8 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
 
   return (
     <div className="page-content">
-      <div style={{ display: 'flex', gap: 24 }}>
-        <aside style={{ width: 160, flexShrink: 0 }}>
+      <div className="sidebar-layout" style={{ gap: 24 }}>
+        <aside className="sidebar-aside">
           <CategorySidebar
             categories={categories}
             selectedId={categoryId}

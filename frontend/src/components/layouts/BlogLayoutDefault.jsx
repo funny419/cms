@@ -61,8 +61,8 @@ export default function BlogLayoutDefault({ posts, loading, hasMore, sentinelRef
     : posts;
 
   return (
-    <div style={{ display: 'flex', gap: 32 }}>
-      <aside style={{ width: 160, flexShrink: 0 }}>
+    <div className="sidebar-layout" style={{ gap: 32 }}>
+      <aside className="sidebar-aside">
         <CategorySidebar
           categories={categories}
           selectedId={categoryId}

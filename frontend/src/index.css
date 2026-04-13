@@ -433,3 +433,70 @@ a:hover { text-decoration: underline; }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Hamburger button (hidden on desktop) ── */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+/* ── Sidebar layout ── */
+.sidebar-layout { display: flex; }
+.sidebar-aside { width: 160px; flex-shrink: 0; }
+
+/* ── Comment guest form grid ── */
+.guest-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* ════════════════════════════════════════
+   Responsive — 640px breakpoint (mobile)
+   ════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0 16px;
+  }
+
+  .nav-brand { padding: 14px 0; }
+
+  .nav-hamburger { display: block; }
+
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 0 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .nav-links-open { display: flex; }
+
+  .nav-link {
+    width: 100%;
+    padding: 8px 4px;
+    border-radius: 0;
+  }
+
+  .nav-theme-btn { margin: 4px 0 0; }
+
+  .sidebar-aside { display: none; }
+}
+
+/* ════════════════════════════════════════
+   Responsive — 480px breakpoint (narrow mobile)
+   ════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .guest-form-grid { grid-template-columns: 1fr; }
+}
