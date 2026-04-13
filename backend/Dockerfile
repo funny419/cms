@@ -15,4 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# 비권한 사용자 생성 + /app 소유권 이전 (uploads/ 쓰기 권한 포함)
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
 # CMD는 docker-compose에서 서비스별로 지정 (dev: flask run, prod: gunicorn)
