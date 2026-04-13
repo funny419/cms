@@ -84,7 +84,10 @@ def list_followers(username: str) -> tuple:
 
     total: int = (
         db.session.execute(
-            select(func.count(Follow.id)).where(Follow.following_id == target.id)
+            select(func.count(Follow.id))
+            .join(User, User.id == Follow.follower_id)
+            .where(Follow.following_id == target.id)
+            .where(User.role != "deactivated")
         ).scalar()
         or 0
     )
@@ -94,6 +97,7 @@ def list_followers(username: str) -> tuple:
             select(User)
             .join(Follow, Follow.follower_id == User.id)
             .where(Follow.following_id == target.id)
+            .where(User.role != "deactivated")
             .order_by(Follow.created_at.desc())
             .offset(offset)
             .limit(per_page)
@@ -125,7 +129,10 @@ def list_following(username: str) -> tuple:
 
     total: int = (
         db.session.execute(
-            select(func.count(Follow.id)).where(Follow.follower_id == target.id)
+            select(func.count(Follow.id))
+            .join(User, User.id == Follow.following_id)
+            .where(Follow.follower_id == target.id)
+            .where(User.role != "deactivated")
         ).scalar()
         or 0
     )
@@ -135,6 +142,7 @@ def list_following(username: str) -> tuple:
             select(User)
             .join(Follow, Follow.following_id == User.id)
             .where(Follow.follower_id == target.id)
+            .where(User.role != "deactivated")
             .order_by(Follow.created_at.desc())
             .offset(offset)
             .limit(per_page)
