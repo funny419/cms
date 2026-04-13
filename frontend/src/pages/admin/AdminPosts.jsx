@@ -63,6 +63,7 @@ export default function AdminPosts() {
         <input
           type="text"
           className="form-input"
+          aria-label="검색"
           placeholder="제목으로 검색..."
           value={inputQ}
           onChange={(e) => setInputQ(e.target.value)}

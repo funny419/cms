@@ -74,14 +74,14 @@ export default function SeriesNav({ series, currentPostId }) {
       }}>
         <div>
           {prev && (
-            <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => navigate(`/posts/${prev.id}`)}>
+            <button className="btn btn-ghost" style={{ fontSize: 13 }} aria-label="이전 시리즈 포스트" onClick={() => navigate(`/posts/${prev.id}`)}>
               ← {prev.title}
             </button>
           )}
         </div>
         <div>
           {next && (
-            <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => navigate(`/posts/${next.id}`)}>
+            <button className="btn btn-ghost" style={{ fontSize: 13 }} aria-label="다음 시리즈 포스트" onClick={() => navigate(`/posts/${next.id}`)}>
               {next.title} →
             </button>
           )}

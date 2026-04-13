@@ -191,7 +191,9 @@ export default function PostEditor() {
         <div style={{ marginBottom: 24 }}>
           {/* Markdown 이미지 업로드 버튼 */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-            <label style={{
+            <label
+              aria-label="이미지 삽입"
+              style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,

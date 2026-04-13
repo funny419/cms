@@ -107,7 +107,7 @@ export default function AdminUsers() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-h)', margin: 0 }}>사용자 정보</h2>
-              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-light)' }}>✕</button>
+              <button aria-label="닫기" onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-light)' }}>✕</button>
             </div>
             <div className="info-row"><span className="info-label">아이디</span><span className="info-value">{selectedUser.username}</span></div>
             <div className="info-row"><span className="info-label">이메일</span><span className="info-value">{selectedUser.email}</span></div>
