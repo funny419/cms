@@ -5,6 +5,8 @@ import { deletePost } from '../../api/posts';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 import { useAuth } from '../../hooks/useAuth';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const STATUS_LABEL = { published: '발행됨', draft: '임시저장', scheduled: '예약됨' };
 const STATUS_COLOR = {
@@ -21,6 +23,7 @@ export default function AdminPosts() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const { toast, showToast, dismissToast } = useToast();
 
   // 300ms 디바운스
   useEffect(() => {
@@ -44,13 +47,19 @@ export default function AdminPosts() {
       message: '이 포스트를 삭제할까요?',
       onConfirm: async () => {
         const res = await deletePost(token, id);
-        if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
+        if (res.success) {
+          setDeletedIds((prev) => new Set([...prev, id]));
+          showToast('포스트가 삭제되었습니다.');
+        } else {
+          showToast(res.error, 'error');
+        }
       },
     });
   };
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       <ConfirmDialog
         isOpen={!!confirm}
         message={confirm?.message ?? ''}

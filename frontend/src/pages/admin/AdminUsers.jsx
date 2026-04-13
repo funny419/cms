@@ -7,6 +7,8 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const ROLE_STYLE = {
   admin:       { background: 'var(--accent-bg)',  color: 'var(--accent-text)' },
@@ -19,6 +21,7 @@ export default function AdminUsers() {
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [overrides, setOverrides] = useState({});
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const { toast, showToast, dismissToast } = useToast();
   const [expandedUser, setExpandedUser] = useState(null);
   const [userPosts, setUserPosts] = useState({});
   const [selectedUser, setSelectedUser] = useState(null);
@@ -44,8 +47,12 @@ export default function AdminUsers() {
   const handleRoleChange = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'editor' : 'admin';
     const res = await adminChangeRole(token, userId, newRole);
-    if (res.success) setOverrides((prev) => ({ ...prev, [userId]: { role: res.data.role } }));
-    else alert(res.error);
+    if (res.success) {
+      setOverrides((prev) => ({ ...prev, [userId]: { role: res.data.role } }));
+      showToast(`권한이 ${res.data.role}로 변경되었습니다.`);
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   const handleDeactivate = (userId) => {
@@ -53,15 +60,24 @@ export default function AdminUsers() {
       message: '이 회원을 비활성화할까요?',
       onConfirm: async () => {
         const res = await adminDeactivateUser(token, userId);
-        if (res.success) setOverrides((prev) => ({ ...prev, [userId]: { role: 'deactivated' } }));
+        if (res.success) {
+          setOverrides((prev) => ({ ...prev, [userId]: { role: 'deactivated' } }));
+          showToast('회원이 비활성화되었습니다.');
+        } else {
+          showToast(res.error, 'error');
+        }
       },
     });
   };
 
   const handleActivate = async (userId) => {
     const res = await adminChangeRole(token, userId, 'editor');
-    if (res.success) setOverrides((prev) => ({ ...prev, [userId]: { role: 'editor' } }));
-    else alert(res.error);
+    if (res.success) {
+      setOverrides((prev) => ({ ...prev, [userId]: { role: 'editor' } }));
+      showToast('회원이 활성화되었습니다.');
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   const handleDelete = (userId) => {
@@ -69,7 +85,12 @@ export default function AdminUsers() {
       message: '이 회원을 삭제할까요? 해당 회원의 글은 유지됩니다.',
       onConfirm: async () => {
         const res = await adminDeleteUser(token, userId);
-        if (res.success) setDeletedIds((prev) => new Set([...prev, userId]));
+        if (res.success) {
+          setDeletedIds((prev) => new Set([...prev, userId]));
+          showToast('회원이 삭제되었습니다.');
+        } else {
+          showToast(res.error, 'error');
+        }
       },
     });
   };
@@ -85,6 +106,7 @@ export default function AdminUsers() {
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       <ConfirmDialog
         isOpen={!!confirm}
         message={confirm?.message ?? ''}

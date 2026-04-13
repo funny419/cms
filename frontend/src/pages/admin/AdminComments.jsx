@@ -5,6 +5,8 @@ import { listAllComments, deleteComment, approveComment, rejectComment } from '.
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 import { useAuth } from '../../hooks/useAuth';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const STATUS_LABEL = { approved: '공개', pending: '승인 대기', spam: '스팸' };
 const STATUS_COLOR = {
@@ -24,6 +26,7 @@ export default function AdminComments() {
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [updatedStatuses, setUpdatedStatuses] = useState({}); // { [id]: 'approved' | 'spam' }
   const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const { toast, showToast, dismissToast } = useToast();
 
   const fetchFn = useCallback(
     (page) => {
@@ -51,18 +54,27 @@ export default function AdminComments() {
 
   const handleApprove = async (commentId) => {
     const res = await approveComment(token, commentId);
-    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'approved' }));
-    else alert(res.error);
+    if (res.success) {
+      setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'approved' }));
+      showToast('댓글이 승인되었습니다.');
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   const handleReject = async (commentId) => {
     const res = await rejectComment(token, commentId);
-    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'spam' }));
-    else alert(res.error);
+    if (res.success) {
+      setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'spam' }));
+      showToast('댓글이 스팸으로 처리되었습니다.');
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   return (
     <div className="page-content" style={{ maxWidth: 960 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       <ConfirmDialog
         isOpen={!!confirm}
         message={confirm?.message ?? ''}
