@@ -65,6 +65,27 @@ jobs:
           Write-Host "모든 컨테이너가 정상 실행 중입니다."
         shell: powershell
 
+      - name: Rollback on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          PREV_SHA: ${{ github.event.before }}
+          MSG_ROLLBACK_START: "배포 실패 감지 — 이전 버전으로 롤백 시도 중..."
+          MSG_ROLLBACK_SKIP: "이전 커밋 SHA가 없어 롤백을 건너뜁니다."
+          MSG_ROLLBACK_DONE: "롤백 완료"
+        run: |
+          if (-not $env:PREV_SHA) {
+            Write-Host $env:MSG_ROLLBACK_SKIP
+            exit 0
+          }
+          Write-Host $env:MSG_ROLLBACK_START
+          git checkout $env:PREV_SHA
+          docker compose -f docker-compose.prod.yml down --remove-orphans
+          docker compose -f docker-compose.prod.yml up -d --build
+          Write-Host $env:MSG_ROLLBACK_DONE
+          Add-Content -Path $env:GITHUB_ENV -Value "ROLLBACK_DONE=true"
+        shell: powershell
+
       - name: Send Discord Notification on Success
         if: success()
         env:
@@ -93,11 +114,18 @@ jobs:
       - name: Send Discord Notification on Failure
         if: failure()
         env:
-          MSG_TITLE: "🔥 **배포 실패**"
-          MSG_BODY: "CMS 서비스 배포 중 오류가 발생했습니다."
+          MSG_TITLE_FAIL: "🔥 **배포 실패**"
+          MSG_BODY_FAIL: "CMS 서비스 배포 중 오류가 발생했습니다."
+          MSG_TITLE_ROLLBACK: "🔄 **배포 실패 — 롤백 완료**"
+          MSG_BODY_ROLLBACK: "배포 실패로 이전 버전으로 롤백되었습니다."
         run: |
-          $title = $env:MSG_TITLE
-          $body = $env:MSG_BODY
+          if ($env:ROLLBACK_DONE -eq "true") {
+            $title = $env:MSG_TITLE_ROLLBACK
+            $body = $env:MSG_BODY_ROLLBACK
+          } else {
+            $title = $env:MSG_TITLE_FAIL
+            $body = $env:MSG_BODY_FAIL
+          }
           $actor = "${{ github.actor }}"
           $sha = "${{ github.sha }}".Substring(0, 7)
           $workflow_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
