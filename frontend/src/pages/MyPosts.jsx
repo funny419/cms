@@ -14,6 +14,7 @@ export default function MyPosts() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
+  const [deleteError, setDeleteError] = useState('');
 
   const fetchFn = useCallback(
     (page) => {
@@ -26,9 +27,10 @@ export default function MyPosts() {
   const posts = items.filter((p) => !deletedIds.has(p.id));
 
   const handleDelete = async (id) => {
+    setDeleteError('');
     const res = await deletePost(token, id);
     if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
-    else alert(res.error);
+    else setDeleteError(res.error);
   };
 
   return (
@@ -39,6 +41,7 @@ export default function MyPosts() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
+      {deleteError && <div className="alert alert-error">{deleteError}</div>}
 
       {posts.length === 0 && !loading && !error ? (
         <div className="empty-state">

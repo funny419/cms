@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { listComments, createComment, updateComment, deleteComment } from '../api/comments';
+import ConfirmDialog from './ConfirmDialog';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -175,6 +176,7 @@ function GuestDeleteForm({ comment, onSuccess, onCancel }) {
 function ReplyItem({ reply, token, user, onRefresh }) {
   const [editMode, setEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const guestEmail = getGuestEmail();
   const guestName = getGuestName();
@@ -183,15 +185,23 @@ function ReplyItem({ reply, token, user, onRefresh }) {
     ? (user.role === 'admin' || reply.author_id === user.id)
     : (reply.author_id === null && guestEmail !== '' && reply.author_name === guestName);
 
-  const handleLoggedInDelete = async () => {
-    if (!window.confirm('답글을 삭제할까요?')) return;
+  const handleLoggedInDelete = () => {
+    setConfirmOpen(true);
+  };
+
+  const doLoggedInDelete = async () => {
     const res = await deleteComment(token, reply.id);
     if (res.success) onRefresh();
-    else alert(res.error);
   };
 
   return (
     <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, marginBottom: 12 }}>
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        message="답글을 삭제할까요?"
+        onConfirm={() => { setConfirmOpen(false); doLoggedInDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
       {editMode ? (
         <EditForm
           comment={reply}
@@ -249,6 +259,7 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const guestEmail = getGuestEmail();
   const guestName = getGuestName();
@@ -259,15 +270,23 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
     ? (user.role === 'admin' || comment.author_id === user.id)
     : (comment.author_id === null && guestEmail !== '' && comment.author_name === guestName);
 
-  const handleLoggedInDelete = async () => {
-    if (!window.confirm('댓글을 삭제할까요?')) return;
+  const handleLoggedInDelete = () => {
+    setConfirmOpen(true);
+  };
+
+  const doLoggedInDelete = async () => {
     const res = await deleteComment(token, comment.id);
     if (res.success) onRefresh();
-    else alert(res.error);
   };
 
   return (
     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 16, marginBottom: 16 }}>
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        message="댓글을 삭제할까요?"
+        onConfirm={() => { setConfirmOpen(false); doLoggedInDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
       {editMode ? (
         <EditForm
           comment={comment}

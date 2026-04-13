@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { listAllComments, deleteComment, approveComment, rejectComment } from '../../api/comments';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 import { useAuth } from '../../hooks/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const STATUS_LABEL = { approved: '공개', pending: '승인 대기', spam: '스팸' };
 const STATUS_COLOR = {
@@ -22,6 +23,7 @@ export default function AdminComments() {
   const { token, user } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [updatedStatuses, setUpdatedStatuses] = useState({}); // { [id]: 'approved' | 'spam' }
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
 
   const fetchFn = useCallback(
     (page) => {
@@ -37,11 +39,14 @@ export default function AdminComments() {
     updatedStatuses[c.id] ? { ...c, status: updatedStatuses[c.id] } : c
   );
 
-  const handleDelete = async (commentId) => {
-    if (!window.confirm('이 댓글을 삭제할까요? 답글도 함께 삭제됩니다.')) return;
-    const res = await deleteComment(token, commentId);
-    if (res.success) setDeletedIds((prev) => new Set([...prev, commentId]));
-    else alert(res.error);
+  const handleDelete = (commentId) => {
+    setConfirm({
+      message: '이 댓글을 삭제할까요? 답글도 함께 삭제됩니다.',
+      onConfirm: async () => {
+        const res = await deleteComment(token, commentId);
+        if (res.success) setDeletedIds((prev) => new Set([...prev, commentId]));
+      },
+    });
   };
 
   const handleApprove = async (commentId) => {
@@ -58,6 +63,12 @@ export default function AdminComments() {
 
   return (
     <div className="page-content" style={{ maxWidth: 960 }}>
+      <ConfirmDialog
+        isOpen={!!confirm}
+        message={confirm?.message ?? ''}
+        onConfirm={() => { const cb = confirm?.onConfirm; setConfirm(null); cb?.(); }}
+        onCancel={() => setConfirm(null)}
+      />
       <h1 className="page-heading" style={{ marginBottom: 24 }}>댓글 관리</h1>
 
       {error && <div className="alert alert-error">{error}</div>}

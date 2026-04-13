@@ -4,6 +4,7 @@ import { adminListPosts } from '../../api/admin';
 import { deletePost } from '../../api/posts';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
 import { useAuth } from '../../hooks/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const STATUS_LABEL = { published: '발행됨', draft: '임시저장', scheduled: '예약됨' };
 const STATUS_COLOR = {
@@ -19,6 +20,7 @@ export default function AdminPosts() {
   const [inputQ, setInputQ] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
 
   // 300ms 디바운스
   useEffect(() => {
@@ -37,15 +39,24 @@ export default function AdminPosts() {
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q, status]);
   const posts = items.filter((p) => !deletedIds.has(p.id));
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('이 포스트를 삭제할까요?')) return;
-    const res = await deletePost(token, id);
-    if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
-    else alert(res.error);
+  const handleDelete = (id) => {
+    setConfirm({
+      message: '이 포스트를 삭제할까요?',
+      onConfirm: async () => {
+        const res = await deletePost(token, id);
+        if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
+      },
+    });
   };
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
+      <ConfirmDialog
+        isOpen={!!confirm}
+        message={confirm?.message ?? ''}
+        onConfirm={() => { const cb = confirm?.onConfirm; setConfirm(null); cb?.(); }}
+        onCancel={() => setConfirm(null)}
+      />
       <h1 className="page-heading" style={{ marginBottom: 16 }}>포스트 관리</h1>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>

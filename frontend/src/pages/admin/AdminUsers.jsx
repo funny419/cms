@@ -6,6 +6,7 @@ import {
 } from '../../api/admin';
 import { useAuth } from '../../hooks/useAuth';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const ROLE_STYLE = {
   admin:       { background: 'var(--accent-bg)',  color: 'var(--accent-text)' },
@@ -17,6 +18,7 @@ const ROLE_LABEL = { admin: 'admin', editor: 'editor', deactivated: '비활성�
 export default function AdminUsers() {
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [overrides, setOverrides] = useState({});
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
   const [expandedUser, setExpandedUser] = useState(null);
   const [userPosts, setUserPosts] = useState({});
   const [selectedUser, setSelectedUser] = useState(null);
@@ -46,11 +48,14 @@ export default function AdminUsers() {
     else alert(res.error);
   };
 
-  const handleDeactivate = async (userId) => {
-    if (!window.confirm('이 회원을 비활성화할까요?')) return;
-    const res = await adminDeactivateUser(token, userId);
-    if (res.success) setOverrides((prev) => ({ ...prev, [userId]: { role: 'deactivated' } }));
-    else alert(res.error);
+  const handleDeactivate = (userId) => {
+    setConfirm({
+      message: '이 회원을 비활성화할까요?',
+      onConfirm: async () => {
+        const res = await adminDeactivateUser(token, userId);
+        if (res.success) setOverrides((prev) => ({ ...prev, [userId]: { role: 'deactivated' } }));
+      },
+    });
   };
 
   const handleActivate = async (userId) => {
@@ -59,11 +64,14 @@ export default function AdminUsers() {
     else alert(res.error);
   };
 
-  const handleDelete = async (userId) => {
-    if (!window.confirm('이 회원을 삭제할까요? 해당 회원의 글은 유지됩니다.')) return;
-    const res = await adminDeleteUser(token, userId);
-    if (res.success) setDeletedIds((prev) => new Set([...prev, userId]));
-    else alert(res.error);
+  const handleDelete = (userId) => {
+    setConfirm({
+      message: '이 회원을 삭제할까요? 해당 회원의 글은 유지됩니다.',
+      onConfirm: async () => {
+        const res = await adminDeleteUser(token, userId);
+        if (res.success) setDeletedIds((prev) => new Set([...prev, userId]));
+      },
+    });
   };
 
   const handleTogglePosts = async (userId) => {
@@ -77,6 +85,12 @@ export default function AdminUsers() {
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
+      <ConfirmDialog
+        isOpen={!!confirm}
+        message={confirm?.message ?? ''}
+        onConfirm={() => { const cb = confirm?.onConfirm; setConfirm(null); cb?.(); }}
+        onCancel={() => setConfirm(null)}
+      />
       <h1 className="page-heading" style={{ marginBottom: 24 }}>회원 관리</h1>
 
       {error && <div className="alert alert-error">{error}</div>}
