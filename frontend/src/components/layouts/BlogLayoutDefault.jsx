@@ -7,7 +7,7 @@ import TagCloud from '../widgets/TagCloud';
 function PostList({ posts, loading, hasMore, sentinelRef }) {
   const navigate = useNavigate();
   if (posts.length === 0 && !loading) {
-    return <div className="empty-state"><p>게시된 글이 없습니다.</p></div>;
+    return <div className="empty-state"><p>아직 포스트가 없습니다.</p></div>;
   }
   return (
     <>

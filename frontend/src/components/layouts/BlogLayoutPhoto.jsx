@@ -46,7 +46,7 @@ function PhotoCard({ post, accentColor }) {
 
 export default function BlogLayoutPhoto({ posts, loading, hasMore, sentinelRef, accentColor }) {
   if (posts.length === 0 && !loading) {
-    return <div className="empty-state"><p>게시된 글이 없습니다.</p></div>;
+    return <div className="empty-state"><p>아직 포스트가 없습니다.</p></div>;
   }
 
   return (

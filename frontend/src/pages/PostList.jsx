@@ -89,7 +89,7 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
           {posts.length === 0 && !loading && !error ? (
             <div className="empty-state">
               <p style={{ fontSize: 32, marginBottom: 12 }}>📄</p>
-              <p>{q ? `"${q}"에 대한 검색 결과가 없습니다.` : '게시된 포스트가 없습니다.'}</p>
+              <p>{(externalFilters?.q || q) ? `"${externalFilters?.q || q}"에 대한 검색 결과가 없습니다.` : '게시된 포스트가 없습니다.'}</p>
             </div>
           ) : (
             <ul className="post-list">
