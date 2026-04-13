@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPost, createPost, updatePost } from '../api/posts';
 import { getTags } from '../api/tags';
 import { useAuth } from './useAuth';
+import useToast from './useToast';
 
 const DRAFT_KEY = 'cms_post_draft';
 
@@ -36,6 +37,7 @@ export function usePostEditor() {
   const [error, setError] = useState('');
   const [slugError, setSlugError] = useState('');
   const [availableTags, setAvailableTags] = useState([]);
+  const { toast, showToast, dismissToast } = useToast();
 
   // 권한 확인 + 편집 모드 포스트 로딩
   useEffect(() => {
@@ -70,12 +72,13 @@ export function usePostEditor() {
     });
   }, []);
 
-  // 신규 작성 시: 10초마다 자동저장
+  // 10초마다 자동저장 (신규: localStorage 저장, 편집: 알림만 표시)
   useEffect(() => {
-    if (isEdit) return;
     const timer = setInterval(() => {
       if (form.title || form.content) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+        if (!isEdit) {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+        }
         setDraftSaved(true);
         setTimeout(() => setDraftSaved(false), 2000);
       }
@@ -102,7 +105,8 @@ export function usePostEditor() {
     setSaving(false);
     if (result.success) {
       localStorage.removeItem(DRAFT_KEY);
-      navigate(`/posts/${result.data.id}`);
+      showToast('저장되었습니다.');
+      setTimeout(() => navigate(`/posts/${result.data.id}`), 1000);
     } else if (result.status === 409) {
       setSlugError('이미 사용 중인 URL 슬러그입니다.');
     } else {
@@ -116,8 +120,9 @@ export function usePostEditor() {
 
   return {
     id, isEdit, form, setForm,
-    loading, saving, draftSaved, error, setError, slugError,
+    loading, saving, draftSaved, error, setError, slugError, setSlugError,
     availableTags, token, user,
     handleChange, handleSave, handleCancel,
+    toast, dismissToast,
   };
 }

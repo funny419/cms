@@ -9,6 +9,7 @@ import TagInput from '../components/inputs/TagInput';
 import CategoryDropdown from '../components/inputs/CategoryDropdown';
 import SeriesDropdown from '../components/inputs/SeriesDropdown';
 import { usePostEditor } from '../hooks/usePostEditor';
+import Toast from '../components/Toast';
 
 const QUILL_FORMATS = [
   'bold', 'italic', 'underline',
@@ -25,9 +26,10 @@ export default function PostEditor() {
 
   const {
     isEdit, form, setForm,
-    loading, saving, draftSaved, error, setError, slugError,
+    loading, saving, draftSaved, error, setError, slugError, setSlugError,
     availableTags, token, user,
     handleChange, handleSave, handleCancel,
+    toast, dismissToast,
   } = usePostEditor();
 
   const quillImageHandler = useCallback(() => {
@@ -96,8 +98,19 @@ export default function PostEditor() {
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
   );
 
+  const handleSlugChange = (e) => {
+    handleChange(e);
+    const val = e.target.value;
+    if (val && !/^[a-z0-9-]*$/.test(val)) {
+      setSlugError('슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.');
+    } else {
+      setSlugError('');
+    }
+  };
+
   return (
     <div className="page-content" style={{ maxWidth: 760 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       {/* 상단 버튼 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <button className="btn btn-ghost" onClick={handleCancel} disabled={saving}>
@@ -114,7 +127,7 @@ export default function PostEditor() {
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-      {draftSaved && !isEdit && (
+      {draftSaved && (
         <div style={{ fontSize: 12, color: 'var(--text-light)', textAlign: 'right', marginBottom: 8 }}>
           ✓ 임시저장됨
         </div>
@@ -260,7 +273,7 @@ export default function PostEditor() {
             className="form-input"
             name="slug"
             value={form.slug}
-            onChange={handleChange}
+            onChange={handleSlugChange}
             placeholder="url-slug"
             style={slugError ? { borderColor: 'var(--danger)' } : undefined}
           />
