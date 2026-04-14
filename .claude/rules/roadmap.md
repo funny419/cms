@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-10
-> 최근 완료: #29 RSS 피드 nginx/vite 라우팅 수정 (fdfdb58, e86cecb) + #30 posts.slug UNIQUE 제약 + slug 중복 409 (ed5c206, e5d7d13) + #66 AdminUsers 페이지네이션+인피니트스크롤 (2eef8e9, bfe1250) + #31 list_posts N+1 → GROUP BY 단일 쿼리 (37dd1a6)
+> 마지막 업데이트: 2026-04-14
+> 최근 완료: #38 backend healthcheck + #39 로그 rotation + #54 CI 자동 롤백 + Dockerfile appuser + #56~#78 UX/a11y/반응형/테스트 대규모 개선 (2026-04-13~14)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
@@ -74,6 +74,30 @@
 | **posts.slug UNIQUE 제약 (#30)** | **`posts.slug` 컬럼 INDEX → UNIQUE 변경 + 마이그레이션(bd7da55c). `POST/PUT /api/posts` slug 중복 시 409 반환 (자기 자신 제외 체크). 커밋: ed5c206(DB), e5d7d13(API)** |
 | **AdminUsers 페이지네이션 (#66)** | **`GET /api/admin/users` 페이지네이션 적용 — 응답 포맷 flat list → `{ items, total, page, per_page, has_more }`. AdminUsers.jsx useInfiniteScroll 훅 적용 + useAuth() 통일. 커밋: 2eef8e9(BE), bfe1250(FE)** |
 | **list_posts N+1 쿼리 개선 (#31)** | **`list_posts()` 포스트 목록 조회 시 N+1 문제 해소 — comment_sq/like_sq scalar_subquery → `outerjoin + GROUP BY` 단일 쿼리. 포스트 20개 기준 추가 쿼리 40회 → 0회. 커밋: 37dd1a6** |
+| **backend 컨테이너 healthcheck (#38)** | **`docker-compose.yml` + `docker-compose.prod.yml`에 healthcheck 추가. start_period: prod=40s, dev=20s. nginx depends_on `service_healthy` 조건 업그레이드. Dockerfile에 curl 설치. 커밋: 87f298b** |
+| **프로덕션 로그 rotation (#39)** | **`docker-compose.prod.yml` — db/backend/nginx 3개 서비스에 json-file driver, max-size 100m, max-file 5 적용. 디스크 무한 누적 방지. 커밋: 8fae255** |
+| **CI/CD 자동 롤백 (#54)** | **배포 실패 시 `github.event.before` SHA로 git checkout 후 재빌드. ROLLBACK_DONE 변수로 Discord 알림 분기. 커밋: 30d430f** |
+| **backend Dockerfile 비권한 USER** | **`adduser appuser + chown /app + USER appuser` 추가 (dev/prod 공통). root에서 프로세스 분리. 커밋: 8b6eb45** |
+| **ConfirmDialog 컴포넌트 (#58)** | **`window.confirm/alert` 전면 교체 → `ConfirmDialog.jsx` (CSS Variables 기반 모달). MyPosts/AdminPosts/AdminUsers/AdminComments/CommentSection 적용. 커밋: 1049c1b** |
+| **키보드 접근성 개선 (#59)** | **클릭 가능 요소 전반 `tabIndex`, `onKeyDown` 추가. 커밋: 5d707b9** |
+| **반응형 레이아웃 (#60)** | **Nav 모바일 햄버거 메뉴 + 640px/480px 브레이크포인트 + `responsive.spec.js` E2E TC. CommentSection 게스트 폼 id 중복 수정. 커밋: 97b5332, cae1fe9** |
+| **PostDetail useEffect 안정화 (#61)** | **`cancelled` 패턴 적용 — unmount 시 setState 방지. 커밋: 1c143bb** |
+| **STATUS_BADGE 공통 상수 추출 (#62)** | **`frontend/src/constants/postStatus.js` 신규 — PostDetail/MyPosts 중복 선언 제거. 커밋: 2fcb96c** |
+| **follows deactivated 필터 (#65)** | **`list_following()` total/items 쿼리에 deactivated 유저 필터 추가. 커밋: 17ebe4a** |
+| **Toast 피드백 컴포넌트 (#67)** | **`Toast.jsx` + `useToast.js` 신규. 2.5초 auto dismiss, 우하단 fixed. AdminUsers/AdminComments/AdminPosts alert 대체. 커밋: cfb773e** |
+| **aria-label 일괄 추가 (#68)** | **아이콘 버튼 및 폼 요소 aria-label 전반 추가. 커밋: 1f28708** |
+| **오류 안내 메시지 개선 (#69)** | **오류 상황별 사용자 친화적 안내 개선. 커밋: 26c9f2a** |
+| **로딩 상태 피드백 (#70)** | **주요 3곳 로딩 스피너/메시지 추가. 커밋: c4bd0d8** |
+| **Admin 반응형 + 포토 모바일 폴백 (#71)** | **Admin 테이블 overflow-x 스크롤 + BlogLayoutPhoto 모바일 fallback. 커밋: e4611be** |
+| **빈 상태 메시지 통일 (#72)** | **전체 빈 목록 상태 메시지 일관된 스타일로 통일. 커밋: 38d8b50** |
+| **PostEditor UX 개선 (#73)** | **PostEditor 3가지 UX 개선 (draft 안내 등). 커밋: 32ff7f9** |
+| **블로그 설정 저장 후 링크 (#74)** | **블로그 설정 저장 성공 시 블로그 홈 링크 표시. 커밋: 0e9e385** |
+| **btn-sm + info 색상 변수 (#75)** | **`btn-sm` 유틸 클래스 + `--color-info` CSS 변수 도입. 커밋: 31d3279** |
+| **PostList 카테고리 URL param (#76)** | **카테고리 필터 상태를 URL query param(`?category=id`)으로 관리 — 뒤로가기/공유 가능. 커밋: 8ce5001** |
+| **다크모드 focus-visible outline (#77)** | **다크모드에서 focus-visible outline 가시성 개선. 커밋: af72ecd** |
+| **SeriesDropdown 인라인 생성 (#78)** | **PostEditor에서 시리즈 선택 시 인라인 입력창으로 새 시리즈 즉시 생성 가능. 커밋: 72fc329** |
+| **Vitest 단위 테스트 확충 (#57)** | **useAuth/Nav/CommentSection/ProfileCard 테스트 23개 추가. 총 Vitest TC: 35→58개. 커밋: 3670d72** |
+| **E2E TC 추가 (#56)** | **TC-U003/U004/U006(시리즈) + TC-U044~U047(온보딩 모달) E2E 자동화. `onboarding.spec.js` 신규. BlogHome getUserSeries 버그 수정 + vite 프록시 /blog 분기 개선. 커밋: 77d2822** |
 
 ### 미구현
 

@@ -171,7 +171,5 @@ docker compose restart backend
 
 ## 관련 문서
 
-- [API 엔드포인트](.claude/rules/api.md)
-- [아키텍처 개요](.claude/rules/architecture.md)
-- [CI/CD 설정](.claude/rules/cicd.md)
-- [Setup Wizard Phase 2 구현 계획](superpowers/plans/2026-04-01-setup-wizard-phase2.md)
+- [GitHub 리포지토리](https://github.com/funny419/cms)
+- [이슈 트래커](https://github.com/funny419/cms/issues)

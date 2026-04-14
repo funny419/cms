@@ -108,7 +108,7 @@
 | `POST /api/users/:username/follow` | 로그인 | 팔로우. 응답: `{ following: true }`. 신규 팔로우 201, 이미 팔로우 중 200. 자기 팔로우 400 |
 | `DELETE /api/users/:username/follow` | 로그인 | 언팔로우. 응답: `{ following: false }` |
 | `GET /api/users/:username/followers` | 공개 | 팔로워 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
-| `GET /api/users/:username/following` | 공개 | 팔로잉 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
+| `GET /api/users/:username/following` | 공개 | 팔로잉 목록 (deactivated 제외, #65). 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
 | `GET /api/feed` | 로그인 | 이웃 피드 (팔로우한 사람의 published+public/members_only 포스트). 파라미터: `?page=1&per_page=20`. 응답: items, total, has_more |
 
 ### 시리즈 API

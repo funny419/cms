@@ -125,13 +125,15 @@ cms/
 │       │   ├── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
 │       │   └── client.js        # axios 인스턴스 + authHeader 헬퍼 — 9개 api/*.js 공통 사용 (리팩토링 FE-P1)
 │       ├── components/
-│       │   ├── Nav.jsx          # role별 네비게이션 (editor: 내 블로그 링크 추가 — Sprint 2)
+│       │   ├── Nav.jsx          # role별 네비게이션 + 모바일 햄버거 메뉴 (#60)
 │       │   ├── CommentSection.jsx
+│       │   ├── ConfirmDialog.jsx  # window.confirm 대체 모달 (#58)
+│       │   ├── Toast.jsx          # 전역 피드백 토스트 (2.5초 auto dismiss, 우하단 fixed) (#67)
 │       │   ├── ProfileCard.jsx  # 사용자 프로필 카드 (아바타, bio) — Sprint 2
 │       │   ├── inputs/          # 입력 컴포넌트
 │       │   │   ├── CategoryDropdown.jsx  # 카테고리 단일 선택 셀렉트 (PostEditor + AdminPosts) — Sprint 2
 │       │   │   ├── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
-│       │   │   └── SeriesDropdown.jsx  # 시리즈 선택 드롭다운 (PostEditor) — Phase 3
+│       │   │   └── SeriesDropdown.jsx  # 시리즈 선택 드롭다운 + 인라인 생성 UI (PostEditor) — Phase 3 / #78
 │       │   ├── layouts/         # 블로그 홈 레이아웃 컴포넌트 (Phase 3.1)
 │       │   │   ├── BlogLayoutDefault.jsx   # Layout A: 사이드바 + 포스트 목록
 │       │   │   ├── BlogLayoutCompact.jsx   # Layout B: 사이드바 숨김
@@ -150,27 +152,36 @@ cms/
 │       │   ├── ThemeContext.jsx     # 라이트/다크 모드 (useTheme)
 │       │   ├── SkinContext.jsx      # 스킨 4종 관리 (useSkin, SKINS 목록)
 │       │   └── CategoryContext.jsx  # 전역 카테고리 목록 — Sprint 2
+│       ├── constants/
+│       │   └── postStatus.js         # STATUS_BADGE 공통 상수 (PostDetail/MyPosts 공유) — #62
 │       ├── hooks/
 │       │   ├── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
 │       │   ├── useAuth.js            # localStorage token/user 단일 창구 (리팩토링 FE-P1)
 │       │   ├── useFetch.js           # cancelled 패턴 공통 훅 — 단순 단일 fetch 케이스 (리팩토링 FE-P2)
-│       │   └── usePostEditor.js      # PostEditor 폼 상태 + draft 자동저장 + API 호출 (리팩토링 FE-P3)
-│       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest)
+│       │   ├── usePostEditor.js      # PostEditor 폼 상태 + draft 자동저장 + API 호출 (리팩토링 FE-P3)
+│       │   └── useToast.js           # Toast 피드백 훅 (showToast/dismissToast) — #67
+│       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest, 총 58개 TC)
 │       │   ├── setup.js              # Vitest 설정
 │       │   ├── OnboardingModal.test.jsx
 │       │   ├── SeriesNav.test.jsx
 │       │   ├── ShareButtons.test.jsx
-│       │   └── usePostEditor.test.jsx  # usePostEditor 훅 테스트 3개 (리팩토링 FE-P3)
-│       └── test/e2e/                 # Playwright E2E 테스트 (High 우선순위 38개 TC 전체 커버)
+│       │   ├── usePostEditor.test.jsx  # usePostEditor 훅 테스트 3개 (리팩토링 FE-P3)
+│       │   ├── useAuth.test.jsx        # useAuth 훅 테스트 5개 (#57)
+│       │   ├── Nav.test.jsx            # 역할별 네비게이션 렌더링 6개 (#57)
+│       │   ├── CommentSection.test.jsx # 댓글 표시 조건 4개 (#57)
+│       │   └── ProfileCard.test.jsx   # 팔로우 버튼 분기 8개 (#57)
+│       └── test/e2e/                 # Playwright E2E 테스트
 │           ├── globalSetup.js        # pw_editor 계정 생성 + admin/editor storageState 저장
 │           ├── admin.spec.js         # TC-A001~A003: Admin 포스트 관리
 │           ├── layout.spec.js        # TC-U022~U025: 블로그 레이아웃 4종
 │           ├── access-control.spec.js # TC-U043, U048, U049: 비로그인 접근 차단
 │           ├── auth-guard.spec.js    # TC-A007, A012, A014~A017: 권한/인증 검증
-│           ├── series.spec.js        # TC-U001~U003, U005: 포스트 시리즈
+│           ├── series.spec.js        # TC-U001~U006: 포스트 시리즈 (U003/U004/U006 추가 #56)
 │           ├── stats.spec.js         # TC-U007~U009: 블로그 통계
 │           ├── follow.spec.js        # TC-U031~U034, I002: 팔로우/피드
 │           ├── admin-actions.spec.js # TC-A005, A008, A009, A011, I004: Admin 액션
+│           ├── onboarding.spec.js    # TC-U044~U047: 온보딩 모달 (#56)
+│           ├── responsive.spec.js    # 반응형 레이아웃 TC (#60)
 │           └── misc.spec.js          # TC-U013, U026, U036, U042, I005: 기타
 │       └── pages/
 │           ├── admin/
@@ -227,7 +238,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-04-10 (posts.slug UNIQUE 제약 추가 — #30)
+> 마지막 업데이트: 2026-04-14 (#63 mimetype 설명 보완, 신규 컴포넌트/테스트 파일 반영)
 
 ### 테이블 요약
 
@@ -387,7 +398,7 @@ id: int (PK)
 uploaded_by: int FK NOT NULL
 filename: str(255) NOT NULL
 filepath: str(500) NOT NULL (storage 경로 또는 CDN URL)
-mimetype: str(100)
+mimetype: str(100) — python-magic으로 감지한 실제 MIME 저장 (client-supplied 값 불신, 2026-04-10 변경)
 size: int (bytes)
 meta_data: JSON nullable (너비, 높이, alt 텍스트 등)
 created_at: DateTime server_default=now()
