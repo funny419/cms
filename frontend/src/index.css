@@ -176,6 +176,18 @@ a {
 }
 a:hover { text-decoration: underline; }
 
+/* ── 키보드 포커스 링 ── */
+/* 라이트: --accent #6c47ff on #ffffff ≈ 4.8:1 WCAG AA */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 다크(수동): --accent #8b6fff on #191919 ≈ 4.9:1 WCAG AA */
+[data-theme="dark"] :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── 유틸리티 ── */
 .page-center {
   min-height: 100svh;
