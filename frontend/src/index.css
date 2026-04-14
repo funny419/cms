@@ -15,6 +15,8 @@
   --danger-bg: #fdf2f2;
   --success: #0f7b6c;
   --success-bg: #f0faf8;
+  --info-bg: #dbeafe;
+  --info-text: #1d4ed8;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --radius: 8px;
@@ -50,6 +52,8 @@
     --danger-bg: rgba(248, 113, 113, 0.1);
     --success: #34d399;
     --success-bg: rgba(52, 211, 153, 0.1);
+    --info-bg: rgba(59, 130, 246, 0.15);
+    --info-text: #93c5fd;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
@@ -267,6 +271,7 @@ a:hover { text-decoration: underline; }
 .btn-danger:hover { background: var(--danger-bg); }
 
 .btn-full { width: 100%; margin-top: 8px; }
+.btn-sm { font-size: 11px; padding: 3px 8px; }
 
 .alert {
   padding: 10px 14px;

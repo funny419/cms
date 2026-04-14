@@ -12,7 +12,7 @@ import useToast from '../../hooks/useToast';
 
 const ROLE_STYLE = {
   admin:       { background: 'var(--accent-bg)',  color: 'var(--accent-text)' },
-  editor:      { background: '#dbeafe',           color: '#1d4ed8' },
+  editor:      { background: 'var(--info-bg)',     color: 'var(--info-text)' },
   deactivated: { background: 'var(--bg-subtle)',  color: 'var(--text-light)' },
 };
 const ROLE_LABEL = { admin: 'admin', editor: 'editor', deactivated: '비활성화' };
@@ -183,30 +183,30 @@ export default function AdminUsers() {
                   <td style={{ padding: '10px 12px' }}>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {!isDeactivated && (
-                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
+                        <button className="btn btn-ghost btn-sm"
                           disabled={isSelf}
                           onClick={() => !isSelf && handleRoleChange(u.id, u.role)}>
                           {u.role === 'admin' ? '→editor' : '→admin'}
                         </button>
                       )}
                       {isDeactivated ? (
-                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px', color: 'var(--success)' }}
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--success)' }}
                           disabled={isSelf}
                           onClick={() => !isSelf && handleActivate(u.id)}>
                           활성화
                         </button>
                       ) : (
-                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
+                        <button className="btn btn-ghost btn-sm"
                           disabled={isSelf}
                           onClick={() => !isSelf && handleDeactivate(u.id)}>
                           비활성화
                         </button>
                       )}
-                      <button className="btn btn-ghost" style={{ fontSize: 11, padding: '3px 8px' }}
+                      <button className="btn btn-ghost btn-sm"
                         onClick={() => handleTogglePosts(u.id)}>
                         글 보기
                       </button>
-                      <button className="btn btn-danger" style={{ fontSize: 11, padding: '3px 8px' }}
+                      <button className="btn btn-danger btn-sm"
                         disabled={isSelf}
                         onClick={() => !isSelf && handleDelete(u.id)}>
                         삭제
