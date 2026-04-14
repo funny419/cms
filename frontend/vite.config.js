@@ -36,6 +36,10 @@ export default defineConfig({
         target: backendUrl,
         changeOrigin: true,
         secure: false,
+        bypass: (req) => {
+          // feed.xml만 백엔드로 프록시, 나머지 /blog/* 경로는 SPA fallback
+          if (!req.url.endsWith('feed.xml')) return '/index.html';
+        },
       },
     },
   },

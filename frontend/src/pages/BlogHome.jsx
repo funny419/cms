@@ -37,7 +37,7 @@ export default function BlogHome() {
       } else {
         setProfileError(profileRes.error || '사용자를 찾을 수 없습니다.');
       }
-      if (seriesRes.success) setSeriesList(seriesRes.data.items || []);
+      if (seriesRes.success) setSeriesList(seriesRes.data || []);
       setProfileLoading(false);
     };
     load();
