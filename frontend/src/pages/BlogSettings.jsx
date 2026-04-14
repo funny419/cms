@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getCurrentUser, updateUser } from '../api/auth';
 import { uploadMedia } from '../api/media';
 import { useAuth } from '../hooks/useAuth';
@@ -131,7 +131,14 @@ export default function BlogSettings() {
         <button style={tabStyle(TAB_DESIGN)} onClick={() => setActiveTab(TAB_DESIGN)}>디자인</button>
       </div>
 
-      {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
+      {message && (
+        <div className="alert alert-success" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{message}</span>
+          <Link to={`/blog/${user?.username}`} style={{ fontSize: 13, fontWeight: 600, color: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', marginLeft: 12 }}>
+            블로그 홈에서 확인하기 →
+          </Link>
+        </div>
+      )}
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       {activeTab === TAB_BASIC && (
