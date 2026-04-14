@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listPosts } from '../api/posts';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import { useCategories } from '../context/CategoryContext';
@@ -25,7 +25,10 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
   const { token, user } = useAuth();
 
   const { categories } = useCategories();
-  const [categoryId, setCategoryId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryId = externalFilters
+    ? null
+    : (searchParams.get('category_id') ? parseInt(searchParams.get('category_id'), 10) : null);
   const [inputQ, setInputQ] = useState('');
   const [q, setQ] = useState('');
 
@@ -60,7 +63,15 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
           <CategorySidebar
             categories={categories}
             selectedId={categoryId}
-            onSelect={(id) => { setCategoryId(id); }}
+            onSelect={(id) => {
+              if (externalFilters) return;
+              setSearchParams((prev) => {
+                const p = Object.fromEntries(prev.entries());
+                if (id) p.category_id = String(id);
+                else delete p.category_id;
+                return p;
+              });
+            }}
           />
         </aside>
         <div style={{ flex: 1, minWidth: 0 }}>
