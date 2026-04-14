@@ -3,7 +3,7 @@
 | 구분 | 기술 |
 |------|------|
 | Frontend | React 19 + Vite + CSS Variables (Tailwind 미설치) |
-| Backend | Python 3.11 + Flask + SQLAlchemy 3.x + Flask-JWT-Extended |
+| Backend | Python 3.11 + Flask + Flask-SQLAlchemy 3.x (SQLAlchemy 2.x 스타일 쿼리) + Flask-JWT-Extended |
 | Database | MariaDB 10.11 |
 | 로컬 개발 포트 | FE: 5173, BE: 5000, DB: 4807 |
 
@@ -56,13 +56,12 @@
 - **Vite proxy**: `vite.config.js`에서 환경변수로 분기
   - `/api` → `BACKEND_URL` (Docker: `http://backend:5000`, 로컬: `http://localhost:5000`)
   - `/uploads` → `FILES_URL` (Docker: `http://nginx-files:80`, 로컬: `http://localhost:5000`)
-- **권한 확인 패턴** (각 페이지에서 사용):
+- **권한 확인 패턴** (리팩토링 후):
   ```js
-  const getUser = () => {
-    try { return JSON.parse(localStorage.getItem('user')); }
-    catch { return null; }
-  };
+  import { useAuth } from '../hooks/useAuth';
+  const { token, user, isLoggedIn } = useAuth();
   ```
+  (`hooks/useAuth.js` — localStorage 직접 접근 단일 창구. 리팩토링 전 `getUser()` 인라인 패턴은 제거됨)
 
 ---
 
@@ -76,20 +75,34 @@ cms/
 │   ├── api/
 │   │   ├── admin.py             # Admin 대시보드 API (검색/필터/페이지네이션 포함)
 │   │   ├── auth.py              # 인증
+│   │   ├── categories.py        # 카테고리 CRUD API (계층형 3단, Sprint 2)
 │   │   ├── comments.py          # 댓글 + 스팸 필터
 │   │   ├── decorators.py        # roles_required 데코레이터
+│   │   ├── feeds.py             # RSS 2.0 피드 (`/blog/:username/feed.xml`)
+│   │   ├── follows.py           # 팔로우/언팔로우/팔로워/팔로잉 + 이웃 피드 API
+│   │   ├── helpers.py           # 공통 헬퍼 (페이지네이션/응답/게스트인증, BE 리팩토링 Issue #14)
 │   │   ├── media.py             # 파일 업로드 + 썸네일 (storage.py 통해 저장)
 │   │   ├── menus.py             # 동적 메뉴
 │   │   ├── posts.py             # 포스트 CRUD + 소유권 + 검색(q) + 페이지네이션
-│   │   ├── settings.py          # 사이트 설정 (site_skin 포함)
-│   │   ├── follows.py           # 팔로우/언팔로우/팔로워/팔로잉 + 이웃 피드 API
-│   │   ├── feeds.py             # RSS 2.0 피드 (`/blog/:username/feed.xml`)
 │   │   ├── series.py            # 포스트 시리즈 CRUD + 시리즈-포스트 연결 API
+│   │   ├── settings.py          # 사이트 설정 (site_skin 포함)
 │   │   ├── stats.py             # 블로그 통계 + Admin 통계 API
+│   │   ├── tags.py              # 태그 CRUD API (Sprint 2)
 │   │   ├── wizard.py            # Setup Wizard Phase 1 (GET /api/wizard/status, POST /api/wizard/setup)
 │   │   └── wizard_phase2.py     # Setup Wizard Phase 2 (POST /api/wizard/db-test, /env, /migrate)
 │   ├── migrations/              # Flask-Migrate (반드시 git 커밋)
-│   ├── models/schema.py         # SQLAlchemy ORM 모델
+│   ├── models/                  # SQLAlchemy ORM 모델 (도메인별 분리, Issue #21)
+│   │   ├── __init__.py          # 전체 모델 re-export (Alembic 자동 감지용)
+│   │   ├── base.py              # Base(DeclarativeBase)
+│   │   ├── user.py              # User, Follow
+│   │   ├── post.py              # Post, PostMeta, PostLike, VisitLog
+│   │   ├── comment.py           # Comment
+│   │   ├── media.py             # Media
+│   │   ├── category.py          # Category
+│   │   ├── tag.py               # Tag, PostTag
+│   │   ├── series.py            # Series, SeriesPost
+│   │   ├── option.py            # Option, Menu, MenuItem
+│   │   └── constants.py         # MAX_CATEGORY_DEPTH=3 등 비즈니스 상수
 │   ├── app.py                   # Flask 팩토리 + 자동 마이그레이션
 │   ├── config.py                # Dev/Prod 설정
 │   ├── database.py              # db = SQLAlchemy(model_class=Base)
@@ -109,15 +122,18 @@ cms/
 │       │   ├── users.js         # 사용자 API (getUserProfile, getUserPosts) — Sprint 2
 │       │   ├── series.js        # 시리즈 API (getSeries, createSeries 등) — Phase 3
 │       │   ├── stats.js         # 통계 API (getBlogStats) — Phase 3
-│       │   └── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
+│       │   ├── wizard.js        # Setup Wizard API (getWizardStatus, testDbConnection, saveEnvFile, runMigration, submitWizardSetup)
+│       │   └── client.js        # axios 인스턴스 + authHeader 헬퍼 — 9개 api/*.js 공통 사용 (리팩토링 FE-P1)
 │       ├── components/
-│       │   ├── Nav.jsx          # role별 네비게이션 (editor: 내 블로그 링크 추가 — Sprint 2)
+│       │   ├── Nav.jsx          # role별 네비게이션 + 모바일 햄버거 메뉴 (#60)
 │       │   ├── CommentSection.jsx
+│       │   ├── ConfirmDialog.jsx  # window.confirm 대체 모달 (#58)
+│       │   ├── Toast.jsx          # 전역 피드백 토스트 (2.5초 auto dismiss, 우하단 fixed) (#67)
 │       │   ├── ProfileCard.jsx  # 사용자 프로필 카드 (아바타, bio) — Sprint 2
 │       │   ├── inputs/          # 입력 컴포넌트
 │       │   │   ├── CategoryDropdown.jsx  # 카테고리 단일 선택 셀렉트 (PostEditor + AdminPosts) — Sprint 2
 │       │   │   ├── TagInput.jsx        # 태그 chip 입력 (PostEditor) — Sprint 2
-│       │   │   └── SeriesDropdown.jsx  # 시리즈 선택 드롭다운 (PostEditor) — Phase 3
+│       │   │   └── SeriesDropdown.jsx  # 시리즈 선택 드롭다운 + 인라인 생성 UI (PostEditor) — Phase 3 / #78
 │       │   ├── layouts/         # 블로그 홈 레이아웃 컴포넌트 (Phase 3.1)
 │       │   │   ├── BlogLayoutDefault.jsx   # Layout A: 사이드바 + 포스트 목록
 │       │   │   ├── BlogLayoutCompact.jsx   # Layout B: 사이드바 숨김
@@ -136,13 +152,37 @@ cms/
 │       │   ├── ThemeContext.jsx     # 라이트/다크 모드 (useTheme)
 │       │   ├── SkinContext.jsx      # 스킨 4종 관리 (useSkin, SKINS 목록)
 │       │   └── CategoryContext.jsx  # 전역 카테고리 목록 — Sprint 2
+│       ├── constants/
+│       │   └── postStatus.js         # STATUS_BADGE 공통 상수 (PostDetail/MyPosts 공유) — #62
 │       ├── hooks/
-│       │   └── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
-│       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest)
+│       │   ├── useInfiniteScroll.js  # IntersectionObserver 기반 인피니트 스크롤
+│       │   ├── useAuth.js            # localStorage token/user 단일 창구 (리팩토링 FE-P1)
+│       │   ├── useFetch.js           # cancelled 패턴 공통 훅 — 단순 단일 fetch 케이스 (리팩토링 FE-P2)
+│       │   ├── usePostEditor.js      # PostEditor 폼 상태 + draft 자동저장 + API 호출 (리팩토링 FE-P3)
+│       │   └── useToast.js           # Toast 피드백 훅 (showToast/dismissToast) — #67
+│       ├── test/                     # 프론트엔드 컴포넌트 테스트 (Vitest, 총 58개 TC)
 │       │   ├── setup.js              # Vitest 설정
 │       │   ├── OnboardingModal.test.jsx
 │       │   ├── SeriesNav.test.jsx
-│       │   └── ShareButtons.test.jsx
+│       │   ├── ShareButtons.test.jsx
+│       │   ├── usePostEditor.test.jsx  # usePostEditor 훅 테스트 3개 (리팩토링 FE-P3)
+│       │   ├── useAuth.test.jsx        # useAuth 훅 테스트 5개 (#57)
+│       │   ├── Nav.test.jsx            # 역할별 네비게이션 렌더링 6개 (#57)
+│       │   ├── CommentSection.test.jsx # 댓글 표시 조건 4개 (#57)
+│       │   └── ProfileCard.test.jsx   # 팔로우 버튼 분기 8개 (#57)
+│       └── test/e2e/                 # Playwright E2E 테스트
+│           ├── globalSetup.js        # pw_editor 계정 생성 + admin/editor storageState 저장
+│           ├── admin.spec.js         # TC-A001~A003: Admin 포스트 관리
+│           ├── layout.spec.js        # TC-U022~U025: 블로그 레이아웃 4종
+│           ├── access-control.spec.js # TC-U043, U048, U049: 비로그인 접근 차단
+│           ├── auth-guard.spec.js    # TC-A007, A012, A014~A017: 권한/인증 검증
+│           ├── series.spec.js        # TC-U001~U006: 포스트 시리즈 (U003/U004/U006 추가 #56)
+│           ├── stats.spec.js         # TC-U007~U009: 블로그 통계
+│           ├── follow.spec.js        # TC-U031~U034, I002: 팔로우/피드
+│           ├── admin-actions.spec.js # TC-A005, A008, A009, A011, I004: Admin 액션
+│           ├── onboarding.spec.js    # TC-U044~U047: 온보딩 모달 (#56)
+│           ├── responsive.spec.js    # 반응형 레이아웃 TC (#60)
+│           └── misc.spec.js          # TC-U013, U026, U036, U042, I005: 기타
 │       └── pages/
 │           ├── admin/
 │           │   ├── AdminPosts.jsx     # 포스트 관리 (검색+status필터+category필터+무한스크롤 — Sprint 2)
@@ -165,7 +205,7 @@ cms/
 │           └── SetupWizard.jsx  # Setup Wizard 5단계 UI (DB연결→재시작→마이그레이션→계정→완료)
 ├── docs/
 │   ├── superpowers/             # 설계 스펙 및 구현 계획서
-│   ├── qa/                      # QA 테스트 케이스 (tc_sprint3.md 인덱스, tc_user.md, tc_admin.md, tc_integration.md)
+│   ├── qa/                      # QA 테스트 케이스 (tc_sprint3.md 인덱스, tc_user.md, tc_admin.md, tc_integration.md, tc_wizard.md)
 │   ├── INSTALL.md               # 설치 가이드 (Setup Wizard 5단계 포함)
 │   ├── INFRA_ANALYSIS_REPORT.md
 │   └── 멀티유저블로그_UX기획_분석보고서.md
@@ -198,7 +238,7 @@ cms/
 
 ## 현재 DB 테이블 목록 (스키마)
 
-> 마지막 업데이트: 2026-04-01 (인덱스 추가 반영 — ix_posts_author_id, idx_follows_following_id)
+> 마지막 업데이트: 2026-04-14 (#63 mimetype 설명 보완, 신규 컴포넌트/테스트 파일 반영)
 
 ### 테이블 요약
 
@@ -211,7 +251,7 @@ cms/
 | `post_tags` | Post-Tag 연결 | post_id(FK), tag_id(FK) | Post, Tag |
 | `comments` | 댓글 | id(PK), post_id(FK), author_id(FK, nullable), content, status | Post, User, Comment(계층형) |
 | `post_likes` | 추천 | id(PK), post_id(FK), user_id(FK) | Post, User |
-| `post_meta` | 포스트 메타데이터 | id(PK), post_id(FK), meta_key, meta_value | Post |
+| ~~`post_meta`~~ | ~~포스트 메타데이터~~ | ~~id(PK), post_id(FK), meta_key, meta_value~~ | ~~Post~~ — **스팩아웃 (#50)** |
 | `media` | 파일 메타데이터 | id(PK), uploaded_by(FK), filename, filepath, size | User |
 | `options` | 전역 설정 | id(PK), option_name, option_value | (단일 행) |
 | `menus` / `menu_items` | 네비게이션 메뉴 | menu_id, parent_id(자기참조) | (계층형) |
@@ -245,7 +285,7 @@ created_at: DateTime server_default=now()
 id: int (PK)
 author_id: int FK nullable (마이그레이션 d56f01212789에서 nullable 변경)
 title: str(255) NOT NULL
-slug: str(255) INDEX NOT NULL
+slug: str(255) UNIQUE NOT NULL (uq_posts_slug, 마이그레이션 bd7da55c — #30)
 content: Text nullable
 excerpt: Text nullable
 status: str(20) default='draft' [draft, published, scheduled]
@@ -358,7 +398,7 @@ id: int (PK)
 uploaded_by: int FK NOT NULL
 filename: str(255) NOT NULL
 filepath: str(500) NOT NULL (storage 경로 또는 CDN URL)
-mimetype: str(100)
+mimetype: str(100) — python-magic으로 감지한 실제 MIME 저장 (client-supplied 값 불신, 2026-04-10 변경)
 size: int (bytes)
 meta_data: JSON nullable (너비, 높이, alt 텍스트 등)
 created_at: DateTime server_default=now()
@@ -367,13 +407,16 @@ created_at: DateTime server_default=now()
 ### 인덱스 설계
 
 **주요 인덱스:**
-- `posts`: idx_posts_slug, (category_id, status) 복합 인덱스 (Sprint 2)
+- `posts`: `uq_posts_slug` UNIQUE 인덱스 (slug, #30 — 2026-04-10, bd7da55c), (category_id, status) 복합 인덱스 (Sprint 2)
 - `posts`: `ix_posts_author_id` (author_id) — stats/feed 쿼리 최적화 (추가: 2026-04-01, commit a5a52cc)
-- `comments`: (post_id, status, created_at)
-- `post_tags`: (tag_id) — 태그별 포스트 조회 최적화
+- `comments`: `idx_comments_post_status_created` (post_id, status, created_at) — 댓글 목록 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
+- `post_tags`: `idx_post_tags_tag_id` (tag_id) — 태그별 포스트 조회 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `categories`: (parent_id, order), slug
-- `post_likes`: (user_id, post_id)
+- `post_likes`: `idx_post_likes_user_id` (user_id) — 좋아요 집계 최적화 (추가: 2026-04-06, commit 83c2b7f)
 - `follows`: `idx_follows_following_id` (following_id) — 팔로워 목록 조회 최적화 (추가: 2026-04-01, commit a5a52cc)
+- `visit_logs`: `idx_visit_logs_visited_at` (visited_at) — 통계 날짜 범위 필터 최적화 (추가: 2026-04-08)
+- `posts`: `idx_posts_status_visibility_created` (status, visibility, created_at DESC) — 목록 조회 복합 인덱스 (추가: 2026-04-08)
+- `series_posts`: `idx_series_posts_post_id` (post_id) — 포스트가 속한 시리즈 역방향 조회 최적화 (추가: 2026-04-10)
 
 **Fulltext 인덱스 (검색):**
 - `posts`: FULLTEXT(title, excerpt, content) — `MATCH ... AGAINST` 쿼리용
@@ -402,6 +445,10 @@ created_at: DateTime server_default=now()
 | `3c1734bf86e6_create_visit_logs_table.py` | visit_logs 테이블 생성 (Phase 3 Stage 1) | ✅ |
 | `79e90ed73d8d_create_series_and_series_posts_tables.py` | series, series_posts 테이블 생성 (Phase 3 Stage 2) | ✅ |
 | `c6ba37f921ea_add_idx_posts_author_id_follows_.py` | ix_posts_author_id + idx_follows_following_id 인덱스 추가 (성능 개선) | ✅ |
+| `5c4b3411ca67_add_indexes_for_comments_post_tags_post_.py` | idx_comments_post_status_created + idx_post_tags_tag_id + idx_post_likes_user_id 인덱스 추가 (리팩토링 P2-DB, Issue #18) | ✅ |
+| `5d92b5bbdf0c_add_indexes_visit_logs_posts.py` | visit_logs.visited_at + posts 복합 인덱스(status, visibility, created_at DESC) 추가 | ✅ |
+| `5523ceeb393f_add_idx_series_posts_post_id.py` | series_posts.post_id 인덱스 추가 (no-op, DB에 이미 적용됨) | ✅ |
+| `bd7da55c642e_add_unique_constraint_to_posts_slug.py` | posts.slug UNIQUE 제약 추가 (빈 slug post-{id} 정규화 후 uq_posts_slug 생성, #30) | ✅ |
 
 ### 주의사항
 

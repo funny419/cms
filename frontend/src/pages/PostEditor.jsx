@@ -1,25 +1,15 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
-import { getPost, createPost, updatePost } from '../api/posts';
 import { uploadMedia } from '../api/media';
-import { getTags } from '../api/tags';
 import { useTheme } from '../context/ThemeContext';
 import { useCategories } from '../context/CategoryContext';
 import TagInput from '../components/inputs/TagInput';
 import CategoryDropdown from '../components/inputs/CategoryDropdown';
 import SeriesDropdown from '../components/inputs/SeriesDropdown';
-
-const DRAFT_KEY = 'cms_post_draft';
-
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
-const isEditorOrAdmin = (user) =>
-  user && (user.role === 'admin' || user.role === 'editor');
+import { usePostEditor } from '../hooks/usePostEditor';
+import Toast from '../components/Toast';
 
 const QUILL_FORMATS = [
   'bold', 'italic', 'underline',
@@ -29,85 +19,30 @@ const QUILL_FORMATS = [
 ];
 
 export default function PostEditor() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const isEdit = Boolean(id);
-  const token = localStorage.getItem('token');
-  const user = getUser();
   const { theme } = useTheme();
   const { categories } = useCategories();
   const quillRef = useRef(null);
-
-  const [form, setForm] = useState(() => {
-    const base = { title: '', content: '', excerpt: '', slug: '', post_type: 'post', content_format: 'html', visibility: 'public', category_id: null, series_id: null, tags: [], thumbnail_url: '' };
-    if (id) return base; // 편집 모드: draft 무시
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      return saved ? { ...base, ...JSON.parse(saved) } : base;
-    } catch {
-      return base;
-    }
-  });
-  const [loading, setLoading] = useState(isEdit);
-  const [saving, setSaving] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const [error, setError] = useState('');
-  const [availableTags, setAvailableTags] = useState([]);
 
-  useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    if (!isEditorOrAdmin(user)) { navigate('/posts'); return; }
+  const {
+    isEdit, form, setForm,
+    loading, saving, draftSaved, error, setError, slugError, setSlugError,
+    availableTags, token, user,
+    handleChange, handleSave, handleCancel,
+    toast, dismissToast,
+  } = usePostEditor();
 
-    if (isEdit) {
-      getPost(id, token, true).then((res) => {
-        if (res.success) {
-          setForm({
-            title: res.data.title || '',
-            content: res.data.content || '',
-            excerpt: res.data.excerpt || '',
-            slug: res.data.slug || '',
-            post_type: res.data.post_type || 'post',
-            content_format: res.data.content_format || 'html',
-            visibility: res.data.visibility || 'public',
-            category_id: res.data.category_id ?? null,
-            series_id: res.data.series_id ?? null,
-            tags: res.data.tags || [],
-            thumbnail_url: res.data.thumbnail_url || '',
-          });
-        }
-        setLoading(false);
-      });
-    }
-  }, [id]);
-
-  useEffect(() => {
-    getTags().then((res) => {
-      if (res.success) setAvailableTags(res.data.items || []);
-    });
-  }, []);
-
-  // 신규 작성 시: 10초마다 자동저장
-  useEffect(() => {
-    if (isEdit) return;
-    const timer = setInterval(() => {
-      if (form.title || form.content) {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
-        setDraftSaved(true);
-        setTimeout(() => setDraftSaved(false), 2000);
-      }
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [form, isEdit]);
-
-  // WYSIWYG 이미지 핸들러: 파일 선택 → API 업로드 → Quill에 삽입
   const quillImageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg,image/png,image/gif,image/webp';
     input.onchange = async () => {
       const file = input.files[0];
       if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        setError('이미지 크기가 10MB를 초과합니다.');
+        return;
+      }
       setImageUploading(true);
       setError('');
       const res = await uploadMedia(token, file);
@@ -119,14 +54,13 @@ export default function PostEditor() {
           quill.insertEmbed(range.index, 'image', res.data.url);
           quill.setSelection(range.index + 1);
         }
-      } else {
-        setError(res.error || '이미지 업로드에 실패했습니다.');
+      } else if (res.error) {
+        setError(res.error);
       }
     };
     input.click();
-  }, [token]);
+  }, [token, setError]);
 
-  // QUILL_MODULES: quillImageHandler 의존성 때문에 useMemo로 컴포넌트 내부에 선언
   const quillModules = useMemo(() => ({
     toolbar: {
       container: [
@@ -140,11 +74,14 @@ export default function PostEditor() {
     },
   }), [quillImageHandler]);
 
-  // Markdown 이미지 삽입: 업로드 후 ![이미지](url) 커서 위치에 추가
   const handleMarkdownImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    e.target.value = ''; // 같은 파일 재선택 허용
+    e.target.value = '';
+    if (file.size > 10 * 1024 * 1024) {
+      setError('이미지 크기가 10MB를 초과합니다.');
+      return;
+    }
     setImageUploading(true);
     setError('');
     const res = await uploadMedia(token, file);
@@ -152,48 +89,28 @@ export default function PostEditor() {
     if (res.success) {
       const mdSyntax = `\n![이미지](${res.data.url})\n`;
       setForm((prev) => ({ ...prev, content: prev.content + mdSyntax }));
-    } else {
-      setError(res.error || '이미지 업로드에 실패했습니다.');
+    } else if (res.error) {
+      setError(res.error);
     }
-  };
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSave = async (status) => {
-    if (!form.title.trim()) {
-      setError('제목을 입력해주세요.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-
-    const payload = { ...form, status, tags: form.tags.map((t) => t.id) };
-    const result = isEdit
-      ? await updatePost(token, id, payload)
-      : await createPost(token, payload);
-
-    setSaving(false);
-
-    if (result.success) {
-      localStorage.removeItem(DRAFT_KEY);
-      navigate(`/posts/${result.data.id}`);
-    } else {
-      setError(result.error || '저장에 실패했습니다.');
-    }
-  };
-
-  const handleCancel = () => {
-    navigate(isEdit ? `/posts/${id}` : '/posts');
   };
 
   if (loading) return (
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
   );
 
+  const handleSlugChange = (e) => {
+    handleChange(e);
+    const val = e.target.value;
+    if (val && !/^[a-z0-9-]*$/.test(val)) {
+      setSlugError('슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.');
+    } else {
+      setSlugError('');
+    }
+  };
+
   return (
     <div className="page-content" style={{ maxWidth: 760 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       {/* 상단 버튼 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <button className="btn btn-ghost" onClick={handleCancel} disabled={saving}>
@@ -210,7 +127,7 @@ export default function PostEditor() {
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-      {draftSaved && !isEdit && (
+      {draftSaved && (
         <div style={{ fontSize: 12, color: 'var(--text-light)', textAlign: 'right', marginBottom: 8 }}>
           ✓ 임시저장됨
         </div>
@@ -248,7 +165,7 @@ export default function PostEditor() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         <button
           type="button"
-          onClick={() => setForm({ ...form, content_format: 'html' })}
+          onClick={() => setForm((prev) => ({ ...prev, content_format: 'html' }))}
           disabled={form.content_format === 'markdown'}
           style={{
             padding: '4px 14px',
@@ -265,7 +182,7 @@ export default function PostEditor() {
         </button>
         <button
           type="button"
-          onClick={() => setForm({ ...form, content_format: 'markdown' })}
+          onClick={() => setForm((prev) => ({ ...prev, content_format: 'markdown' }))}
           disabled={isEdit && form.content_format === 'html'}
           style={{
             padding: '4px 14px',
@@ -287,7 +204,9 @@ export default function PostEditor() {
         <div style={{ marginBottom: 24 }}>
           {/* Markdown 이미지 업로드 버튼 */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-            <label style={{
+            <label
+              aria-label="이미지 삽입"
+              style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
@@ -303,7 +222,7 @@ export default function PostEditor() {
               🖼 이미지 삽입
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 style={{ display: 'none' }}
                 disabled={imageUploading}
                 onChange={handleMarkdownImageUpload}
@@ -313,7 +232,7 @@ export default function PostEditor() {
           <div data-color-mode={theme === 'dark' ? 'dark' : 'light'}>
             <MDEditor
               value={form.content}
-              onChange={(val) => setForm({ ...form, content: val || '' })}
+              onChange={(val) => setForm((prev) => ({ ...prev, content: val || '' }))}
               height={400}
             />
           </div>
@@ -323,7 +242,7 @@ export default function PostEditor() {
           ref={quillRef}
           theme="snow"
           value={form.content}
-          onChange={(val) => setForm({ ...form, content: val })}
+          onChange={(val) => setForm((prev) => ({ ...prev, content: val }))}
           modules={quillModules}
           formats={QUILL_FORMATS}
           style={{ marginBottom: 24 }}
@@ -354,9 +273,13 @@ export default function PostEditor() {
             className="form-input"
             name="slug"
             value={form.slug}
-            onChange={handleChange}
+            onChange={handleSlugChange}
             placeholder="url-slug"
+            style={slugError ? { borderColor: 'var(--danger)' } : undefined}
           />
+          {slugError && (
+            <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>{slugError}</p>
+          )}
         </div>
         <div>
           <label className="form-label">타입</label>
@@ -382,7 +305,7 @@ export default function PostEditor() {
           <label className="form-label">카테고리</label>
           <CategoryDropdown
             value={form.category_id}
-            onChange={(id) => setForm((prev) => ({ ...prev, category_id: id }))}
+            onChange={(catId) => setForm((prev) => ({ ...prev, category_id: catId }))}
             categories={categories}
           />
         </div>
@@ -390,7 +313,7 @@ export default function PostEditor() {
           <label className="form-label">시리즈</label>
           <SeriesDropdown
             value={form.series_id}
-            onChange={(id) => setForm((prev) => ({ ...prev, series_id: id }))}
+            onChange={(sid) => setForm((prev) => ({ ...prev, series_id: sid }))}
             username={user?.username}
           />
         </div>

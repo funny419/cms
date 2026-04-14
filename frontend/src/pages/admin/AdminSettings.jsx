@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SKINS, useSkin } from '../../context/SkinContext';
 import { updateSettings } from '../../api/settings';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
   const { skin: currentSkin, setSkin } = useSkin();
 
   const [selected, setSelected] = useState(currentSkin);
@@ -14,13 +15,7 @@ export default function AdminSettings() {
   const [error, setError] = useState('');
 
   // 권한 확인
-  try {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!token || user?.role !== 'admin') {
-      navigate('/login');
-      return null;
-    }
-  } catch {
+  if (!token || user?.role !== 'admin') {
     navigate('/login');
     return null;
   }

@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import (
     create_access_token,
@@ -9,16 +11,23 @@ from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Follow, Post, User
+from extensions import limiter
+from models import Comment, Follow, Post, User
 
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
 def register() -> tuple:
     data = request.get_json()
     if not data or not data.get("username") or not data.get("email") or not data.get("password"):
         return jsonify({"success": False, "data": {}, "error": "Missing required fields"}), 400
+    if len(data["password"]) < 8:
+        return jsonify(
+            {"success": False, "data": {}, "error": "비밀번호는 8자 이상이어야 합니다."}
+        ), 400
     if db.session.execute(
         select(User).where(User.username == data["username"])
     ).scalar_one_or_none():
@@ -35,11 +44,12 @@ def register() -> tuple:
         ), 201
     except Exception as e:
         db.session.rollback()
-        print(e)
+        logger.error(e, exc_info=True)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login() -> tuple:
     data = request.get_json()
     if not data:
@@ -124,7 +134,7 @@ def update_me() -> tuple:
         return jsonify({"success": True, "data": user.to_dict(), "error": ""}), 200
     except Exception as e:
         db.session.rollback()
-        print(e)
+        logger.error(e, exc_info=True)
         return jsonify({"success": False, "data": {}, "error": "An internal error occurred."}), 500
 
 
@@ -230,6 +240,14 @@ def get_user_profile(username: str) -> tuple:
     )
 
     d = user.to_dict()
+    # 본인 또는 admin이 아닌 경우 email 제거
+    is_owner = viewer_id is not None and viewer_id == user.id
+    is_admin_viewer = False
+    if not is_owner and viewer_id is not None:
+        viewer = db.session.get(User, viewer_id)
+        is_admin_viewer = viewer is not None and viewer.role == "admin"
+    if not is_owner and not is_admin_viewer:
+        d.pop("email", None)
     d["post_count"] = post_count
     d["follower_count"] = follower_count
     d["following_count"] = following_count

@@ -29,8 +29,9 @@ app.register_blueprint(<domain>_bp)
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from api.decorators import roles_required
+from api.helpers import get_pagination_params, success_response, error_response
 from database import db
-from models.schema import SomeModel
+from models import SomeModel
 from sqlalchemy import select
 
 domain_bp = Blueprint('domain', __name__)
@@ -41,19 +42,26 @@ domain_bp = Blueprint('domain', __name__)
 def some_endpoint() -> tuple:
     user_id = int(get_jwt_identity())  # str → int 변환 필수
     # ...
-    return jsonify({"success": True, "data": result, "error": None}), 200
+    return success_response(result, 200)
 ```
 
 ## 3. 응답 포맷 (반드시 준수)
 
+**신규 엔드포인트는 반드시 `success_response` / `error_response` 헬퍼 사용.**
+기존 핸들러는 현행 유지(소급 적용 없음).
+
 ```python
+from api.helpers import success_response, error_response
+
 # 성공
-return jsonify({"success": True, "data": {...}, "error": None}), 200
+return success_response({"items": items, "total": total}, 200)
+return success_response({}, 201)
 
 # 실패
-return jsonify({"success": False, "data": None, "error": "메시지"}), 400
-return jsonify({"success": False, "data": None, "error": "Forbidden"}), 403
-return jsonify({"success": False, "data": None, "error": "Not found"}), 404
+return error_response("메시지", 400)
+return error_response("Forbidden", 403)
+return error_response("Not found", 404)
+return error_response("An internal error occurred.", 500)
 ```
 
 ## 4. SQLAlchemy 2.x 스타일 (1.x 금지)
@@ -66,11 +74,11 @@ item = db.session.get(SomeModel, item_id)
 stmt = select(SomeModel).where(SomeModel.active == True)
 item = db.session.execute(stmt).scalar_one_or_none()
 
-# 목록 + 페이지네이션
-page = request.args.get('page', 1, type=int)
-per_page = request.args.get('per_page', 20, type=int)
+# 목록 + 페이지네이션 — helpers.py 활용 (DRY)
+from api.helpers import get_pagination_params
+page, per_page, offset = get_pagination_params()
 stmt = select(SomeModel).order_by(SomeModel.created_at.desc())
-stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+stmt = stmt.offset(offset).limit(per_page)
 items = db.session.execute(stmt).scalars().all()
 ```
 
@@ -81,7 +89,7 @@ claims = get_jwt()
 role = claims.get('role')
 
 if role != 'admin' and item.author_id != user_id:
-    return jsonify({"success": False, "data": None, "error": "Forbidden"}), 403
+    return error_response("Forbidden", 403)
 ```
 
 ## 6. Import 주의
@@ -92,13 +100,74 @@ from api.decorators import roles_required   # ✅
 from backend.api.decorators import ...      # ❌
 ```
 
-## 7. 완료 체크리스트
+모델 import 경로 (Issue #21 이후):
+```python
+from models import Post, User, Comment     # ✅ (models/__init__.py re-export)
+from models.schema import Post, User       # ❌ (구 경로, 사용 금지)
+```
 
-- [ ] 응답 포맷이 `{ success, data, error }` 형태
+## 7. SOLID/DRY 가이드 (BE)
+
+### helpers.py 활용 (DRY)
+
+`backend/api/helpers.py`에 공통 헬퍼 함수가 있습니다. 직접 구현하지 말고 활용하세요:
+
+```python
+from api.helpers import get_pagination_params, success_response, error_response, verify_guest_auth
+
+# 페이지네이션 파라미터 추출 (7개 함수에서 중복 제거)
+page, per_page, offset = get_pagination_params()
+
+# 응답 포맷 통일
+return success_response({"items": items, "total": total}, 200)
+return error_response("Not found", 404)
+
+# 게스트 댓글 인증 (None=성공, tuple=실패)
+err = verify_guest_auth(comment, data)
+if err:
+    return err
+```
+
+### SRP — 핸들러 책임 분리
+
+핸들러 함수가 100줄을 초과하면 내부 헬퍼 함수로 분해를 검토하세요:
+```python
+# ❌ 핸들러가 모든 것을 담당
+def get_post(post_id):
+    # 200줄: 인증 + 접근제어 + view_count + 집계 + 시리즈 + 응답
+
+# ✅ 책임 분리
+def _record_visit(post, request, user_id): ...
+def _get_post_aggregates(post_id): ...
+def _build_series_info(post_id): ...
+def get_post(post_id):
+    # 핵심 흐름만 남김
+```
+
+### OCP — 필터/확장 포인트 분리
+
+새 필터 추가 시 기존 함수 내부를 수정하는 대신 별도 함수로 분리하세요:
+```python
+# ❌ 새 필터마다 함수 내부 수정
+def list_items():
+    if q: ...
+    if category_id: ...
+    if new_filter: ...  # 함수 수정 필요
+
+# ✅ 필터 함수 분리
+def _apply_search_filter(query, q): ...
+def _apply_category_filter(query, category_id): ...
+```
+
+## 8. 완료 체크리스트
+
+- [ ] **신규 엔드포인트**: `success_response()` / `error_response()` 사용 필수 (기존 핸들러 소급 적용 없음)
 - [ ] 모든 함수에 타입 힌트 (`-> tuple`)
 - [ ] SQLAlchemy 2.x 스타일 (`select()`, `scalar_one_or_none()`)
 - [ ] JWT identity `int()` 변환
 - [ ] 권한 없는 요청 시 적절한 HTTP 상태 코드
 - [ ] 새 Blueprint면 `app.py`에 등록
+- [ ] 모델 import 경로: `from models import X` (구 경로 `from models.schema import X` 금지)
+- [ ] 페이지네이션 직접 구현 대신 `get_pagination_params()` 활용
 - [ ] 새 패키지 추가 시 `requirements.txt` 반영 + `--no-cache` 재빌드
 - [ ] `api.md`에 엔드포인트 추가

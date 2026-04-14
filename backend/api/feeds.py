@@ -4,7 +4,7 @@ from flask import Blueprint, Response, request
 from sqlalchemy import select
 
 from database import db
-from models.schema import Post, User
+from models import Post, User
 
 feeds_bp = Blueprint("feeds", __name__)
 

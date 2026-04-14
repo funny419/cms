@@ -3,6 +3,10 @@ import { useCallback, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listAllComments, deleteComment, approveComment, rejectComment } from '../../api/comments';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
+import { useAuth } from '../../hooks/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const STATUS_LABEL = { approved: '공개', pending: '승인 대기', spam: '스팸' };
 const STATUS_COLOR = {
@@ -18,20 +22,19 @@ function formatDate(iso) {
 
 export default function AdminComments() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [updatedStatuses, setUpdatedStatuses] = useState({}); // { [id]: 'approved' | 'spam' }
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const { toast, showToast, dismissToast } = useToast();
 
   const fetchFn = useCallback(
     (page) => {
       if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return listAllComments(token, '', page);
     },
-    [token, navigate]
+    [token, navigate, user?.role]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token]);
   const comments = items.filter((c) => !deletedIds.has(c.id));
@@ -39,27 +42,45 @@ export default function AdminComments() {
     updatedStatuses[c.id] ? { ...c, status: updatedStatuses[c.id] } : c
   );
 
-  const handleDelete = async (commentId) => {
-    if (!window.confirm('이 댓글을 삭제할까요? 답글도 함께 삭제됩니다.')) return;
-    const res = await deleteComment(token, commentId);
-    if (res.success) setDeletedIds((prev) => new Set([...prev, commentId]));
-    else alert(res.error);
+  const handleDelete = (commentId) => {
+    setConfirm({
+      message: '이 댓글을 삭제할까요? 답글도 함께 삭제됩니다.',
+      onConfirm: async () => {
+        const res = await deleteComment(token, commentId);
+        if (res.success) setDeletedIds((prev) => new Set([...prev, commentId]));
+      },
+    });
   };
 
   const handleApprove = async (commentId) => {
     const res = await approveComment(token, commentId);
-    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'approved' }));
-    else alert(res.error);
+    if (res.success) {
+      setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'approved' }));
+      showToast('댓글이 승인되었습니다.');
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   const handleReject = async (commentId) => {
     const res = await rejectComment(token, commentId);
-    if (res.success) setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'spam' }));
-    else alert(res.error);
+    if (res.success) {
+      setUpdatedStatuses((prev) => ({ ...prev, [commentId]: 'spam' }));
+      showToast('댓글이 스팸으로 처리되었습니다.');
+    } else {
+      showToast(res.error, 'error');
+    }
   };
 
   return (
     <div className="page-content" style={{ maxWidth: 960 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
+      <ConfirmDialog
+        isOpen={!!confirm}
+        message={confirm?.message ?? ''}
+        onConfirm={() => { const cb = confirm?.onConfirm; setConfirm(null); cb?.(); }}
+        onCancel={() => setConfirm(null)}
+      />
       <h1 className="page-heading" style={{ marginBottom: 24 }}>댓글 관리</h1>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -67,6 +88,7 @@ export default function AdminComments() {
       {comments.length === 0 && !loading && !error ? (
         <div className="empty-state"><p>등록된 댓글이 없습니다.</p></div>
       ) : (
+        <div className="table-wrapper">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -135,6 +157,7 @@ export default function AdminComments() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div ref={sentinelRef} style={{ height: 1 }} />

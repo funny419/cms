@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Post, Series, SeriesPost, User
+from models import Post, Series, SeriesPost, User
 
 series_bp = Blueprint("series", __name__)
 
@@ -172,6 +172,15 @@ def add_series_post(series_id: int) -> tuple:
     post: Post | None = db.session.get(Post, post_id)
     if not post:
         return jsonify({"success": False, "data": {}, "error": "Post not found"}), 404
+
+    # 포스트 소유권 및 visibility 검증 (admin 제외)
+    current_user_id: int = int(get_jwt_identity())
+    user: User | None = db.session.get(User, current_user_id)
+    if user and user.role != "admin":
+        if post.author_id != current_user_id or post.visibility == "private":
+            return jsonify(
+                {"success": False, "data": {}, "error": "접근 권한이 없는 포스트입니다."}
+            ), 403
 
     order: int = data.get("order", 0)
     sp = SeriesPost(series_id=series_id, post_id=post_id, order=order)

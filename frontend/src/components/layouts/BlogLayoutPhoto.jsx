@@ -46,18 +46,12 @@ function PhotoCard({ post, accentColor }) {
 
 export default function BlogLayoutPhoto({ posts, loading, hasMore, sentinelRef, accentColor }) {
   if (posts.length === 0 && !loading) {
-    return <div className="empty-state"><p>게시된 글이 없습니다.</p></div>;
+    return <div className="empty-state"><p>아직 포스트가 없습니다.</p></div>;
   }
 
   return (
     <>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <div className="photo-grid">
         {posts.map((post) => (
           <PhotoCard key={post.id} post={post} accentColor={accentColor} />
         ))}

@@ -1,5 +1,11 @@
 ## 트러블슈팅
 
+**모델 파일 분리 (models/ 디렉토리, Issue #21 이후):**
+- `from models.schema import X` ImportError: `schema.py`는 삭제됨 → `from models import X`로 변경
+- 새 모델 추가 후 Alembic이 해당 테이블을 DROP으로 감지: `models/__init__.py`에 re-export 누락 → 반드시 `__init__.py`에 추가 후 `flask db migrate` 재실행
+- 새 도메인 상수(`MAX_DEPTH` 등) 추가 위치: `models/constants.py` (config.py가 아님 — config.py는 환경/배포 설정 전용)
+- 크로스 파일 forward reference 오류 (`Mapped["Post"]`에서 ruff F821 또는 mypy name-defined): `from __future__ import annotations` + `TYPE_CHECKING` 블록으로 조건부 import 추가
+
 **Docker 빌드:**
 - `SELF_SIGNED_CERT_IN_CHAIN`: 개발용 `frontend/Dockerfile`에 `npm config set strict-ssl false` 적용됨
 - `npm ci` 실패(lock 불일치): 개발용은 `npm install` 사용, `Dockerfile.prod`만 `npm ci` 사용
@@ -11,6 +17,53 @@
 - 업로드 이미지 로드 실패: `vite.config.js`의 `FILES_URL` 환경변수 확인 (`http://nginx-files:80`), `nginx-files` 컨테이너 실행 여부 확인
 - 테이블 없음 오류: `docker exec cms_backend_prod flask db upgrade` 실행
 - JWT "Subject must be a string": `create_access_token(identity=str(user.id))` 확인
+
+**Flask-Limiter 429 응답:**
+- 기본 동작: HTML 반환 → FE/E2E에서 JSON 파싱 오류 발생
+- 해결: `app.py`에 `@app.errorhandler(RateLimitExceeded)` 등록하여 JSON 응답 반환 (커밋: fa1fc0c)
+- 테스트 환경: `TestConfig.RATELIMIT_ENABLED = False` 설정으로 rate limit 비활성화
+- **`rl_client` 픽스처에서 `create_app()` 재호출 시 test DB 오염**: 새 앱 인스턴스가 TestConfig를 무시하고 운영 DB에 접속 → `conftest.py`의 `app` 픽스처를 의존성으로 받아 `app.test_client()` 재사용해야 함 (environment.md pytest 정책 참조)
+
+**pytest DB 격리 표준 (clean_db fixture 정책):**
+- `DELETE FROM` 사용 금지 — auto_increment 미리셋으로 FK 위반 위험 있음
+- `TRUNCATE TABLE` 사용 (auto_increment 리셋 + 속도 빠름)
+- FK_CHECKS=0 설정 후 TRUNCATE → FK_CHECKS=1 복원 순서 필수
+- raw connection 또는 SQLAlchemy `text()` 방식으로 실행
+
+**app.app_context() 중첩 금지:**
+- `app(scope=session)` 픽스처가 이미 context를 열고 있으면 개별 테스트/픽스처에서 `with app.app_context():` 재사용 금지
+- 불가피하게 중첩이 필요한 경우 주석으로 이유 명시 필수
+
+**cmsdb_test 단일 프로세스 규칙:**
+- pytest 실행 전 `pgrep pytest`로 기존 프로세스 확인 필수
+- 백그라운드 pytest 실행 중 새 실행 시작 금지 (`-n auto` 병렬 옵션 금지)
+- 테스트 DB 직접 조작 스크립트(`docker compose exec backend python3 -c "..."`) 사용 금지
+
+**cmsdb_test 메타데이터 락 데드락 (cms_db CPU 폭주):**
+- **증상**: `docker stats cms_db`에서 CPU 100% 이상 지속, `SHOW FULL PROCESSLIST`에서 `Waiting for table metadata lock` / `Waiting for schema metadata lock` 세션 다수
+- **원인**: pytest를 동시에 여러 프로세스로 실행하거나, 이전 테스트 세션이 비정상 종료되어 열린 트랜잭션/커넥션이 남아 `DROP TABLE`/`DROP DATABASE` 체인 데드락 발생
+- **DB 락 데드락 발생 시 처리 순서:**
+  1. `docker compose exec db mariadb -u root -p` → `SHOW FULL PROCESSLIST;`로 락 확인
+  2. `KILL <process_id>;`로 미종료 트랜잭션 해제
+  3. 완전 초기화: `DROP DATABASE cmsdb_test; CREATE DATABASE cmsdb_test;`
+  4. pytest 단일 프로세스로 재실행
+  ```bash
+  # 락 대기 세션 확인
+  docker compose exec db mariadb -u root -p -e "SHOW FULL PROCESSLIST;"
+  # 막힌 세션 ID 개별 종료 (예: ID 2150, 2151)
+  docker compose exec db mariadb -u root -p -e "KILL 2150; KILL 2151;"
+  # CPU 정상화 확인
+  docker stats cms_db --no-stream
+  ```
+
+**마이그레이션 + 인덱스 추가 커밋 체크리스트:**
+1. DB 완전 초기화 후 pytest 1회 실행 → 전체 passed 확인
+2. pytest 2회 연속 실행 → 동일 결과 확인 (재현 안정성 검증)
+3. 두 번 모두 통과 후 commit
+
+**pre-commit 실패 에스컬레이션 기준:**
+- 동일 오류로 2회 이상 실패 시 → 독자 해결 금지, team-lead에게 즉시 보고
+- 공유 인프라 파일(`conftest.py` 등) 수정은 team-lead 명시적 승인 후에만 허용
 
 **프로덕션 마이그레이션 오류:**
 - `Table already exists`: `docker exec cms_backend_prod flask db stamp head` 실행
@@ -40,7 +93,6 @@
 - 훅 미설치: `bash scripts/setup-hooks.sh` 실행 (새 클론 후 1회 필요)
 - ruff auto-fix 후 diff가 생김: 정상 — 수정된 파일이 자동 재스테이징되어 같이 커밋됨
 - **ESLint staged files 경로 오류 (커밋 0a034a10 수정)**: `No such file or directory: frontend/src/` — `scripts/pre-commit.sh` line 70에서 `sed 's|^frontend/||'`로 컨테이너 내부 경로(`/app`)로 변환하도록 수정. staged files만 lint하는 방식 적용.
-- **pytest + Flask-Migrate 충돌 (TestConfig)**: SQLite in-memory DB에서 `db_upgrade()` 실행 오류 — `app.py`의 `create_app()` 팩토리에서 `TESTING=True`일 때 `db.upgrade()` 스킵. `conftest.py`에서 `_db.create_all()`로 테이블 생성 (마이그레이션 파일 불필요). Flask-Migrate와 in-memory 테스트 DB 양립 불가.
 - **react-hooks/rules-of-hooks ESLint 에러 (useEffect + setState)**: 비동기 작업 중 unmount 시 setState 호출 제한 — `async/cancelled` 패턴으로 수정: `useEffect(() => { let cancelled = false; const fetchData = async () => { /*...*/ if (!cancelled) setState(...) }; return () => { cancelled = true } })`. BlogHome.jsx 등 비동기 페칭 컴포넌트에 적용.
 
 **Setup Wizard Phase 2:**
@@ -53,10 +105,37 @@
 - Setup Wizard 완료 후에도 `/wizard`로 리다이렉트됨: admin 계정이 없거나 `.env`에 `WIZARD_COMPLETED=true` 미포함 → `POST /api/wizard/setup` 재실행 또는 직접 추가
 
 **팀 에이전트 (멀티 에이전트) 스폰:**
-- `API Error: 500 Invalid model: claude-opus-4-6` — Agent 도구의 `model` 파라미터에 `"opus"` 사용 시 발생. **`"opus"` 사용 금지.**
-- 팀원 스폰 시 반드시 `model: "sonnet"` 명시하거나 model 파라미터를 생략(부모 모델 상속)할 것.
-- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5)
-- `"opus"` 단독 지정은 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+- `API Error: 500 Invalid model: claude-opus-4-6` — `"opus"` 명시 또는 model 파라미터 **생략** 시 모두 발생. **생략도 금지.**
+- **⚠️ 반드시 `model: "sonnet"` 명시할 것 — 생략하면 claude-opus-4-6이 기본값으로 설정되어 500 에러 발생**
+- 검증된 model 값: `"sonnet"` (claude-sonnet-4-6), `"haiku"` (claude-haiku-4-5-20251001)
+- `"opus"` 단독 지정 및 model 생략 모두 현재 API에서 유효하지 않은 모델 ID로 처리됨 → 에이전트 즉시 오류 종료
+- **올바른 스폰 예시**: `Agent(subagent_type: "general-purpose", model: "sonnet", team_name: "...", name: "...")`
+
+**Playwright E2E 테스트:**
+- 실행 전제: `docker compose up -d` + FE/BE 모두 정상 기동 상태 (`http://localhost:5173` 접속 가능)
+- `npm run test:e2e` 실행 위치: `frontend/` 디렉토리 (또는 `cd frontend && npx playwright test`)
+- `globalSetup.js`가 pw_editor 계정을 자동 생성하고 `.auth/` 디렉토리에 storageState 저장
+  - pw_editor 계정이 이미 존재하면 로그인만 재시도 (중복 오류 무시)
+- `.auth/` 디렉토리는 `.gitignore` 제외됨 — CI/CD 파이프라인에서는 globalSetup이 매번 재실행됨
+- `Page.goto` timeout 오류: `docker compose ps`로 모든 컨테이너 healthy 상태 확인 후 재실행
+- `AdminPosts` 디바운스 타이밍 이슈: UI 대신 API 레벨로 검증 (TC-A001 — 300ms debounce 우회)
+- `SeriesNav` N/M span 선택 충돌: 전역 Nav의 `이전`/`다음` 링크와 SeriesNav 충돌 → XPath로 `.series-nav` 내부 스코핑
+- **E2E 병렬 실행 시 Rate Limit 발동**: 다수 spec 파일이 `getToken()`으로 직접 로그인 호출 → 10/min 초과. 해결: `globalSetup.js`의 storageState 활용(`readFileSync` 기반 `getTokenFromStorageState`). `.auth/` 디렉토리에 admin.json, editor.json, editor2.json 저장 (커밋: 0b5fe25)
+- **E2E 타이밍 보장 패턴 표준**: `waitForResponse` 단독 사용 금지 — 아래 패턴으로 통일
+  ```javascript
+  await someResponse;
+  await page.waitForLoadState('networkidle');
+  await expect(element).toBeVisible({ timeout: 8000 });
+  ```
+- **E2E 코드 패턴 변경 시 사전 grep 필수**: 수정 전 대상 파일 전체 확인
+  ```bash
+  grep -r "패턴명" frontend/src/test/e2e/
+  ```
+- **E2E 파일 커밋 전 ESLint 사전 검증**:
+  ```bash
+  docker compose exec frontend npx eslint src/test/e2e/<파일명>.js
+  ```
+  E2E 파일에서 `Buffer` 대신 `Uint8Array` 사용 관례 확립 (ESLint 브라우저 환경 호환)
 
 **팀 에이전트 작업 완료 보고 형식:**
 작업 완료 보고 시 아래 항목을 반드시 명시할 것 — roadmap.md/api.md 등 문서 자동 반영을 위함:
@@ -64,6 +143,8 @@
 - **API 변경**: 추가/수정된 엔드포인트 + 요청/응답 필드 변경 (예: `GET /api/auth/users/:username` 응답에 `total_view_count` 추가)
 - **컴포넌트 변경**: 신규 생성/수정된 파일 경로 (예: `frontend/src/components/widgets/StatsWidget.jsx` 신규)
 - **커밋 해시**: 변경 커밋 ID
+- **코드 리뷰**: `code-review.md` 체크리스트 실행 결과 (예: `통과`, `필수 수정 N건`, `미실행`)
+  - 코드 변경이 있는 모든 작업에서 필수. 커밋 전 반드시 실행할 것.
 
 예시 보고 형식:
 ```

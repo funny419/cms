@@ -4,7 +4,7 @@ from database import db as _db
 
 
 def make_post(app, title, content="", status="published", visibility="public"):
-    from models.schema import Post, User
+    from models import Post, User
 
     uname = f"u_{uuid.uuid4().hex[:6]}"
     user = User(username=uname, email=f"{uname}@t.com", role="editor")
@@ -47,14 +47,14 @@ def test_search_empty_returns_all(client, app):
 def test_tags_filter(client, app):
     """?tags=id 필터로 태그 포스트 조회."""
     with app.app_context():
-        from models.schema import Tag
+        from models import Tag
 
         tag = Tag(name=f"T_{uuid.uuid4().hex[:4]}", slug=f"t-{uuid.uuid4().hex[:4]}")
         _db.session.add(tag)
         _db.session.flush()
         tag_id = tag.id
         post_id, _ = make_post(app, title="Tagged Post")
-        from models.schema import Post
+        from models import Post
 
         post = _db.session.get(Post, post_id)
         post.tags.append(tag)

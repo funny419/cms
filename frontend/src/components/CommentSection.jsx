@@ -1,16 +1,20 @@
 // frontend/src/components/CommentSection.jsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { listComments, createComment, updateComment, deleteComment } from '../api/comments';
+import ConfirmDialog from './ConfirmDialog';
 
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// 게스트 이메일을 localStorage에서 관리
+// 게스트 정보를 localStorage에서 관리
 const getGuestEmail = () => localStorage.getItem('guest_email') || '';
 const setGuestEmail = (email) => localStorage.setItem('guest_email', email);
+const getGuestName = () => localStorage.getItem('guest_name') || '';
+const setGuestName = (name) => localStorage.setItem('guest_name', name);
 
 // ─── 댓글 작성 폼 ─────────────────────────────────────────────
 function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
@@ -37,7 +41,10 @@ function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
     const res = await createComment(token, postId, data);
     setSubmitting(false);
     if (res.success) {
-      if (!isLoggedIn) setGuestEmail(authorEmail.trim());
+      if (!isLoggedIn) {
+        setGuestEmail(authorEmail.trim());
+        setGuestName(authorName.trim());
+      }
       setContent('');
       setAuthorPassword('');
       onSuccess(res.data);
@@ -49,13 +56,22 @@ function CommentForm({ token, postId, parentId = null, onSuccess, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       {!isLoggedIn && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-          <input className="form-input" placeholder="이름 *" value={authorName}
-            onChange={(e) => setAuthorName(e.target.value)} required />
-          <input className="form-input" type="email" placeholder="이메일 *" value={authorEmail}
-            onChange={(e) => setAuthorEmail(e.target.value)} required />
-          <input className="form-input" type="password" placeholder="패스워드 * (수정/삭제에 사용)" value={authorPassword}
-            onChange={(e) => setAuthorPassword(e.target.value)} required />
+        <div className="guest-form-grid">
+          <div>
+            <label htmlFor={`guest-name-${parentId ?? 'root'}`} style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>이름</label>
+            <input id={`guest-name-${parentId ?? 'root'}`} className="form-input" placeholder="이름 *" value={authorName}
+              onChange={(e) => setAuthorName(e.target.value)} required />
+          </div>
+          <div>
+            <label htmlFor={`guest-email-${parentId ?? 'root'}`} style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>이메일</label>
+            <input id={`guest-email-${parentId ?? 'root'}`} className="form-input" type="email" placeholder="이메일 *" value={authorEmail}
+              onChange={(e) => setAuthorEmail(e.target.value)} required />
+          </div>
+          <div>
+            <label htmlFor={`guest-password-${parentId ?? 'root'}`} style={{ position: 'absolute', width: 1, height: 1, padding: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>패스워드</label>
+            <input id={`guest-password-${parentId ?? 'root'}`} className="form-input" type="password" placeholder="패스워드 * (수정/삭제에 사용)" value={authorPassword}
+              onChange={(e) => setAuthorPassword(e.target.value)} required />
+          </div>
         </div>
       )}
       <textarea
@@ -101,7 +117,7 @@ function EditForm({ comment, token, onSuccess, onCancel }) {
 
     const data = isLoggedIn
       ? { content: content.trim() }
-      : { content: content.trim(), author_email: comment.author_email, author_password: password };
+      : { content: content.trim(), author_email: getGuestEmail(), author_password: password };
 
     const res = await updateComment(token, comment.id, data);
     setSubmitting(false);
@@ -146,7 +162,7 @@ function GuestDeleteForm({ comment, onSuccess, onCancel }) {
     setSubmitting(true);
     setError('');
     const res = await deleteComment(null, comment.id,
-      { author_email: comment.author_email, author_password: password });
+      { author_email: getGuestEmail(), author_password: password });
     setSubmitting(false);
     if (res.success) onSuccess();
     else setError(res.error);
@@ -169,22 +185,32 @@ function GuestDeleteForm({ comment, onSuccess, onCancel }) {
 function ReplyItem({ reply, token, user, onRefresh }) {
   const [editMode, setEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const guestEmail = getGuestEmail();
+  const guestName = getGuestName();
   const isLoggedIn = !!token && !!user;
   const isOwner = isLoggedIn
     ? (user.role === 'admin' || reply.author_id === user.id)
-    : (reply.author_id === null && reply.author_email === guestEmail && guestEmail !== '');
+    : (reply.author_id === null && guestEmail !== '' && reply.author_name === guestName);
 
-  const handleLoggedInDelete = async () => {
-    if (!window.confirm('답글을 삭제할까요?')) return;
+  const handleLoggedInDelete = () => {
+    setConfirmOpen(true);
+  };
+
+  const doLoggedInDelete = async () => {
     const res = await deleteComment(token, reply.id);
     if (res.success) onRefresh();
-    else alert(res.error);
   };
 
   return (
     <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, marginBottom: 12 }}>
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        message="답글을 삭제할까요?"
+        onConfirm={() => { setConfirmOpen(false); doLoggedInDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
       {editMode ? (
         <EditForm
           comment={reply}
@@ -242,24 +268,34 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const guestEmail = getGuestEmail();
+  const guestName = getGuestName();
   const isLoggedIn = !!token && !!user;
 
   // 본인 댓글 여부
   const isOwner = isLoggedIn
     ? (user.role === 'admin' || comment.author_id === user.id)
-    : (comment.author_id === null && comment.author_email === guestEmail && guestEmail !== '');
+    : (comment.author_id === null && guestEmail !== '' && comment.author_name === guestName);
 
-  const handleLoggedInDelete = async () => {
-    if (!window.confirm('댓글을 삭제할까요?')) return;
+  const handleLoggedInDelete = () => {
+    setConfirmOpen(true);
+  };
+
+  const doLoggedInDelete = async () => {
     const res = await deleteComment(token, comment.id);
     if (res.success) onRefresh();
-    else alert(res.error);
   };
 
   return (
     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 16, marginBottom: 16 }}>
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        message="댓글을 삭제할까요?"
+        onConfirm={() => { setConfirmOpen(false); doLoggedInDelete(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
       {editMode ? (
         <EditForm
           comment={comment}
@@ -357,7 +393,7 @@ function CommentItem({ comment, replies, token, postId, user, onRefresh }) {
 export default function CommentSection({ postId, user }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   useEffect(() => {
     const load = async () => {

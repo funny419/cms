@@ -203,6 +203,11 @@ def save_env() -> tuple:
 @wizard_phase2_bp.route("/migrate", methods=["POST"])
 def run_migration() -> tuple:
     """DB 마이그레이션 실행 (flask db upgrade)."""
+    if os.environ.get("WIZARD_COMPLETED") == "true":
+        return (
+            jsonify({"success": False, "data": {}, "error": "Wizard already completed."}),
+            409,
+        )
     try:
         result = subprocess.run(
             ["flask", "db", "upgrade"],

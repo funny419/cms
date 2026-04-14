@@ -4,7 +4,7 @@ const SOCIAL_ICONS = {
   linkedin: '💼',
 };
 
-export default function ProfileCard({ user, blogColor, onFollow, isFollowing, isOwnBlog }) {
+export default function ProfileCard({ user, blogColor, onFollow, isFollowing, isOwnBlog, followLoading }) {
   if (!user) return null;
 
   const displayTitle = user.blog_title || `${user.username}의 블로그`;
@@ -80,8 +80,10 @@ export default function ProfileCard({ user, blogColor, onFollow, isFollowing, is
             className={isFollowing ? 'btn btn-ghost' : 'btn btn-primary'}
             style={{ marginTop: 10, fontSize: 13 }}
             onClick={onFollow}
+            disabled={followLoading}
+            aria-label={isFollowing ? '팔로잉 취소' : '팔로우'}
           >
-            {isFollowing ? '팔로잉 ✓' : '팔로우'}
+            {followLoading ? '처리 중...' : (isFollowing ? '팔로잉 ✓' : '팔로우')}
           </button>
         )}
 

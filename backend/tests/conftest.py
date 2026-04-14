@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from app import create_app  # noqa: E402
@@ -15,6 +17,7 @@ class TestConfig:
     STORAGE_BACKEND = "local"
     UPLOAD_FOLDER = "/tmp/cms_test_uploads"
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    RATELIMIT_ENABLED = False
 
 
 @pytest.fixture(scope="session")
@@ -25,7 +28,7 @@ def app():
         # create_all()은 마이그레이션을 실행하지 않으므로 FULLTEXT 인덱스를 수동 생성
         _db.session.execute(
             _db.text(
-                "ALTER TABLE posts ADD FULLTEXT INDEX ft_posts_search (title, content, excerpt)"
+                "ALTER TABLE posts ADD FULLTEXT INDEX IF NOT EXISTS ft_posts_search (title, content, excerpt)"
             )
         )
         _db.session.commit()
@@ -38,13 +41,21 @@ def clean_db(app):
     with app.app_context():
         yield
         _db.session.rollback()
-        # comments 자기참조 FK(parent_id) 때문에 자식 댓글 먼저 NULL 처리 후 삭제
-        _db.session.execute(
-            _db.text("UPDATE comments SET parent_id = NULL WHERE parent_id IS NOT NULL")
-        )
-        for table in reversed(_db.metadata.sorted_tables):
-            _db.session.execute(table.delete())
+        # FK 체크 비활성화 후 TRUNCATE (auto_increment 리셋)
+        _db.session.execute(_db.text("SET FOREIGN_KEY_CHECKS = 0"))
+        for table in _db.metadata.sorted_tables:
+            _db.session.execute(_db.text(f"TRUNCATE TABLE `{table.name}`"))
+        _db.session.execute(_db.text("SET FOREIGN_KEY_CHECKS = 1"))
         _db.session.commit()
+
+
+@pytest.fixture(autouse=True)
+def cleanup_uploads():
+    yield
+    uploads_dir = Path("/app/uploads")
+    for f in uploads_dir.iterdir():
+        if f.is_file() and f.name != ".gitkeep":
+            f.unlink()
 
 
 @pytest.fixture(scope="function")
@@ -55,7 +66,7 @@ def client(app):
 @pytest.fixture(scope="function")
 def admin_headers(client, app):
     with app.app_context():
-        from models.schema import User
+        from models import User
 
         user = User(username="admin_user", email="admin@test.com", role="admin")
         user.set_password("testpass123")
@@ -69,7 +80,7 @@ def admin_headers(client, app):
 @pytest.fixture(scope="function")
 def editor_headers(client, app):
     with app.app_context():
-        from models.schema import User
+        from models import User
 
         user = User(username="editor_user", email="editor@test.com", role="editor")
         user.set_password("testpass123")
@@ -84,7 +95,7 @@ def editor_headers(client, app):
 
 def make_comment(app, status="pending"):
     """테스트용 댓글 생성 헬퍼. app context 내부에서 호출할 것."""
-    from models.schema import Comment, Post, User
+    from models import Comment, Post, User
 
     author = User(username=f"author_{status}", email=f"auth_{status}@test.com", role="editor")
     author.set_password("pass")

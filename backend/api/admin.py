@@ -3,8 +3,9 @@ from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import func, select, update
 
 from api.decorators import roles_required
+from api.helpers import get_pagination_params
 from database import db
-from models.schema import Comment, Post, User
+from models import Comment, Post, User
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -13,9 +14,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 @roles_required("admin")
 def admin_list_posts() -> tuple:
     """전체 포스트 목록 (모든 유저, 검색/필터/페이지네이션)."""
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "").strip()
 
@@ -99,9 +98,29 @@ def admin_reject_comment(comment_id: int) -> tuple:
 @admin_bp.route("/users", methods=["GET"])
 @roles_required("admin")
 def admin_list_users() -> tuple:
-    """전체 회원 목록 (deactivated 포함)."""
-    users = db.session.execute(select(User)).scalars().all()
-    return jsonify({"success": True, "data": [u.to_dict() for u in users], "error": ""}), 200
+    """전체 회원 목록 (deactivated 포함, 페이지네이션)."""
+    page, per_page, offset = get_pagination_params()
+    total: int = db.session.execute(select(func.count(User.id))).scalar() or 0
+    users = (
+        db.session.execute(
+            select(User).order_by(User.created_at.desc()).offset(offset).limit(per_page)
+        )
+        .scalars()
+        .all()
+    )
+    return jsonify(
+        {
+            "success": True,
+            "data": {
+                "items": [u.to_dict() for u in users],
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "has_more": page * per_page < total,
+            },
+            "error": "",
+        }
+    ), 200
 
 
 @admin_bp.route("/users/<int:user_id>/role", methods=["PUT"])
@@ -209,9 +228,7 @@ def admin_user_posts(user_id: int) -> tuple:
 def admin_list_comments() -> tuple:
     """관리자 전용 — 전체 댓글 목록 (post_title 포함, 페이지네이션)."""
     status_filter = request.args.get("status")
-    page = max(1, request.args.get("page", 1, type=int) or 1)
-    per_page = min(max(1, request.args.get("per_page", 20, type=int) or 20), 100)
-    offset = (page - 1) * per_page
+    page, per_page, offset = get_pagination_params()
 
     count_query = select(func.count(Comment.id)).join(Post, Comment.post_id == Post.id)
     if status_filter:
@@ -229,7 +246,7 @@ def admin_list_comments() -> tuple:
     rows = db.session.execute(query.offset(offset).limit(per_page)).all()
     items = []
     for comment, post_title in rows:
-        d = comment.to_dict()
+        d = comment.to_admin_dict()
         d["post_title"] = post_title
         items.append(d)
 

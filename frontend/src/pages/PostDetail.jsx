@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPost, listPosts, likePost } from '../api/posts';
+import { getPost, likePost } from '../api/posts';
 import 'react-quill-new/dist/quill.snow.css';
 import MDEditor from '@uiw/react-md-editor';
 import CommentSection from '../components/CommentSection';
@@ -8,51 +8,35 @@ import SeriesNav from '../components/SeriesNav';
 import ShareButtons from '../components/ShareButtons';
 import TagCloud from '../components/widgets/TagCloud';
 import { useTheme } from '../context/ThemeContext';
-
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
-const STATUS_BADGE = {
-  published: {
-    label: '발행됨',
-    style: { background: 'var(--accent-bg)', color: 'var(--accent-text)' },
-  },
-  draft: {
-    label: '임시저장',
-    style: { background: 'var(--bg-subtle)', color: 'var(--text-light)' },
-  },
-  scheduled: {
-    label: '예약됨',
-    style: { background: '#fef3c7', color: '#92400e' },
-  },
-};
+import { useAuth } from '../hooks/useAuth';
+import { STATUS_BADGE } from '../constants/postStatus';
 
 export default function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
-  const [prev, setPrev] = useState(null);
-  const [next, setNext] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const user = getUser();
+  const [membersOnly, setMembersOnly] = useState(false);
+  const { token, user } = useAuth();
   const { theme } = useTheme();
-  const token = localStorage.getItem('token');
   const [likeCount, setLikeCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
   const [liking, setLiking] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       try {
-        const [postRes, listRes] = await Promise.all([
-          getPost(id, token),
-          listPosts(token),
-        ]);
+        const postRes = await getPost(id, token);
+        if (cancelled) return;
 
         if (!postRes.success) {
-          setError('포스트를 찾을 수 없습니다.');
+          if (postRes.status === 403) {
+            setMembersOnly(true);
+          } else {
+            setError('포스트를 찾을 수 없습니다.');
+          }
           setLoading(false);
           return;
         }
@@ -60,26 +44,18 @@ export default function PostDetail() {
         setPost(postRes.data);
         setLikeCount(postRes.data.like_count ?? 0);
         setUserLiked(postRes.data.user_liked ?? false);
-
-        if (listRes.success) {
-          // created_at 내림차순 (최신 글이 앞)
-          const sorted = [...listRes.data.items].sort(
-            (a, b) => new Date(b.created_at) - new Date(a.created_at)
-          );
-          const idx = sorted.findIndex((p) => p.id === postRes.data.id);
-          if (idx > 0) setPrev(sorted[idx - 1]);
-          if (idx < sorted.length - 1) setNext(sorted[idx + 1]);
-        }
-
         setLoading(false);
       } catch {
-        setError('포스트를 불러오는 중 오류가 발생했습니다.');
-        setLoading(false);
+        if (!cancelled) {
+          setError('포스트를 불러오는 중 오류가 발생했습니다.');
+          setLoading(false);
+        }
       }
     };
 
     load();
-  }, [id]);
+    return () => { cancelled = true; };
+  }, [id, token]);
 
   const handleLike = async () => {
     if (!token || !user) return;
@@ -94,6 +70,13 @@ export default function PostDetail() {
 
   if (loading) return (
     <div className="empty-state" style={{ marginTop: 80 }}>불러오는 중...</div>
+  );
+
+  if (membersOnly) return (
+    <div className="page-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+      <p style={{ fontSize: 16, color: 'var(--text)', marginBottom: 16 }}>이 글은 로그인 후 읽을 수 있습니다.</p>
+      <Link to="/login" className="btn btn-primary">로그인하기</Link>
+    </div>
   );
 
   if (error) return (
@@ -215,21 +198,21 @@ export default function PostDetail() {
       <CommentSection postId={post.id} user={user} />
 
       {/* 이전/다음 */}
-      {(prev || next) && (
+      {(post.prev_post || post.next_post) && (
         <>
           <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '40px 0 20px' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              {prev && (
-                <button className="btn btn-ghost" onClick={() => navigate(`/posts/${prev.id}`)}>
-                  ← {prev.title}
+              {post.prev_post && (
+                <button className="btn btn-ghost" onClick={() => navigate(`/posts/${post.prev_post.id}`)}>
+                  ← {post.prev_post.title}
                 </button>
               )}
             </div>
             <div>
-              {next && (
-                <button className="btn btn-ghost" onClick={() => navigate(`/posts/${next.id}`)}>
-                  {next.title} →
+              {post.next_post && (
+                <button className="btn btn-ghost" onClick={() => navigate(`/posts/${post.next_post.id}`)}>
+                  {post.next_post.title} →
                 </button>
               )}
             </div>

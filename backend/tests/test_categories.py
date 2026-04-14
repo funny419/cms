@@ -2,7 +2,7 @@ from database import db as _db
 
 
 def make_category(app, name="기술", slug="tech", parent_id=None):
-    from models.schema import Category
+    from models import Category
 
     cat = Category(name=name, slug=slug, parent_id=parent_id)
     _db.session.add(cat)
@@ -160,7 +160,7 @@ def test_create_category_with_description(client, app, admin_headers):
 
 def test_list_category_posts_public(client, app):
     with app.app_context():
-        from models.schema import Post, User
+        from models import Post, User
 
         user = User(username="catpost_author", email="catpost@test.com", role="editor")
         user.set_password("pass")
@@ -190,7 +190,7 @@ def test_list_category_posts_not_found(client):
 
 def test_list_category_posts_logged_in_sees_members_only(client, app, editor_headers):
     with app.app_context():
-        from models.schema import Post, User
+        from models import Post, User
 
         user = User(username="catmonly_author", email="catmonly@test.com", role="editor")
         user.set_password("pass")

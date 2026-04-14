@@ -15,6 +15,8 @@
   --danger-bg: #fdf2f2;
   --success: #0f7b6c;
   --success-bg: #f0faf8;
+  --info-bg: #dbeafe;
+  --info-text: #1d4ed8;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --radius: 8px;
@@ -50,6 +52,8 @@
     --danger-bg: rgba(248, 113, 113, 0.1);
     --success: #34d399;
     --success-bg: rgba(52, 211, 153, 0.1);
+    --info-bg: rgba(59, 130, 246, 0.15);
+    --info-text: #93c5fd;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
@@ -172,6 +176,18 @@ a {
 }
 a:hover { text-decoration: underline; }
 
+/* ── 키보드 포커스 링 ── */
+/* 라이트: --accent #6c47ff on #ffffff ≈ 4.8:1 WCAG AA */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* 다크(수동): --accent #8b6fff on #191919 ≈ 4.9:1 WCAG AA */
+[data-theme="dark"] :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── 유틸리티 ── */
 .page-center {
   min-height: 100svh;
@@ -267,6 +283,7 @@ a:hover { text-decoration: underline; }
 .btn-danger:hover { background: var(--danger-bg); }
 
 .btn-full { width: 100%; margin-top: 8px; }
+.btn-sm { font-size: 11px; padding: 3px 8px; }
 
 .alert {
   padding: 10px 14px;
@@ -432,4 +449,82 @@ a:hover { text-decoration: underline; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── Hamburger button (hidden on desktop) ── */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+/* ── Sidebar layout ── */
+.sidebar-layout { display: flex; }
+.sidebar-aside { width: 160px; flex-shrink: 0; }
+
+/* ── Admin table overflow ── */
+.table-wrapper { overflow-x: auto; }
+
+/* ── Blog photo grid ── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* ── Comment guest form grid ── */
+.guest-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* ════════════════════════════════════════
+   Responsive — 640px breakpoint (mobile)
+   ════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0 16px;
+  }
+
+  .nav-brand { padding: 14px 0; }
+
+  .nav-hamburger { display: block; }
+
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 0 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .nav-links-open { display: flex; }
+
+  .nav-link {
+    width: 100%;
+    padding: 8px 4px;
+    border-radius: 0;
+  }
+
+  .nav-theme-btn { margin: 4px 0 0; }
+
+  .sidebar-aside { display: none; }
+}
+
+/* ════════════════════════════════════════
+   Responsive — 480px breakpoint (narrow mobile)
+   ════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .guest-form-grid { grid-template-columns: 1fr; }
+  .photo-grid { grid-template-columns: 1fr; }
 }

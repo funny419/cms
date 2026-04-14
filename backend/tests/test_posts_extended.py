@@ -8,7 +8,7 @@ from database import db as _db
 def make_user_and_post(
     app, username=None, status="published", visibility="public", category_id=None
 ):
-    from models.schema import Post, User
+    from models import Post, User
 
     username = username or f"u_{uuid.uuid4().hex[:6]}"
     user = User(username=username, email=f"{username}@test.com", role="editor")
@@ -52,7 +52,7 @@ class TestListPostsFilters:
 
     def test_filter_by_category_id(self, client, app):
         with app.app_context():
-            from models.schema import Category
+            from models import Category
 
             cat = Category(name="필터카테고리", slug="filter-cat")
             _db.session.add(cat)
@@ -65,7 +65,7 @@ class TestListPostsFilters:
 
     def test_filter_by_tags(self, client, app):
         with app.app_context():
-            from models.schema import Post, PostTag, Tag, User
+            from models import Post, PostTag, Tag, User
 
             user = User(username="tagfilter_u", email="tagfilter_u@test.com", role="editor")
             user.set_password("pass123")
@@ -114,7 +114,7 @@ class TestListPostsFilters:
 class TestGetMyPosts:
     def test_get_mine_success(self, client, app, editor_headers):
         with app.app_context():
-            from models.schema import Post, User
+            from models import Post, User
 
             editor = _db.session.execute(
                 _db.select(User).where(User.username == "editor_user")
@@ -201,7 +201,7 @@ class TestCreatePost:
 class TestDeletePost:
     def test_editor_can_delete_own_post(self, client, app, editor_headers):
         with app.app_context():
-            from models.schema import Post, User
+            from models import Post, User
 
             editor = _db.session.execute(
                 _db.select(User).where(User.username == "editor_user")
@@ -241,7 +241,7 @@ class TestDeletePost:
 class TestUpdatePost:
     def test_editor_can_update_own_post(self, client, app, editor_headers):
         with app.app_context():
-            from models.schema import Post, User
+            from models import Post, User
 
             editor = _db.session.execute(
                 _db.select(User).where(User.username == "editor_user")

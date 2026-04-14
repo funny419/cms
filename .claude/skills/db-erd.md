@@ -1,13 +1,22 @@
 ---
 name: db-erd
-description: schema.py를 읽어 DB ERD를 Mermaid 형식으로 생성. 테이블 관계, 컬럼, 제약조건 시각화.
+description: models/ 디렉토리의 도메인별 파일을 읽어 DB ERD를 Mermaid 형식으로 생성. 테이블 관계, 컬럼, 제약조건 시각화.
 ---
 
 # DB ERD
 
 ## 실행 순서
 
-1. `backend/models/schema.py` 를 Read 도구로 읽는다
+1. `backend/models/` 디렉토리의 도메인별 파일을 Read 도구로 읽는다 (Issue #21 이후 schema.py는 삭제됨)
+   - `models/user.py` — User, Follow
+   - `models/post.py` — Post, PostMeta, PostLike, VisitLog
+   - `models/comment.py` — Comment
+   - `models/media.py` — Media
+   - `models/category.py` — Category
+   - `models/tag.py` — Tag, PostTag
+   - `models/series.py` — Series, SeriesPost
+   - `models/option.py` — Option, Menu, MenuItem
+   - `models/constants.py` — MAX_CATEGORY_DEPTH 등 도메인 상수
 2. 모든 모델(테이블), 컬럼, 관계(ForeignKey, relationship)를 파악한다
 3. 아래 Mermaid 형식으로 ERD를 출력한다
 4. 필요 시 `docs/ERD.md` 파일로 저장한다

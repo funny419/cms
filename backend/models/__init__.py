@@ -1,4 +1,46 @@
-# models 패키지 초기화
-# schema.py에 정의된 모든 모델 클래스를 models 패키지 레벨로 노출시킵니다.
-# 이를 통해 'from models import User'와 같은 구문이 가능해집니다.
-from .schema import *
+"""
+models 패키지 — 전체 ORM 모델 re-export (Alembic 자동 감지용)
+
+도메인별 파일 구조:
+  base.py        — Base(DeclarativeBase)
+  user.py        — User, Follow
+  post.py        — Post, PostLike, VisitLog
+  comment.py     — Comment
+  media.py       — Media
+  category.py    — Category
+  tag.py         — Tag, PostTag
+  series.py      — Series, SeriesPost
+  option.py      — Option, Menu, MenuItem
+  constants.py   — MAX_CATEGORY_DEPTH
+"""
+
+from models.base import Base
+from models.category import Category
+from models.comment import Comment
+from models.constants import MAX_CATEGORY_DEPTH
+from models.media import Media
+from models.option import Menu, MenuItem, Option
+from models.post import Post, PostLike, VisitLog
+from models.series import Series, SeriesPost
+from models.tag import PostTag, Tag
+from models.user import Follow, User
+
+__all__ = [
+    "Base",
+    "User",
+    "Follow",
+    "Post",
+    "PostLike",
+    "VisitLog",
+    "Comment",
+    "Media",
+    "Category",
+    "Tag",
+    "PostTag",
+    "Series",
+    "SeriesPost",
+    "Option",
+    "Menu",
+    "MenuItem",
+    "MAX_CATEGORY_DEPTH",
+]

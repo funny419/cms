@@ -5,7 +5,7 @@ from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import select
 
 from database import db
-from models.schema import Option, User
+from models import Option, User
 
 wizard_bp = Blueprint("wizard", __name__, url_prefix="/api/wizard")
 

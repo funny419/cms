@@ -2,8 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(docker compose:*)",
+      "Bash(docker:*)",
       "Bash(git:*)",
       "Bash(gh:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
       "Bash(bash scripts/pre-commit.sh)",
       "Bash(bash scripts/setup-hooks.sh)"
     ]
@@ -16,6 +19,18 @@
             "type": "command",
             "command": "branch=$(git branch --show-current 2>/dev/null || echo 'unknown'); if [ \"$branch\" = \"main\" ]; then env_msg=\"main 브랜치 → 리모트 Windows Docker (docker exec cms_backend_prod ...)\"; else env_msg=\"${branch} 브랜치 → 로컬 Mac Docker (docker compose exec ...)\"; fi; printf '{\"systemMessage\": \"CMS 프로젝트 시작 — %s\"}' \"$env_msg\"",
             "statusMessage": "프로젝트 환경 확인 중..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/simplicity-first-check.sh",
+            "statusMessage": "Simplicity First 게이트 확인 중..."
           }
         ]
       }

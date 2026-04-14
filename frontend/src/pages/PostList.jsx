@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listPosts } from '../api/posts';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import { useCategories } from '../context/CategoryContext';
 import CategorySidebar from '../components/widgets/CategorySidebar';
+import { useAuth } from '../hooks/useAuth';
 
 function highlightText(text, q) {
   if (!q || !text) return text;
@@ -16,20 +17,18 @@ function highlightText(text, q) {
   );
 }
 
-const getUser = () => {
-  try { return JSON.parse(localStorage.getItem('user')); }
-  catch { return null; }
-};
 const isEditorOrAdmin = (user) =>
   user && (user.role === 'admin' || user.role === 'editor');
 
 export default function PostList({ externalFilters = null, highlightQ = '' }) {
   const navigate = useNavigate();
-  const user = getUser();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
 
   const { categories } = useCategories();
-  const [categoryId, setCategoryId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryId = externalFilters
+    ? null
+    : (searchParams.get('category_id') ? parseInt(searchParams.get('category_id'), 10) : null);
   const [inputQ, setInputQ] = useState('');
   const [q, setQ] = useState('');
 
@@ -59,12 +58,20 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
 
   return (
     <div className="page-content">
-      <div style={{ display: 'flex', gap: 24 }}>
-        <aside style={{ width: 160, flexShrink: 0 }}>
+      <div className="sidebar-layout" style={{ gap: 24 }}>
+        <aside className="sidebar-aside">
           <CategorySidebar
             categories={categories}
             selectedId={categoryId}
-            onSelect={(id) => { setCategoryId(id); }}
+            onSelect={(id) => {
+              if (externalFilters) return;
+              setSearchParams((prev) => {
+                const p = Object.fromEntries(prev.entries());
+                if (id) p.category_id = String(id);
+                else delete p.category_id;
+                return p;
+              });
+            }}
           />
         </aside>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -93,7 +100,7 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
           {posts.length === 0 && !loading && !error ? (
             <div className="empty-state">
               <p style={{ fontSize: 32, marginBottom: 12 }}>📄</p>
-              <p>{q ? `"${q}"에 대한 검색 결과가 없습니다.` : '게시된 포스트가 없습니다.'}</p>
+              <p>{(externalFilters?.q || q) ? `"${externalFilters?.q || q}"에 대한 검색 결과가 없습니다.` : '게시된 포스트가 없습니다.'}</p>
             </div>
           ) : (
             <ul className="post-list">
@@ -102,6 +109,9 @@ export default function PostList({ externalFilters = null, highlightQ = '' }) {
                   key={post.id}
                   className="post-item"
                   onClick={() => navigate(`/posts/${post.id}`)}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/posts/${post.id}`)}
+                  role="button"
+                  tabIndex={0}
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="post-title">

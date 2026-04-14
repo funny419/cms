@@ -25,7 +25,7 @@ class TestWizardStatusStep:
     def test_status_step_5_when_completed(self, client, app, monkeypatch):
         """admin 계정 있으면 step=5 (completed)."""
         from database import db as _db
-        from models.schema import User
+        from models import User
 
         monkeypatch.delenv("WIZARD_COMPLETED", raising=False)
         with app.app_context():
@@ -160,6 +160,11 @@ class TestWizardEnv:
 
 
 class TestWizardMigrate:
+    @pytest.fixture(autouse=True)
+    def reset_wizard_completed(self, monkeypatch):
+        """각 테스트 전 WIZARD_COMPLETED 환경변수 초기화."""
+        monkeypatch.delenv("WIZARD_COMPLETED", raising=False)
+
     def test_migrate_success(self, client):
         """flask db upgrade 성공 → 200."""
         mock_result = MagicMock()

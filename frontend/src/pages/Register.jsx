@@ -16,6 +16,10 @@ export default function Register() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    if (formData.password.length < 8) {
+      setError('비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
     const result = await registerUser(formData.username, formData.email, formData.password);
     if (result.success) {
       setSuccess('가입이 완료됐습니다. 로그인 페이지로 이동합니다...');

@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Post, PostTag, Tag
+from models import Post, PostTag, Tag
 
 tags_bp = Blueprint("tags", __name__, url_prefix="/api/tags")
 
@@ -90,7 +90,7 @@ def list_tag_posts(tag_id: int) -> tuple:
     from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
     from sqlalchemy import or_
 
-    from models.schema import User
+    from models import User
 
     tag: Tag | None = db.session.get(Tag, tag_id)
     if not tag:

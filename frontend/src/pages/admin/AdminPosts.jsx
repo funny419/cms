@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { adminListPosts } from '../../api/admin';
 import { deletePost } from '../../api/posts';
 import useInfiniteScroll from '../../hooks/useInfiniteScroll';
+import { useAuth } from '../../hooks/useAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import Toast from '../../components/Toast';
+import useToast from '../../hooks/useToast';
 
 const STATUS_LABEL = { published: '발행됨', draft: '임시저장', scheduled: '예약됨' };
 const STATUS_COLOR = {
@@ -13,52 +17,79 @@ const STATUS_COLOR = {
 
 export default function AdminPosts() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user } = useAuth();
   const [deletedIds, setDeletedIds] = useState(new Set());
   const [inputQ, setInputQ] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
+  const [confirm, setConfirm] = useState(null); // { message, onConfirm }
+  const [isSearching, setIsSearching] = useState(false);
+  const { toast, showToast, dismissToast } = useToast();
 
   // 300ms 디바운스
   useEffect(() => {
-    const timer = setTimeout(() => setQ(inputQ.trim()), 300);
+    const timer = setTimeout(() => { setQ(inputQ.trim()); setIsSearching(false); }, 300);
     return () => clearTimeout(timer);
   }, [inputQ]);
 
   const fetchFn = useCallback(
     (page) => {
       if (!token) { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
-      } catch { navigate('/login'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
+      if (user?.role !== 'admin') { navigate('/my-posts'); return Promise.resolve({ success: false, data: { items: [], has_more: false } }); }
       return adminListPosts(token, page, 20, q, status);
     },
-    [token, q, status]
+    [token, q, status, user?.role, navigate]
   );
   const { items, loading, hasMore, error, sentinelRef } = useInfiniteScroll(fetchFn, [token, q, status]);
   const posts = items.filter((p) => !deletedIds.has(p.id));
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('이 포스트를 삭제할까요?')) return;
-    const res = await deletePost(token, id);
-    if (res.success) setDeletedIds((prev) => new Set([...prev, id]));
-    else alert(res.error);
+  const handleDelete = (id) => {
+    setConfirm({
+      message: '이 포스트를 삭제할까요?',
+      onConfirm: async () => {
+        const res = await deletePost(token, id);
+        if (res.success) {
+          setDeletedIds((prev) => new Set([...prev, id]));
+          showToast('포스트가 삭제되었습니다.');
+        } else {
+          showToast(res.error, 'error');
+        }
+      },
+    });
   };
 
   return (
     <div className="page-content" style={{ maxWidth: 900 }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
+      <ConfirmDialog
+        isOpen={!!confirm}
+        message={confirm?.message ?? ''}
+        onConfirm={() => { const cb = confirm?.onConfirm; setConfirm(null); cb?.(); }}
+        onCancel={() => setConfirm(null)}
+      />
       <h1 className="page-heading" style={{ marginBottom: 16 }}>포스트 관리</h1>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="제목으로 검색..."
-          value={inputQ}
-          onChange={(e) => setInputQ(e.target.value)}
-          style={{ flex: 1, maxWidth: 300 }}
-        />
+        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
+          <input
+            type="text"
+            className="form-input"
+            aria-label="검색"
+            placeholder="제목으로 검색..."
+            value={inputQ}
+            onChange={(e) => { setInputQ(e.target.value); setIsSearching(true); }}
+            style={{ width: '100%', paddingRight: isSearching ? 32 : undefined }}
+          />
+          {isSearching && (
+            <span style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              width: 14, height: 14, border: '2px solid var(--border)',
+              borderTopColor: 'var(--accent)', borderRadius: '50%',
+              display: 'inline-block',
+              animation: 'spin 0.7s linear infinite',
+            }} />
+          )}
+        </div>
         <select
           className="form-input"
           value={status}
@@ -79,6 +110,7 @@ export default function AdminPosts() {
           <p>{q || status ? '검색 결과가 없습니다.' : '포스트가 없습니다.'}</p>
         </div>
       ) : (
+        <div className="table-wrapper">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
@@ -123,6 +155,7 @@ export default function AdminPosts() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div ref={sentinelRef} style={{ height: 1 }} />

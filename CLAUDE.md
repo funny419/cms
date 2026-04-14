@@ -17,3 +17,6 @@ Docker 컨테이너로 관리. main 브랜치 push → GitHub Actions → Window
 @.claude/rules/troubleshooting.md
 @.claude/rules/roadmap.md
 @.claude/rules/qa.md
+@.claude/rules/security.md
+@.claude/rules/team-operations.md
+@.claude/rules/sprint-planning.md

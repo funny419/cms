@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api.decorators import roles_required
 from database import db
-from models.schema import MAX_CATEGORY_DEPTH, Category, Post
+from models import MAX_CATEGORY_DEPTH, Category, Post
 
 categories_bp = Blueprint("categories", __name__, url_prefix="/api/categories")
 
@@ -161,7 +161,7 @@ def list_category_posts(cat_id: int) -> tuple:
     from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
     from sqlalchemy import or_
 
-    from models.schema import User
+    from models import User
 
     cat: Category | None = db.session.get(Category, cat_id)
     if not cat:

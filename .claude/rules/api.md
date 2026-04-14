@@ -18,8 +18,8 @@
 | `GET /api/posts/:id` | 공개 | 포스트 단건 + view_count +1 (`?skip_count=1` 시 미증가) — `content_format`, `visibility`, `category_id`, `tags[]` 포함. **visibility 접근 제어**: private 글은 작성자/admin만 조회 가능 |
 | `POST /api/posts/:id/like` | editor/admin | 추천 토글 (본인 글 불가, 1인 1추천) |
 | `GET /api/posts/mine` | 로그인 | 내 글 전체. 파라미터: `?page=1&per_page=20` |
-| `POST /api/posts` | editor/admin | 글 작성. 요청: `title`, `content`, `excerpt`, `slug`, `status`, `post_type`, `content_format` ('html'\|'markdown'), `visibility` ('public'\|'members_only'\|'private'), `category_id`, `tags: [id, ...]` |
-| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사). 요청 필드 동일 |
+| `POST /api/posts` | editor/admin | 글 작성. 요청: `title`, `content`, `excerpt`, `slug`, `status`, `post_type`, `content_format` ('html'\|'markdown'), `visibility` ('public'\|'members_only'\|'private'), `category_id`, `tags: [id, ...]`. slug 중복 시 409 |
+| `PUT /api/posts/:id` | 소유자/admin | 수정 (소유권 검사). 요청 필드 동일. slug 중복 시 409 (자기 자신 제외) |
 | `DELETE /api/posts/:id` | 소유자/admin | 삭제 (소유권 검사) |
 
 ### 인증 & 사용자 API
@@ -27,10 +27,10 @@
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `POST /api/auth/register` | 공개 | 회원가입. 요청: `username`, `email`, `password`. 생성 role: editor |
-| `POST /api/auth/login` | 공개 | 로그인. 요청: `username`, `password`. 응답: `access_token`, `user` |
+| `POST /api/auth/login` | 공개 | 로그인. 요청: `username`, `password`. 응답: `access_token`, `user`. **Rate Limit: 10회/분** 초과 시 429 반환 (Flask-Limiter, 2026-04-07) |
 | `GET /api/auth/me` | 로그인 | 현재 사용자 조회. 응답: id, username, email, role, bio, avatar_url, blog_title, blog_color, website_url, social_links, blog_layout, banner_image_url, created_at |
 | `PUT /api/auth/me` | 로그인 | 프로필 수정. 요청: username, email, bio, avatar_url, blog_title, blog_color(#rrggbb 형식), website_url, social_links(JSON), blog_layout(default\|compact\|magazine\|photo), banner_image_url |
-| `GET /api/auth/users/:username` | 공개 | 유저 블로그 프로필 조회. 응답: User 전체 필드 + post_count, follower_count, following_count, is_following(선택적JWT), total_view_count, total_comment_count. 404: 없음/비활성화된 사용자 |
+| `GET /api/auth/users/:username` | 공개 | 유저 블로그 프로필 조회. 응답: User 전체 필드 + post_count, follower_count, following_count, is_following(선택적JWT), total_view_count, total_comment_count. **비로그인 접근 시 email 필드 제외** (보안 수정 2026-04-07, commit bd640c4). 404: 없음/비활성화된 사용자 |
 | `GET /api/auth/users/search` | 공개 | 작성자 자동완성용 유저 검색. 파라미터: `?q=username_prefix`. 비활성화 제외, 최대 10건. 응답: `{ items: [{id, username}] }` |
 
 ### 카테고리 API
@@ -70,19 +70,28 @@
 | `GET /api/settings` | 공개 | 사이트 설정 조회 (`site_title`, `site_skin` 등) |
 | `PUT /api/settings` | admin | 사이트 설정 수정 (`site_skin` 포함) |
 
+### 메뉴 API
+
+| 엔드포인트 | 권한 | 설명 |
+|-----------|------|------|
+| `GET /api/menus` | 공개 | 전체 메뉴 목록 조회. 응답: `[{id, name, location}]` |
+| `GET /api/menus/:id/items` | 공개 | 메뉴 아이템 목록 조회 (order 순 정렬). 응답: `[{id, title, url, parent_id, order}]`. 404: 메뉴 없음 |
+| `POST /api/menus` | admin | 메뉴 생성. 요청: `name`(필수), `location`(선택). 응답: `{id, name, location}` |
+| `POST /api/menus/:id/items` | admin | 메뉴 아이템 추가. 요청: `title`(필수), `url`(필수), `parent_id`(선택), `order`(선택, 기본 0). 404: 메뉴 없음 |
+
 ### 미디어 API
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
-| `GET /api/media` | editor/admin | 미디어 목록 (응답: `url`, `thumbnail_url` 포함) |
-| `POST /api/media` | editor/admin | 파일 업로드. 응답: `{ url: "/uploads/...", thumbnail_url: "/uploads/thumb_..." }` |
+| `GET /api/media` | editor/admin | 미디어 목록 (응답: `url`, `thumbnail_url` 포함). admin=전체 조회, editor=본인 업로드만 조회 (보안 수정 2026-04-07, commit bd640c4) |
+| `POST /api/media` | editor/admin | 파일 업로드. 허용 MIME: image/jpeg, image/png, image/gif, image/webp (magic bytes 검증, 2026-04-07). 10MB 초과 시 413. 응답: `{ url: "/uploads/...", thumbnail_url: "/uploads/thumb_..." }` |
 
 ### 어드민 API
 
 | 엔드포인트 | 권한 | 설명 |
 |-----------|------|------|
 | `GET /api/admin/posts` | admin | 전체 포스트 관리. 파라미터: `?page=1&per_page=20&q=검색어&status=published` (status 필터 포함) |
-| `GET /api/admin/users` | admin | 전체 회원 목록 (deactivated 포함) |
+| `GET /api/admin/users` | admin | 전체 회원 목록 (deactivated 포함). 파라미터: `?page=1&per_page=20`. 응답: `{ items, total, page, per_page, has_more }` |
 | `GET /api/admin/users/:id/posts` | admin | 특정 회원의 포스트 전체 조회 |
 | `GET /api/admin/comments` | admin | 전체 댓글 목록 (post_title 포함). 파라미터: `?page=1&per_page=20&status=pending\|approved\|spam` |
 | `PUT /api/admin/comments/:id/approve` | admin | 게스트 댓글 승인 (pending → approved) |
@@ -99,7 +108,7 @@
 | `POST /api/users/:username/follow` | 로그인 | 팔로우. 응답: `{ following: true }`. 신규 팔로우 201, 이미 팔로우 중 200. 자기 팔로우 400 |
 | `DELETE /api/users/:username/follow` | 로그인 | 언팔로우. 응답: `{ following: false }` |
 | `GET /api/users/:username/followers` | 공개 | 팔로워 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
-| `GET /api/users/:username/following` | 공개 | 팔로잉 목록. 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
+| `GET /api/users/:username/following` | 공개 | 팔로잉 목록 (deactivated 제외, #65). 파라미터: `?page=1&per_page=20` (per_page 최대 100). 응답: `items[{id, username, avatar_url}]`, `total`, `has_more` |
 | `GET /api/feed` | 로그인 | 이웃 피드 (팔로우한 사람의 published+public/members_only 포스트). 파라미터: `?page=1&per_page=20`. 응답: items, total, has_more |
 
 ### 시리즈 API

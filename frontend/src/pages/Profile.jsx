@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, updateUser } from '../api/auth';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -9,7 +10,7 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }

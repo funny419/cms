@@ -4,7 +4,7 @@ from database import db as _db
 
 
 def make_user(role="editor"):
-    from models.schema import User
+    from models import User
 
     uname = f"u_{uuid.uuid4().hex[:6]}"
     user = User(username=uname, email=f"{uname}@t.com", role=role)
@@ -67,7 +67,7 @@ def test_get_feed_with_follows(client, app):
     with app.app_context():
         uid1, u1 = make_user()
         uid2, u2 = make_user()
-        from models.schema import Post
+        from models import Post
 
         post = Post(
             title="Feed Test Post",

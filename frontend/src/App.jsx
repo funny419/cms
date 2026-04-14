@@ -25,6 +25,10 @@ import AdminComments from './pages/admin/AdminComments';
 import AdminSettings from './pages/admin/AdminSettings';
 import { getSettings } from './api/settings';
 import { getWizardStatus } from './api/wizard';
+import { setGlobalToast } from './api/client';
+import { useFetch } from './hooks/useFetch';
+import useToast from './hooks/useToast';
+import Toast from './components/Toast';
 
 // Router 내부에서 wizard status 체크 + 라우팅 처리
 function AppContent() {
@@ -34,40 +38,37 @@ function AppContent() {
   // /wizard 경로에서는 처음부터 checked=true (무한 리다이렉트 방지)
   const [wizardChecked, setWizardChecked] = useState(() => location.pathname === '/wizard');
   const [wizardDbConnected, setWizardDbConnected] = useState(true);
+  const { toast, showToast, dismissToast } = useToast();
 
   useEffect(() => {
-    let cancelled = false;
-    getSettings().then((res) => {
-      if (cancelled) return;
-      if (res.success && res.data.site_skin) {
-        setSkin(res.data.site_skin);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [setSkin]);
+    setGlobalToast(showToast);
+    return () => setGlobalToast(null);
+  }, [showToast]);
 
-  useEffect(() => {
-    if (wizardChecked) return; // /wizard 경로는 초기값으로 처리됨
-    let cancelled = false;
-    getWizardStatus().then((res) => {
-      if (cancelled) return;
+  useFetch(
+    getSettings,
+    (res) => { if (res.success && res.data.site_skin) setSkin(res.data.site_skin); },
+    [setSkin]
+  );
+
+  useFetch(
+    () => wizardChecked ? null : getWizardStatus(),
+    (res) => {
       if (res.success && res.data) {
         setWizardDbConnected(res.data.db_connected);
-        if (!res.data.completed) {
-          navigate('/wizard', { replace: true });
-        }
+        if (!res.data.completed) navigate('/wizard', { replace: true });
       }
       setWizardChecked(true);
-    });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    },
+    []
+  );
 
   // wizard 확인 전에는 아무것도 렌더링하지 않음 (/wizard 페이지는 제외)
   if (!wizardChecked && location.pathname !== '/wizard') return null;
 
   return (
     <>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />}
       <Nav />
       <OnboardingModal />
       <Routes>

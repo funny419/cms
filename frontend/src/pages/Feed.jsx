@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getFeed } from '../api/users';
 import useInfiniteScroll from '../hooks/useInfiniteScroll';
 import TagCloud from '../components/widgets/TagCloud';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Feed() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token } = useAuth();
 
   const fetchFn = useCallback(
     (page) => {
@@ -43,10 +44,10 @@ export default function Feed() {
       {posts.length === 0 && !loading && !error ? (
         <div className="empty-state">
           <p style={{ fontSize: 32, marginBottom: 12 }}>📭</p>
-          <p>팔로우한 블로거의 새 글이 여기에 표시됩니다.</p>
-          <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => navigate('/posts')}>
+          <p>팔로우하는 사람이 없습니다. 이웃을 찾아보세요.</p>
+          <Link to="/posts" className="btn btn-ghost" style={{ marginTop: 12, display: 'inline-block' }}>
             블로그 탐색하기
-          </button>
+          </Link>
         </div>
       ) : (
         <ul className="post-list">
@@ -55,6 +56,9 @@ export default function Feed() {
               key={post.id}
               className="post-item"
               onClick={() => navigate(`/posts/${post.id}`)}
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`/posts/${post.id}`)}
+              role="button"
+              tabIndex={0}
               style={{ cursor: 'pointer' }}
             >
               <div style={{ fontSize: 12, color: 'var(--text-light)', marginBottom: 4 }}>

@@ -39,6 +39,7 @@ export default function TagInput({ selectedTags = [], availableTags = [], onChan
             #{tag.name}
             <button
               type="button"
+              aria-label={`${tag.name} 태그 삭제`}
               onClick={() => removeTag(tag.id)}
               style={{ background: 'none', border: 'none', cursor: 'pointer',
                 color: 'inherit', fontSize: 12, padding: 0, lineHeight: 1 }}>
@@ -49,6 +50,7 @@ export default function TagInput({ selectedTags = [], availableTags = [], onChan
       </div>
       <input
         className="form-input"
+        aria-label="태그 검색"
         value={input}
         onChange={(e) => { setInput(e.target.value); setShowSuggestions(true); }}
         onFocus={() => setShowSuggestions(true)}

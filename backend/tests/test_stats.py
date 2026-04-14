@@ -6,7 +6,7 @@ from database import db as _db
 
 
 def make_user(role="editor"):
-    from models.schema import User
+    from models import User
 
     uname = f"u_{uuid.uuid4().hex[:6]}"
     user = User(username=uname, email=f"{uname}@t.com", role=role)

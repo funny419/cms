@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
+import { authHeader } from './client';
 
 export const getUserSeries = async (username) => {
   try {

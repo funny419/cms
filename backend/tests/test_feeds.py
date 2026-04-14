@@ -6,7 +6,7 @@ from database import db as _db
 def make_user_with_posts(
     app, username, role="editor", post_count=2, visibility="public", status="published"
 ):
-    from models.schema import Post, User
+    from models import Post, User
 
     user = User(username=username, email=f"{username}@test.com", role=role)
     user.set_password("pass")
@@ -58,7 +58,7 @@ class TestRssFeed:
     def test_only_published_public_posts_included(self, client, app):
         """draft 포스트와 private 포스트는 피드에 포함되지 않음."""
         with app.app_context():
-            from models.schema import Post, User
+            from models import Post, User
 
             user = User(username="feedfilter", email="feedfilter@test.com", role="editor")
             user.set_password("pass")
@@ -100,7 +100,7 @@ class TestRssFeed:
 
     def test_feed_uses_blog_title(self, client, app):
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             user = User(username="feedtitle", email="feedtitle@test.com", role="editor")
             user.set_password("pass")
@@ -114,7 +114,7 @@ class TestRssFeed:
     def test_feed_defaults_title_without_blog_title(self, client, app):
         """blog_title이 없으면 username + '의 블로그' 사용."""
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             user = User(username="feednotitle", email="feednotitle@test.com", role="editor")
             user.set_password("pass")
@@ -128,7 +128,7 @@ class TestRssFeed:
     def test_empty_feed_still_valid_xml(self, client, app):
         """포스트가 없어도 유효한 RSS XML 반환."""
         with app.app_context():
-            from models.schema import User
+            from models import User
 
             user = User(username="feedempty", email="feedempty@test.com", role="editor")
             user.set_password("pass")

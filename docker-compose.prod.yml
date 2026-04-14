@@ -17,6 +17,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
 
   backend:
     build:
@@ -36,8 +41,19 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       STORAGE_BACKEND: local
     command: ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/wizard/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
       - uploads_data:/app/uploads  # 배포 재빌드 후에도 업로드 파일 유지
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
 
   # Nginx reverse proxy and frontend server
   nginx:
@@ -49,9 +65,15 @@ services:
     ports:
       - "80:80" # Expose web server on port 80
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - uploads_data:/app/uploads  # backend와 동일 볼륨 마운트 → /uploads/ 직접 서빙
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
 
 volumes:
   db_data_prod:

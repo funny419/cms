@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 
 from api.decorators import roles_required
 from database import db
-from models.schema import Comment, Follow, Post, User, VisitLog
+from models import Comment, Follow, Post, User, VisitLog
 
 stats_bp = Blueprint("stats", __name__)
 

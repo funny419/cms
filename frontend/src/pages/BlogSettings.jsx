@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getCurrentUser, updateUser } from '../api/auth';
 import { uploadMedia } from '../api/media';
+import { useAuth } from '../hooks/useAuth';
 
 const SOCIAL_FIELDS = [
   { key: 'github', label: 'GitHub', placeholder: 'https://github.com/username' },
@@ -14,7 +15,7 @@ const TAB_DESIGN = 'design';
 
 export default function BlogSettings() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const { token, user: authUser } = useAuth();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +94,7 @@ export default function BlogSettings() {
     if (res.success) {
       setUser(res.data);
       try {
-        const stored = JSON.parse(localStorage.getItem('user') || '{}');
+        const stored = authUser || {};
         localStorage.setItem('user', JSON.stringify({ ...stored, ...res.data }));
       } catch {} // eslint-disable-line no-empty
       setMessage('저장됐습니다.');
@@ -130,7 +131,14 @@ export default function BlogSettings() {
         <button style={tabStyle(TAB_DESIGN)} onClick={() => setActiveTab(TAB_DESIGN)}>디자인</button>
       </div>
 
-      {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
+      {message && (
+        <div className="alert alert-success" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{message}</span>
+          <Link to={`/blog/${user?.username}`} style={{ fontSize: 13, fontWeight: 600, color: 'inherit', textDecoration: 'underline', whiteSpace: 'nowrap', marginLeft: 12 }}>
+            블로그 홈에서 확인하기 →
+          </Link>
+        </div>
+      )}
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       {activeTab === TAB_BASIC && (

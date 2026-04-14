@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { authHeader } from './client';
 
 const BASE_URL = '/api/posts';
-const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
 
 // listPosts: token이 있으면 Authorization 헤더 포함 (user_liked 반영)
 export const listPosts = async (
@@ -29,7 +29,7 @@ export const getPost = async (id, token, skipCount = false) => {
     const response = await axios.get(`${BASE_URL}/${id}`, { headers, params });
     return response.data;
   } catch (error) {
-    return { success: false, error: error.response?.data?.error || 'Failed to fetch post.' };
+    return { success: false, error: error.response?.data?.error || 'Failed to fetch post.', status: error.response?.status };
   }
 };
 
@@ -38,7 +38,7 @@ export const createPost = async (token, data) => {
     const response = await axios.post(BASE_URL, data, { headers: authHeader(token) });
     return response.data;
   } catch (error) {
-    return { success: false, error: error.response?.data?.error || 'Failed to create post.' };
+    return { success: false, error: error.response?.data?.error || 'Failed to create post.', status: error.response?.status };
   }
 };
 
@@ -47,7 +47,7 @@ export const updatePost = async (token, id, data) => {
     const response = await axios.put(`${BASE_URL}/${id}`, data, { headers: authHeader(token) });
     return response.data;
   } catch (error) {
-    return { success: false, error: error.response?.data?.error || 'Failed to update post.' };
+    return { success: false, error: error.response?.data?.error || 'Failed to update post.', status: error.response?.status };
   }
 };
 
