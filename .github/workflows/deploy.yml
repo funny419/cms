@@ -1,4 +1,4 @@
-name: Deploy CMS to Windows
+name: Deploy CMS to Ubuntu
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
 
 jobs:
   deploy:
-    # 윈도우 머신에 설치된 Self-Hosted Runner를 사용한다고 가정
-    runs-on: [self-hosted, windows, x64]
+    # Ubuntu 머신에 설치된 Self-Hosted Runner를 사용한다고 가정
+    runs-on: [self-hosted, linux, x64]
 
     steps:
       - name: Checkout code
@@ -15,55 +15,37 @@ jobs:
 
       - name: Create .env file from Secrets
         # 시크릿을 env 섹션으로 분리하여 로그 노출 방지
-        # UTF-8 No BOM 보장을 위해 .NET WriteAllText 사용
         env:
           CMS_MARIADB_PASSWORD: ${{ secrets.CMS_MARIADB_PASSWORD }}
           CMS_DB_APP_PASSWORD: ${{ secrets.CMS_DB_APP_PASSWORD }}
           FLASK_SECRET_KEY: ${{ secrets.FLASK_SECRET_KEY }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
-          $lines = @(
-            "CMS_MARIADB_PASSWORD=$env:CMS_MARIADB_PASSWORD",
-            "CMS_DB_APP_PASSWORD=$env:CMS_DB_APP_PASSWORD",
-            "CMS_DB_USER=funnycms",
-            "CMS_DB_NAME=cmsdb",
-            "SECRET_KEY=$env:FLASK_SECRET_KEY",
-            "JWT_SECRET_KEY=$env:JWT_SECRET_KEY"
-          )
-          $content = $lines -join "`n"
-          # UTF-8 No BOM 명시적 지정
-          [System.IO.File]::WriteAllText(
-            (Join-Path $PWD ".env"),
-            $content,
-            [System.Text.UTF8Encoding]::new($false)
-          )
-          Write-Host ".env 파일 생성 완료"
-        shell: powershell
+          printf "CMS_MARIADB_PASSWORD=%s\nCMS_DB_APP_PASSWORD=%s\nCMS_DB_USER=funnycms\nCMS_DB_NAME=cmsdb\nSECRET_KEY=%s\nJWT_SECRET_KEY=%s\n" \
+            "$CMS_MARIADB_PASSWORD" "$CMS_DB_APP_PASSWORD" "$FLASK_SECRET_KEY" "$JWT_SECRET_KEY" > .env
+          echo ".env 파일 생성 완료"
 
       - name: Build and Run with Docker Compose
         # docker compose v2 사용, --remove-orphans로 고아 컨테이너 제거
         run: |
           docker compose -f docker-compose.prod.yml down --remove-orphans
           docker compose -f docker-compose.prod.yml up -d --build
-        shell: powershell
 
       - name: Verify deployment health
         # 컨테이너 안정화 후 비정상 종료 여부 확인
         run: |
-          Write-Host "컨테이너 안정화 대기 중 (30초)..."
-          Start-Sleep -Seconds 30
+          echo "컨테이너 안정화 대기 중 (30초)..."
+          sleep 30
 
-          $ps = docker compose -f docker-compose.prod.yml ps -a
-          Write-Host $ps
+          docker compose -f docker-compose.prod.yml ps -a
 
-          $exited = docker compose -f docker-compose.prod.yml ps -a --filter status=exited -q
-          if ($exited) {
-            Write-Error "비정상 종료된 컨테이너가 감지되었습니다. 로그를 확인하세요."
+          exited=$(docker compose -f docker-compose.prod.yml ps -a --filter status=exited -q)
+          if [ -n "$exited" ]; then
+            echo "비정상 종료된 컨테이너가 감지되었습니다. 로그를 확인하세요." >&2
             docker compose -f docker-compose.prod.yml logs --tail=100
             exit 1
-          }
-          Write-Host "모든 컨테이너가 정상 실행 중입니다."
-        shell: powershell
+          fi
+          echo "모든 컨테이너가 정상 실행 중입니다."
 
       - name: Rollback on failure
         if: failure()
@@ -74,78 +56,54 @@ jobs:
           MSG_ROLLBACK_SKIP: "이전 커밋 SHA가 없어 롤백을 건너뜁니다."
           MSG_ROLLBACK_DONE: "롤백 완료"
         run: |
-          if (-not $env:PREV_SHA) {
-            Write-Host $env:MSG_ROLLBACK_SKIP
+          if [ -z "$PREV_SHA" ]; then
+            echo "$MSG_ROLLBACK_SKIP"
             exit 0
-          }
-          Write-Host $env:MSG_ROLLBACK_START
-          git checkout $env:PREV_SHA
+          fi
+          echo "$MSG_ROLLBACK_START"
+          git checkout "$PREV_SHA"
           docker compose -f docker-compose.prod.yml down --remove-orphans
           docker compose -f docker-compose.prod.yml up -d --build
-          Write-Host $env:MSG_ROLLBACK_DONE
-          Add-Content -Path $env:GITHUB_ENV -Value "ROLLBACK_DONE=true"
-        shell: powershell
+          echo "$MSG_ROLLBACK_DONE"
+          echo "ROLLBACK_DONE=true" >> $GITHUB_ENV
 
       - name: Send Discord Notification on Success
         if: success()
         env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           MSG_TITLE: "🚀 **배포 성공**"
           MSG_BODY: "CMS 서비스가 프로덕션에 정상 배포되었습니다."
         run: |
-          $title = $env:MSG_TITLE
-          $body = $env:MSG_BODY
-          $actor = "${{ github.actor }}"
-          $sha = "${{ github.sha }}".Substring(0, 7)
-
-          $fullMsg = "$title : $body (by @$actor, commit: $sha)"
-
-          $jsonPayload = "{ ""content"": ""$fullMsg"" }"
-
-          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-          $byteData = $utf8NoBom.GetBytes($jsonPayload)
-
-          Invoke-WebRequest -Uri "${{ secrets.DISCORD_WEBHOOK_URL }}" `
-                            -Method Post `
-                            -ContentType "application/json; charset=utf-8" `
-                            -Body $byteData `
-                            -UseBasicParsing
-        shell: powershell
+          SHA="${{ github.sha }}"
+          FULL_MSG="${MSG_TITLE} : ${MSG_BODY} (by @${{ github.actor }}, commit: ${SHA:0:7})"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"${FULL_MSG}\"}"
 
       - name: Send Discord Notification on Failure
         if: failure()
         env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           MSG_TITLE_FAIL: "🔥 **배포 실패**"
           MSG_BODY_FAIL: "CMS 서비스 배포 중 오류가 발생했습니다."
           MSG_TITLE_ROLLBACK: "🔄 **배포 실패 — 롤백 완료**"
           MSG_BODY_ROLLBACK: "배포 실패로 이전 버전으로 롤백되었습니다."
         run: |
-          if ($env:ROLLBACK_DONE -eq "true") {
-            $title = $env:MSG_TITLE_ROLLBACK
-            $body = $env:MSG_BODY_ROLLBACK
-          } else {
-            $title = $env:MSG_TITLE_FAIL
-            $body = $env:MSG_BODY_FAIL
-          }
-          $actor = "${{ github.actor }}"
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $workflow_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          $fullMsg = "$title : $body (by @$actor, commit: $sha) \n> [워크플로우 로그 확인]($workflow_url)"
-
-          $jsonPayload = "{ ""content"": ""$fullMsg"" }"
-
-          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-          $byteData = $utf8NoBom.GetBytes($jsonPayload)
-
-          Invoke-WebRequest -Uri "${{ secrets.DISCORD_WEBHOOK_URL }}" `
-                            -Method Post `
-                            -ContentType "application/json; charset=utf-8" `
-                            -Body $byteData `
-                            -UseBasicParsing
-        shell: powershell
+          SHA="${{ github.sha }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "$ROLLBACK_DONE" = "true" ]; then
+            TITLE="$MSG_TITLE_ROLLBACK"
+            BODY="$MSG_BODY_ROLLBACK"
+          else
+            TITLE="$MSG_TITLE_FAIL"
+            BODY="$MSG_BODY_FAIL"
+          fi
+          FULL_MSG="${TITLE} : ${BODY} (by @${{ github.actor }}, commit: ${SHA:0:7})\n> [워크플로우 로그 확인](${WORKFLOW_URL})"
+          curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"${FULL_MSG}\"}"
 
       - name: Clean up
         # 보안을 위해 생성된 .env 파일 삭제
-        run: Remove-Item -Path .env -Force -ErrorAction SilentlyContinue
         if: always()
-        shell: powershell
+        run: rm -f .env
