@@ -15,8 +15,8 @@
 
 ## 구현 현황
 
-> 마지막 업데이트: 2026-04-14
-> 최근 완료: #38 backend healthcheck + #39 로그 rotation + #54 CI 자동 롤백 + Dockerfile appuser + #56~#78 UX/a11y/반응형/테스트 대규모 개선 (2026-04-13~14)
+> 마지막 업데이트: 2026-04-16
+> 최근 완료: Dockerfile appuser 레이어 최적화 (2ef8727) + CI/CD Ubuntu bash 전환 (69579f3) (2026-04-16)
 > 스팩아웃 확정: 포스트 예약 발행, 알림 시스템(Socket.IO), JWT 블랙리스트
 
 ### 완료
@@ -78,6 +78,8 @@
 | **프로덕션 로그 rotation (#39)** | **`docker-compose.prod.yml` — db/backend/nginx 3개 서비스에 json-file driver, max-size 100m, max-file 5 적용. 디스크 무한 누적 방지. 커밋: 8fae255** |
 | **CI/CD 자동 롤백 (#54)** | **배포 실패 시 `github.event.before` SHA로 git checkout 후 재빌드. ROLLBACK_DONE 변수로 Discord 알림 분기. 커밋: 30d430f** |
 | **backend Dockerfile 비권한 USER** | **`adduser appuser + chown /app + USER appuser` 추가 (dev/prod 공통). root에서 프로세스 분리. 커밋: 8b6eb45** |
+| **Dockerfile appuser 레이어 최적화** | **`adduser`를 `COPY requirements.txt` 이전으로 이동 → 코드 변경 시 사용자 생성 레이어 캐시 재사용. `adduser`와 `chown` 단계 분리. 커밋: 2ef8727** |
+| **CI/CD Ubuntu 전환** | **deploy.yml Windows PowerShell → Ubuntu bash 전면 재작성. `runs-on: linux`. `.env` 생성: `WriteAllText → printf`. Docker 상태 확인: `Start-Sleep → sleep`. Discord 알림: `Invoke-WebRequest → curl -X POST`. `DISCORD_WEBHOOK_URL` env 섹션 분리(보안). 커밋: 69579f3** |
 | **ConfirmDialog 컴포넌트 (#58)** | **`window.confirm/alert` 전면 교체 → `ConfirmDialog.jsx` (CSS Variables 기반 모달). MyPosts/AdminPosts/AdminUsers/AdminComments/CommentSection 적용. 커밋: 1049c1b** |
 | **키보드 접근성 개선 (#59)** | **클릭 가능 요소 전반 `tabIndex`, `onKeyDown` 추가. 커밋: 5d707b9** |
 | **반응형 레이아웃 (#60)** | **Nav 모바일 햄버거 메뉴 + 640px/480px 브레이크포인트 + `responsive.spec.js` E2E TC. CommentSection 게스트 폼 id 중복 수정. 커밋: 97b5332, cae1fe9** |
